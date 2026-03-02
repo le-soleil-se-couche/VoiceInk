@@ -76,6 +76,9 @@ class MediaPlayer {
   }
 
   _toggleLinux() {
+    // Try MPRIS D-Bus first — works reliably on both X11 and Wayland
+    if (this._toggleMpris()) return true;
+
     const binary = this._resolveLinuxFastPaste();
     if (binary) {
       const result = spawnSync(binary, ["--media-play-pause"], {
@@ -100,6 +103,36 @@ class MediaPlayer {
 
     debugLogger.warn("No media control method available on Linux", {}, "media");
     return false;
+  }
+
+  _toggleMpris() {
+    const listResult = spawnSync("dbus-send", [
+      "--session", "--dest=org.freedesktop.DBus", "--type=method_call",
+      "--print-reply", "/org/freedesktop/DBus",
+      "org.freedesktop.DBus.ListNames",
+    ], { stdio: "pipe", timeout: 2000 });
+
+    if (listResult.status !== 0) return false;
+
+    const output = listResult.stdout?.toString() || "";
+    const players = output.match(/string "org\.mpris\.MediaPlayer2\.[^"]+"/g);
+    if (!players || players.length === 0) return false;
+
+    let toggled = false;
+    for (const match of players) {
+      const dest = match.replace(/^string "/, "").replace(/"$/, "");
+      const result = spawnSync("dbus-send", [
+        "--session", "--type=method_call", `--dest=${dest}`,
+        "/org/mpris/MediaPlayer2",
+        "org.mpris.MediaPlayer2.Player.PlayPause",
+      ], { stdio: "pipe", timeout: 2000 });
+
+      if (result.status === 0) {
+        debugLogger.debug("Media toggled via MPRIS", { player: dest }, "media");
+        toggled = true;
+      }
+    }
+    return toggled;
   }
 
   _toggleMacOS() {
@@ -130,10 +163,10 @@ class MediaPlayer {
       }
     }
 
-    // Fallback to PowerShell
+    // Fallback to PowerShell using keybd_event for VK_MEDIA_PLAY_PAUSE
     const result = spawnSync("powershell", [
       "-NoProfile", "-NonInteractive", "-Command",
-      "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]0xB3)",
+      "Add-Type -TypeDefinition 'using System.Runtime.InteropServices; public class KB { [DllImport(\"user32.dll\")] public static extern void keybd_event(byte bVk, byte bScan, int dwFlags, int dwExtraInfo); }'; [KB]::keybd_event(0xB3, 0, 1, 0); [KB]::keybd_event(0xB3, 0, 3, 0)",
     ], {
       stdio: "pipe",
       timeout: 5000,
