@@ -2154,7 +2154,9 @@ class IPCHandlers {
               chunksCompleted: 0,
             });
 
-            const chunkPaths = await splitAudioFile(filePath, chunkDir);
+            const chunkPaths = await splitAudioFile(filePath, chunkDir, {
+              segmentDuration: 240, // ~3.75 MB/chunk, under Vercel's 4.5 MB payload limit
+            });
             const totalChunks = chunkPaths.length;
 
             debugLogger.debug("Audio split into chunks", { totalChunks });
