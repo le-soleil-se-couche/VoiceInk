@@ -49,20 +49,85 @@ const VoiceWaveIndicator = ({ isListening }) => {
 // Enhanced Tooltip Component
 const Tooltip = ({ children, content, emoji }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const triggerRef = useRef(null);
+  const tooltipRef = useRef(null);
+  const [tooltipPosition, setTooltipPosition] = useState({
+    left: 0,
+    top: 0,
+    arrowLeft: "50%",
+  });
+
+  useEffect(() => {
+    if (!isVisible) {
+      return;
+    }
+
+    const updatePosition = () => {
+      const triggerEl = triggerRef.current;
+      const tooltipEl = tooltipRef.current;
+
+      if (!triggerEl || !tooltipEl) {
+        return;
+      }
+
+      const margin = 8;
+      const triggerRect = triggerEl.getBoundingClientRect();
+      const tooltipRect = tooltipEl.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+
+      const centeredLeft = triggerRect.left + triggerRect.width / 2 - tooltipRect.width / 2;
+      const maxLeft = Math.max(margin, viewportWidth - tooltipRect.width - margin);
+      const left = Math.min(Math.max(centeredLeft, margin), maxLeft);
+      const top = Math.max(margin, triggerRect.top - tooltipRect.height - margin);
+      const arrowLeftPx = Math.min(
+        Math.max(triggerRect.left + triggerRect.width / 2 - left, 10),
+        tooltipRect.width - 10
+      );
+
+      setTooltipPosition({
+        left,
+        top,
+        arrowLeft: `${arrowLeftPx}px`,
+      });
+    };
+
+    const raf = window.requestAnimationFrame(updatePosition);
+    window.addEventListener("resize", updatePosition);
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [isVisible, content]);
 
   return (
     <div className="relative inline-block">
-      <div onMouseEnter={() => setIsVisible(true)} onMouseLeave={() => setIsVisible(false)}>
+      <div
+        ref={triggerRef}
+        onMouseEnter={() => setIsVisible(true)}
+        onMouseLeave={() => setIsVisible(false)}
+      >
         {children}
       </div>
       {isVisible && (
         <div
-          className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-1 py-1 text-popover-foreground bg-popover border border-border rounded-md whitespace-nowrap z-10 transition-opacity duration-150 shadow-lg"
-          style={{ fontSize: "9.7px" }}
+          ref={tooltipRef}
+          className="fixed px-1 py-1 text-popover-foreground bg-popover border border-border rounded-md z-10 transition-opacity duration-150 shadow-lg"
+          style={{
+            fontSize: "9.7px",
+            whiteSpace: "normal",
+            lineHeight: 1.2,
+            maxWidth: "calc(100vw - 16px)",
+            left: `${tooltipPosition.left}px`,
+            top: `${tooltipPosition.top}px`,
+          }}
         >
           {emoji && <span className="mr-1">{emoji}</span>}
           {content}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-popover"></div>
+          <div
+            className="absolute top-full w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-popover"
+            style={{ left: tooltipPosition.arrowLeft, transform: "translateX(-50%)" }}
+          ></div>
         </div>
       )}
     </div>
