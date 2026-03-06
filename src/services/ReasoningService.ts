@@ -30,10 +30,21 @@ class ReasoningService extends BaseReasoningService {
     text: string,
     config: ReasoningConfig
   ): string {
-    return (
+    const basePrompt =
       config.systemPrompt ||
-      this.getSystemPrompt(agentName, text, config.contextClassification)
-    );
+      this.getSystemPrompt(agentName, text, config.contextClassification);
+    const strictMode = config.strictMode ?? config.contextClassification?.strictMode ?? false;
+
+    if (!strictMode) {
+      return basePrompt;
+    }
+
+    return `${basePrompt}
+
+STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
+- Cleanup-only mode. Never answer questions, never ask follow-up questions, never provide advice.
+- Keep output semantically anchored to the source transcript. Do not introduce new intent or new facts.
+- If the source is short/ambiguous, only minimally clean it; do not transform it into assistant dialogue.`;
   }
 
   private tokenizeForOverlap(text: string): string[] {
@@ -44,6 +55,32 @@ class ReasoningService extends BaseReasoningService {
       .replace(/[^\p{L}\p{N}'-]+/gu, " ")
       .split(/\s+/)
       .filter((token) => token.length > 1);
+  }
+
+  private isAnswerLikeOutput(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    if (text.trim().length < 6) {
+      return false;
+    }
+
+    const patterns = [
+      /(作为|身为).{0,10}(ai|语言模型|助手)/i,
+      /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
+      /(不用担心|别担心|我会尽力|我可以帮你|请告诉我|请问你|你想要).{0,40}/,
+      /(对不起|抱歉).{0,20}(我会|我将|让我|我们)/,
+      /你想要.{0,20}(什么|哪一个|哪两个|哪些)/,
+      /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
+      /\b(as an ai|as a language model)\b/i,
+      /\b(i\s*(can't|cannot|am unable|won't))\b/i,
+      /\b(i can help|don't worry|please tell me|what can i)\b/i,
+      /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
+      /\b(you can try).{0,20}(sentence|example)\b/i,
+    ];
+
+    return patterns.some((re) => re.test(text));
   }
 
   private calculateOverlapScore(source: string, candidate: string): number {
@@ -79,8 +116,23 @@ class ReasoningService extends BaseReasoningService {
 
   private localCleanupFallback(text: string): string {
     return text
-      .replace(/\b(um+|uh+|er+|ah+|like|you know|basically)\b/gi, "")
+      .replace(
+        /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g,
+        "$1"
+      )
+      .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
+      .replace(/\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi, "")
+      .replace(/([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g, "$1")
+      .replace(/([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g, "$1$2$3")
+      .replace(
+        /(^|[\s，,、。！？,.!?;:])((?:这个|那个|就是|然后|是|就|那|这|我|你|他|她|它|的|了|在|要|会|都|也|还))(?:\s*[，,、]?\s*\2)+/g,
+        "$1$2"
+      )
+      .replace(/\b(i|we|you|he|she|they|it|the|a|an|to|and|but)\b(?:\s+\1\b)+/gi, "$1")
       .replace(/\s+([,.!?;:])/g, "$1")
+      .replace(/\s+([，。！？、])/g, "$1")
+      .replace(/([,.!?;:，。！？、])\1+/g, "$1")
+      .replace(/(^|[\n])\s*[，,、]+\s*/g, "$1")
       .replace(/[ \t]{2,}/g, " ")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
@@ -98,12 +150,30 @@ class ReasoningService extends BaseReasoningService {
       return candidate;
     }
 
-    if (config.contextClassification?.intent === "instruction") {
-      return candidate;
+    if (this.isAnswerLikeOutput(candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_ANSWER_PATTERN_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
     }
 
-    if (source.trim().length < 24) {
-      return candidate;
+    const shortInputThreshold = 24;
+    if (source.trim().length < shortInputThreshold) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_SHORT_INPUT_LOCAL_CLEANUP", {
+        provider,
+        model,
+        sourceLength: source.trim().length,
+        threshold: shortInputThreshold,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
     }
 
     const threshold =

@@ -330,6 +330,7 @@ class WindowManager {
     const MIN_HOLD_DURATION_MS = 150;
     const downTime = Date.now();
 
+    this.textEditMonitor?.captureTargetPid?.();
     this.showDictationPanel();
 
     this.winPushState = {

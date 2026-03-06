@@ -58,7 +58,7 @@ const Tooltip = ({ children, content, emoji }) => {
       {isVisible && (
         <div
           className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-1 py-1 text-popover-foreground bg-popover border border-border rounded-md whitespace-nowrap z-10 transition-opacity duration-150 shadow-lg"
-          style={{ fontSize: "9.7px", maxWidth: "96px" }}
+          style={{ fontSize: "9.7px" }}
         >
           {emoji && <span className="mr-1">{emoji}</span>}
           {content}

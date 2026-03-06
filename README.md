@@ -738,9 +738,26 @@ A: With local processing, your audio never leaves your device. With cloud proces
 **Q: What languages are supported?**
 A: OpenWhispr supports 58 languages including English, Spanish, French, German, Chinese, Japanese, and more. Set your preferred language in the .env file or use auto-detect.
 
+## Stabilization Notes (2026-03-06)
+
+Recent stabilization work has been accepted in these areas:
+
+- ✅ Paste reliability and fallback behavior (auto-paste, copy fallback, manual paste guidance)
+- ✅ Smart dictionary pipeline (including stricter dictionary-aware handling in post-processing)
+- ✅ Environment and runtime configuration hardening for local/cloud modes
+
+Known limitation under active investigation:
+
+- ⚠️ In some environments, transcription requests can occasionally drift into answer-like assistant output instead of pure speech-to-text results.
+
+Current mitigation strategy:
+
+- Use stricter reasoning/transcription guards to keep output close to source speech intent.
+- Apply tighter dictionary and post-processing constraints to reduce over-generation.
+
 ## Project Status
 
-OpenWhispr is actively maintained and ready for production use. Current version: 1.5.4
+OpenWhispr is actively maintained and ready for production use. Current version: 1.5.5
 
 - ✅ Core functionality complete
 - ✅ Cross-platform support (macOS, Windows, Linux)

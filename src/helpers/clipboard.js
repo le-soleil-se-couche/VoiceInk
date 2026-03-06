@@ -59,6 +59,51 @@ const RESTORE_DELAYS = {
   linux: 200,
 };
 
+const WINDOWS_FOCUS_PROBE_SCRIPT = `
+try {
+  Add-Type -AssemblyName UIAutomationClient | Out-Null
+  $el = [System.Windows.Automation.AutomationElement]::FocusedElement
+  if ($null -eq $el) {
+    [pscustomobject]@{ ok = $false; reason = "no_focused_element" } | ConvertTo-Json -Compress
+    exit 0
+  }
+
+  $textPatternRef = $null
+  $valuePatternRef = $null
+  $hasTextPattern = $el.TryGetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern, [ref]$textPatternRef)
+  $hasValuePattern = $el.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$valuePatternRef)
+
+  $windowClass = ""
+  $windowName = ""
+  $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+  $node = $el
+  for ($i = 0; $i -lt 20 -and $null -ne $node; $i++) {
+    if ($node.Current.ControlType.ProgrammaticName -eq "ControlType.Window") {
+      $windowClass = $node.Current.ClassName
+      $windowName = $node.Current.Name
+      break
+    }
+    $node = $walker.GetParent($node)
+  }
+
+  [pscustomobject]@{
+    ok = $true
+    controlType = $el.Current.ControlType.ProgrammaticName
+    className = $el.Current.ClassName
+    automationId = $el.Current.AutomationId
+    hasKeyboardFocus = $el.Current.HasKeyboardFocus
+    isEnabled = $el.Current.IsEnabled
+    isOffscreen = $el.Current.IsOffscreen
+    hasTextPattern = $hasTextPattern
+    hasValuePattern = $hasValuePattern
+    windowClass = $windowClass
+    windowName = $windowName
+  } | ConvertTo-Json -Compress
+} catch {
+  [pscustomobject]@{ ok = $false; error = $_.Exception.Message } | ConvertTo-Json -Compress
+}
+`;
+
 function writeClipboardInRenderer(webContents, text) {
   if (!webContents || !webContents.executeJavaScript) {
     return Promise.reject(new Error("Invalid webContents for clipboard write"));
@@ -482,6 +527,126 @@ class ClipboardManager {
     }
   }
 
+  probeWindowsPasteTarget() {
+    if (process.platform !== "win32") {
+      return null;
+    }
+
+    try {
+      const result = spawnSync(
+        "powershell.exe",
+        [
+          "-NoProfile",
+          "-NonInteractive",
+          "-WindowStyle",
+          "Hidden",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-Command",
+          WINDOWS_FOCUS_PROBE_SCRIPT,
+        ],
+        {
+          windowsHide: true,
+          timeout: 1500,
+          encoding: "utf8",
+        }
+      );
+
+      const stdout = (result.stdout || "").trim();
+      if (!stdout) {
+        return null;
+      }
+
+      const parsed = JSON.parse(stdout);
+      if (!parsed?.ok) {
+        this.safeLog("⚠️ Windows focus probe unavailable", parsed);
+        return null;
+      }
+
+      const controlType = String(parsed.controlType || "");
+      const className = String(parsed.className || "").toLowerCase();
+      const windowClass = String(parsed.windowClass || "").toLowerCase();
+      const hasTextPattern = !!parsed.hasTextPattern;
+      const hasValuePattern = !!parsed.hasValuePattern;
+      const isEnabled = parsed.isEnabled !== false;
+      const hasFocus = parsed.hasKeyboardFocus !== false;
+
+      const definitelyNonTextControlTypes = new Set([
+        "ControlType.Button",
+        "ControlType.CheckBox",
+        "ControlType.RadioButton",
+        "ControlType.Image",
+        "ControlType.ListItem",
+        "ControlType.TreeItem",
+        "ControlType.MenuItem",
+        "ControlType.ToolBar",
+        "ControlType.TabItem",
+        "ControlType.Hyperlink",
+      ]);
+
+      const definitelyNonTextClasses = [
+        "syslistview32",
+        "workerw",
+        "progman",
+        "shell_traywnd",
+        "mstasklistwclass",
+      ];
+
+      const classLooksNonText = definitelyNonTextClasses.some(
+        (token) => className.includes(token) || windowClass.includes(token)
+      );
+      const controlLooksNonText =
+        definitelyNonTextControlTypes.has(controlType) && !hasTextPattern && !hasValuePattern;
+      const noEditablePattern =
+        !hasTextPattern &&
+        !hasValuePattern &&
+        controlType !== "ControlType.Edit" &&
+        controlType !== "ControlType.Document";
+
+      debugLogger.debug(
+        "Windows focus probe",
+        {
+          controlType,
+          className: parsed.className || "",
+          windowClass: parsed.windowClass || "",
+          hasTextPattern,
+          hasValuePattern,
+          isEnabled,
+          hasFocus,
+        },
+        "clipboard"
+      );
+
+      if ((classLooksNonText || controlLooksNonText || noEditablePattern) && isEnabled && hasFocus) {
+        return {
+          shouldSkipAutoPaste: true,
+          reason: "target_not_text_input",
+          details: {
+            controlType,
+            className: parsed.className || "",
+            windowClass: parsed.windowClass || "",
+            hasTextPattern,
+            hasValuePattern,
+          },
+        };
+      }
+
+      return {
+        shouldSkipAutoPaste: false,
+        details: {
+          controlType,
+          className: parsed.className || "",
+          windowClass: parsed.windowClass || "",
+          hasTextPattern,
+          hasValuePattern,
+        },
+      };
+    } catch (error) {
+      this.safeLog("⚠️ Windows focus probe failed", error?.message || error);
+      return null;
+    }
+  }
+
   async pasteText(text, options = {}) {
     const startTime = Date.now();
     const platform = process.platform;
@@ -526,14 +691,82 @@ class ClipboardManager {
           await this.pasteMacOS(originalClipboard, options);
         }
       } else if (platform === "win32") {
+        const focusProbe = this.probeWindowsPasteTarget();
+        if (focusProbe?.shouldSkipAutoPaste) {
+          method = "clipboard";
+          this.safeLog("⚠️ Windows target is not text-editable, skipping auto paste", focusProbe);
+          debugLogger.info(
+            "Windows paste downgraded to clipboard-only",
+            {
+              reason: focusProbe.reason,
+              ...focusProbe.details,
+            },
+            "clipboard"
+          );
+          return buildPasteResult({
+            success: false,
+            mode: "copied",
+            message: "No editable text field detected. Text copied to clipboard; paste manually with Ctrl+V.",
+            reason: focusProbe.reason,
+            method,
+            platform,
+          });
+        }
+
         const winFastPaste = this.resolveWindowsFastPasteBinary();
+        const hasTargetPid = Number.isInteger(options?.targetPid) && options.targetPid > 0;
         if (winFastPaste) {
           method = "sendinput";
         } else {
           const nircmdPath = this.getNircmdPath();
           method = nircmdPath ? "nircmd" : "powershell";
         }
-        await this.pasteWindows(originalClipboard);
+        const preserveClipboardForManualFallback =
+          method === "powershell" || (method === "nircmd" && !hasTargetPid);
+
+        await this.pasteWindows(originalClipboard, {
+          preserveClipboard: preserveClipboardForManualFallback,
+        });
+
+        if (method === "nircmd" && !hasTargetPid) {
+          debugLogger.info(
+            "Windows paste treated as clipboard fallback (unverified nircmd sendkeypress)",
+            {
+              reason: "paste_unverified_nircmd",
+            },
+            "clipboard"
+          );
+          return buildPasteResult({
+            success: false,
+            mode: "copied",
+            message:
+              "Text copied to clipboard. Auto-paste via nircmd could not be verified; press Ctrl+V manually.",
+            reason: "paste_unverified_nircmd",
+            method,
+            platform,
+          });
+        }
+
+        // PowerShell SendKeys often exits 0 even when the target app did not
+        // accept the paste. Treat it as clipboard fallback so UI stays visible.
+        if (method === "powershell") {
+          debugLogger.info(
+            "Windows paste treated as clipboard fallback (unverified powershell sendkeys)",
+            {
+              reason: "paste_unverified_powershell",
+            },
+            "clipboard"
+          );
+          return buildPasteResult({
+            success: false,
+            mode: "copied",
+            message:
+              "Text copied to clipboard. Auto-paste via PowerShell is unverified; press Ctrl+V manually.",
+            reason: "paste_unverified_powershell",
+            method,
+            platform,
+          });
+        }
       } else {
         method = (await this.pasteLinux(originalClipboard, options)) || "linux-tools";
       }
@@ -701,17 +934,17 @@ class ClipboardManager {
     });
   }
 
-  async pasteWindows(originalClipboard) {
+  async pasteWindows(originalClipboard, options = {}) {
     const fastPastePath = this.resolveWindowsFastPasteBinary();
 
     if (fastPastePath) {
-      return this.pasteWithFastPaste(fastPastePath, originalClipboard);
+      return this.pasteWithFastPaste(fastPastePath, originalClipboard, options);
     }
 
-    return this.pasteWithNircmdOrPowerShell(originalClipboard);
+    return this.pasteWithNircmdOrPowerShell(originalClipboard, options);
   }
 
-  async pasteWithFastPaste(fastPastePath, originalClipboard) {
+  async pasteWithFastPaste(fastPastePath, originalClipboard, options = {}) {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         let hasTimedOut = false;
@@ -757,7 +990,7 @@ class ClipboardManager {
               `❌ Windows fast-paste failed (code ${code}), falling back to nircmd/PowerShell`,
               { elapsedMs: elapsed, stderr: stderrData.trim() }
             );
-            this.pasteWithNircmdOrPowerShell(originalClipboard).then(resolve).catch(reject);
+            this.pasteWithNircmdOrPowerShell(originalClipboard, options).then(resolve).catch(reject);
           }
         });
 
@@ -768,7 +1001,7 @@ class ClipboardManager {
             elapsedMs: Date.now() - startTime,
             error: error.message,
           });
-          this.pasteWithNircmdOrPowerShell(originalClipboard).then(resolve).catch(reject);
+          this.pasteWithNircmdOrPowerShell(originalClipboard, options).then(resolve).catch(reject);
         });
 
         const timeoutId = setTimeout(() => {
@@ -776,24 +1009,25 @@ class ClipboardManager {
           this.safeLog("⏱️ Windows fast-paste timeout, falling back to nircmd/PowerShell");
           killProcess(pasteProcess, "SIGKILL");
           pasteProcess.removeAllListeners();
-          this.pasteWithNircmdOrPowerShell(originalClipboard).then(resolve).catch(reject);
+          this.pasteWithNircmdOrPowerShell(originalClipboard, options).then(resolve).catch(reject);
         }, 2000);
       }, PASTE_DELAYS.win32_fast);
     });
   }
 
-  async pasteWithNircmdOrPowerShell(originalClipboard) {
+  async pasteWithNircmdOrPowerShell(originalClipboard, options = {}) {
     const nircmdPath = this.getNircmdPath();
     if (nircmdPath) {
-      return this.pasteWithNircmd(nircmdPath, originalClipboard);
+      return this.pasteWithNircmd(nircmdPath, originalClipboard, options);
     }
-    return this.pasteWithPowerShell(originalClipboard);
+    return this.pasteWithPowerShell(originalClipboard, options);
   }
 
-  async pasteWithNircmd(nircmdPath, originalClipboard) {
+  async pasteWithNircmd(nircmdPath, originalClipboard, options = {}) {
     return new Promise((resolve, reject) => {
       const pasteDelay = PASTE_DELAYS.win32_nircmd;
       const restoreDelay = RESTORE_DELAYS.win32_nircmd;
+      const shouldRestoreClipboard = !options?.preserveClipboard;
 
       setTimeout(() => {
         let hasTimedOut = false;
@@ -819,18 +1053,23 @@ class ClipboardManager {
             this.safeLog(`✅ nircmd paste success`, {
               elapsedMs: elapsed,
               restoreDelayMs: restoreDelay,
+              restoredClipboard: shouldRestoreClipboard,
             });
-            setTimeout(() => {
-              clipboard.writeText(originalClipboard);
-              this.safeLog("🔄 Clipboard restored");
-            }, restoreDelay);
+            if (shouldRestoreClipboard) {
+              setTimeout(() => {
+                clipboard.writeText(originalClipboard);
+                this.safeLog("🔄 Clipboard restored");
+              }, restoreDelay);
+            } else {
+              this.safeLog("📋 Clipboard preserved for manual paste fallback");
+            }
             resolve();
           } else {
             this.safeLog(`❌ nircmd failed (code ${code}), falling back to PowerShell`, {
               elapsedMs: elapsed,
               stderr: errorOutput,
             });
-            this.pasteWithPowerShell(originalClipboard).then(resolve).catch(reject);
+            this.pasteWithPowerShell(originalClipboard, options).then(resolve).catch(reject);
           }
         });
 
@@ -842,7 +1081,7 @@ class ClipboardManager {
             elapsedMs: elapsed,
             error: error.message,
           });
-          this.pasteWithPowerShell(originalClipboard).then(resolve).catch(reject);
+          this.pasteWithPowerShell(originalClipboard, options).then(resolve).catch(reject);
         });
 
         const timeoutId = setTimeout(() => {
@@ -851,16 +1090,17 @@ class ClipboardManager {
           this.safeLog(`⏱️ nircmd timeout, falling back to PowerShell`, { elapsedMs: elapsed });
           killProcess(pasteProcess, "SIGKILL");
           pasteProcess.removeAllListeners();
-          this.pasteWithPowerShell(originalClipboard).then(resolve).catch(reject);
+          this.pasteWithPowerShell(originalClipboard, options).then(resolve).catch(reject);
         }, 2000);
       }, pasteDelay);
     });
   }
 
-  async pasteWithPowerShell(originalClipboard) {
+  async pasteWithPowerShell(originalClipboard, options = {}) {
     return new Promise((resolve, reject) => {
       const pasteDelay = PASTE_DELAYS.win32_pwsh;
       const restoreDelay = RESTORE_DELAYS.win32_pwsh;
+      const shouldRestoreClipboard = !options?.preserveClipboard;
 
       setTimeout(() => {
         let hasTimedOut = false;
@@ -895,11 +1135,16 @@ class ClipboardManager {
             this.safeLog(`✅ PowerShell paste success`, {
               elapsedMs: elapsed,
               restoreDelayMs: restoreDelay,
+              restoredClipboard: shouldRestoreClipboard,
             });
-            setTimeout(() => {
-              clipboard.writeText(originalClipboard);
-              this.safeLog("🔄 Clipboard restored");
-            }, restoreDelay);
+            if (shouldRestoreClipboard) {
+              setTimeout(() => {
+                clipboard.writeText(originalClipboard);
+                this.safeLog("🔄 Clipboard restored");
+              }, restoreDelay);
+            } else {
+              this.safeLog("📋 Clipboard preserved for manual paste fallback");
+            }
             resolve();
           } else {
             this.safeLog(`❌ PowerShell paste failed`, {
@@ -1629,13 +1874,18 @@ Would you like to open System Settings now?`;
 
     if (platform === "win32") {
       const winFastPaste = this.resolveWindowsFastPasteBinary();
+      const nircmdPath = this.getNircmdPath();
+      const method = winFastPaste ? "sendinput" : nircmdPath ? "nircmd" : "powershell";
+      const tools = [];
+      if (winFastPaste) tools.push("windows-fast-paste");
+      if (nircmdPath) tools.push("nircmd");
       return {
         platform: "win32",
         available: true,
-        method: winFastPaste ? "sendinput" : "powershell",
+        method,
         requiresPermission: false,
         terminalAware: !!winFastPaste,
-        tools: [],
+        tools,
       };
     }
 

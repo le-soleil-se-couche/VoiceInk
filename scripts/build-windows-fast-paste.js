@@ -24,6 +24,7 @@ const projectRoot = path.resolve(__dirname, "..");
 const cSource = path.join(projectRoot, "resources", "windows-fast-paste.c");
 const outputDir = path.join(projectRoot, "resources", "bin");
 const outputBinary = path.join(outputDir, "windows-fast-paste.exe");
+const nircmdBinary = path.join(outputDir, "nircmd.exe");
 
 function log(message) {
   console.log(`[windows-fast-paste] ${message}`);
@@ -73,6 +74,41 @@ async function tryDownload() {
   }
 
   log("Download failed or binary not found after download");
+  return false;
+}
+
+function hasNircmdFallback() {
+  try {
+    return fs.existsSync(nircmdBinary);
+  } catch {
+    return false;
+  }
+}
+
+function tryDownloadNircmdFallback() {
+  if (hasNircmdFallback()) {
+    log("nircmd fallback is already available");
+    return true;
+  }
+
+  const downloadScript = path.join(__dirname, "download-nircmd.js");
+  if (!fs.existsSync(downloadScript)) {
+    log("nircmd download script not found");
+    return false;
+  }
+
+  log("Attempting to download nircmd fallback...");
+  const result = spawnSync(process.execPath, [downloadScript], {
+    stdio: "inherit",
+    cwd: projectRoot,
+  });
+
+  if (result.status === 0 && hasNircmdFallback()) {
+    log("Successfully downloaded nircmd fallback");
+    return true;
+  }
+
+  log("nircmd fallback download failed");
   return false;
 }
 
@@ -174,6 +210,13 @@ async function main() {
 
   const compiled = tryCompile();
   if (compiled) {
+    return;
+  }
+
+  const nircmdReady = tryDownloadNircmdFallback();
+  if (nircmdReady) {
+    console.warn("[windows-fast-paste] Could not obtain windows-fast-paste.exe.");
+    console.warn("[windows-fast-paste] Falling back to nircmd.exe for Windows paste.");
     return;
   }
 

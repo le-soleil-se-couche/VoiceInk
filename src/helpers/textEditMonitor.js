@@ -43,6 +43,47 @@ const MACOS_AX_SCRIPT_BY_PID = (pid) =>
   `\treturn ""\n` +
   `end tell`;
 
+const WINDOWS_FOREGROUND_APP_SCRIPT = `
+try {
+  Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class Win32ForegroundWindow {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+}
+"@ | Out-Null
+
+  $hwnd = [Win32ForegroundWindow]::GetForegroundWindow()
+  if ($hwnd -eq [IntPtr]::Zero) {
+    [pscustomobject]@{
+      pid = $null
+      name = $null
+      capturedAt = (Get-Date).ToUniversalTime().ToString("o")
+    } | ConvertTo-Json -Compress
+    exit 0
+  }
+
+  $targetPid = 0
+  [void][Win32ForegroundWindow]::GetWindowThreadProcessId($hwnd, [ref]$targetPid)
+  $proc = Get-Process -Id $targetPid -ErrorAction SilentlyContinue
+  $name = if ($null -ne $proc) { $proc.ProcessName } else { $null }
+
+  [pscustomobject]@{
+    pid = [int]$targetPid
+    name = $name
+    capturedAt = (Get-Date).ToUniversalTime().ToString("o")
+  } | ConvertTo-Json -Compress
+} catch {
+  [pscustomobject]@{
+    pid = $null
+    name = $null
+    capturedAt = (Get-Date).ToUniversalTime().ToString("o")
+    error = $_.Exception.Message
+  } | ConvertTo-Json -Compress
+}
+`;
+
 class TextEditMonitor extends EventEmitter {
   constructor() {
     super();
@@ -64,24 +105,14 @@ class TextEditMonitor extends EventEmitter {
    * ignoring panel-type windows like the OpenWhispr overlay.
    */
   captureTargetPid() {
-    if (process.platform !== "darwin") return;
-    const script =
-      'ObjC.import("AppKit");' +
-      "const app = $.NSWorkspace.sharedWorkspace.frontmostApplication;" +
-      "const payload = {" +
-      "pid: Number(app.processIdentifier)," +
-      "name: ObjC.unwrap(app.localizedName) || null," +
-      "capturedAt: (new Date()).toISOString()" +
-      "};" +
-      "JSON.stringify(payload);";
-    execFile("osascript", ["-l", "JavaScript", "-e", script], { timeout: 2000 }, (err, stdout) => {
+    const applyCaptureResult = (err, stdout) => {
       if (err) {
         this.lastTargetPid = null;
         this.lastTargetAppName = null;
         this.lastTargetCapturedAt = null;
       } else {
         try {
-          const parsed = JSON.parse(stdout.trim());
+          const parsed = JSON.parse((stdout || "").trim());
           const pid = Number(parsed?.pid);
           this.lastTargetPid = Number.isInteger(pid) ? pid : null;
           this.lastTargetAppName =
@@ -89,18 +120,59 @@ class TextEditMonitor extends EventEmitter {
           this.lastTargetCapturedAt =
             typeof parsed?.capturedAt === "string" ? parsed.capturedAt : new Date().toISOString();
         } catch {
-          const pid = parseInt(stdout.trim(), 10);
-          this.lastTargetPid = isNaN(pid) ? null : pid;
+          const pid = parseInt((stdout || "").trim(), 10);
+          this.lastTargetPid = Number.isInteger(pid) ? pid : null;
           this.lastTargetAppName = null;
           this.lastTargetCapturedAt = new Date().toISOString();
         }
       }
+
       debugLogger.debug("[TextEditMonitor] Captured target app", {
         pid: this.lastTargetPid,
         appName: this.lastTargetAppName,
         capturedAt: this.lastTargetCapturedAt,
       });
-    });
+    };
+
+    if (process.platform === "darwin") {
+      const script =
+        'ObjC.import("AppKit");' +
+        "const app = $.NSWorkspace.sharedWorkspace.frontmostApplication;" +
+        "const payload = {" +
+        "pid: Number(app.processIdentifier)," +
+        "name: ObjC.unwrap(app.localizedName) || null," +
+        "capturedAt: (new Date()).toISOString()" +
+        "};" +
+        "JSON.stringify(payload);";
+      execFile(
+        "osascript",
+        ["-l", "JavaScript", "-e", script],
+        { timeout: 2000 },
+        applyCaptureResult
+      );
+      return;
+    }
+
+    if (process.platform === "win32") {
+      const encodedScript = Buffer.from(WINDOWS_FOREGROUND_APP_SCRIPT, "utf16le").toString(
+        "base64"
+      );
+
+      execFile(
+        "powershell.exe",
+        [
+          "-NoProfile",
+          "-NonInteractive",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-EncodedCommand",
+          encodedScript,
+        ],
+        { timeout: 2000, windowsHide: true, maxBuffer: 1024 * 1024 },
+        applyCaptureResult
+      );
+      return;
+    }
   }
 
   getLastTargetAppInfo() {

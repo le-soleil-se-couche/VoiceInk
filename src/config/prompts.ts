@@ -60,6 +60,27 @@ function getContextInstruction(context?: ContextClassification): string {
   return `Context hint: ${contextLabels[context.context]}.${appSuffix} ${focusHints[context.context]} ${intentHint}`;
 }
 
+function getDictionaryEnforcementInstruction(uiLanguage?: string): string {
+  const locale = normalizeUiLanguage(uiLanguage || "en");
+  const isZh = locale.startsWith("zh");
+
+  if (isZh) {
+    return [
+      "词典强约束：",
+      "- 对人名、产品名、缩写与专有名词，优先使用词典中的写法。",
+      "- 当转录词与词典词存在明显发音相近时，优先归一到词典写法。",
+      "- 不要在词典候选明显可用时自行发明新的拼写。",
+    ].join("\n");
+  }
+
+  return [
+    "Dictionary enforcement:",
+    "- For names, product terms, acronyms, and proper nouns, prefer dictionary spellings.",
+    "- If a transcript token sounds close to a dictionary entry, normalize to the dictionary spelling.",
+    "- Do not invent alternate spellings when a dictionary candidate is plausible.",
+  ].join("\n");
+}
+
 export function getSystemPrompt(
   agentName: string | null,
   customDictionary?: string[],
@@ -87,7 +108,11 @@ export function getSystemPrompt(
   if (promptTemplate) {
     prompt = promptTemplate.replace(/\{\{agentName\}\}/g, name);
   } else {
-    const useFullPrompt = !transcript || detectAgentName(transcript, name);
+    const agentModeEnabled =
+      typeof window !== "undefined" &&
+      !!window.localStorage &&
+      window.localStorage.getItem("reasoningEnableAgentMode") === "true";
+    const useFullPrompt = agentModeEnabled && !!transcript && detectAgentName(transcript, name);
     prompt = (useFullPrompt ? prompts.fullPrompt : prompts.cleanupPrompt).replace(
       /\{\{agentName\}\}/g,
       name
@@ -105,7 +130,14 @@ export function getSystemPrompt(
   }
 
   if (customDictionary && customDictionary.length > 0) {
-    prompt += prompts.dictionarySuffix + customDictionary.join(", ");
+    const normalizedDictionary = Array.from(
+      new Set(customDictionary.map((word) => word.trim()).filter(Boolean))
+    );
+
+    if (normalizedDictionary.length > 0) {
+      prompt += `${prompts.dictionarySuffix}${normalizedDictionary.join(", ")}`;
+      prompt += `\n\n${getDictionaryEnforcementInstruction(uiLanguage)}`;
+    }
   }
 
   return prompt;

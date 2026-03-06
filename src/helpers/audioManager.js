@@ -28,6 +28,483 @@ const isValidApiKey = (key, provider = "openai") => {
   return key !== placeholder;
 };
 
+const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
+  /(作为|身为).{0,10}(ai|语言模型|助手)/i,
+  /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
+  /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
+  /\b(as an ai|as a language model)\b/i,
+  /\b(i\s*(can't|cannot|am unable|won't))\b/i,
+  /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
+  /\b(you can try).{0,20}(sentence|example)\b/i,
+];
+
+const ENGLISH_FILLER_WORD_RE =
+  /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
+const CHINESE_FILLER_WORD_RE =
+  /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
+const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
+const ENGLISH_STUTTER_RE =
+  /\b(i|we|you|he|she|they|it|the|a|an|to|and|but)\b(?:\s+\1\b)+/gi;
+const INLINE_CHINESE_FILLER_RE =
+  /([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g;
+const INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE =
+  /([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g;
+const CHINESE_FUNCTION_WORD_STUTTER_RE =
+  /(^|[\s，,、。！？,.!?;:])((?:这个|那个|就是|然后|是|就|那|这|我|你|他|她|它|的|了|在|要|会|都|也|还))(?:\s*[，,、]?\s*\2)+/g;
+
+const isAnswerLikeTranscriptionOutput = (text) => {
+  if (typeof text !== "string") return false;
+  const trimmed = text.trim();
+  if (trimmed.length < 20) return false;
+  return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
+};
+
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const DICTIONARY_TOKEN_RE = /[\p{L}\p{N}]+/gu;
+const MAX_DICTIONARY_NGRAM = 12;
+const ENGLISH_NUMBER_WORD_VALUES = {
+  zero: 0,
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+  sixteen: 16,
+  seventeen: 17,
+  eighteen: 18,
+  nineteen: 19,
+  twenty: 20,
+  thirty: 30,
+  forty: 40,
+  fifty: 50,
+  sixty: 60,
+  seventy: 70,
+  eighty: 80,
+  ninety: 90,
+};
+const CHINESE_NUMBER_DIGIT_VALUES = {
+  零: 0,
+  〇: 0,
+  一: 1,
+  二: 2,
+  两: 2,
+  三: 3,
+  四: 4,
+  五: 5,
+  六: 6,
+  七: 7,
+  八: 8,
+  九: 9,
+};
+const CHINESE_NUMBER_UNIT_VALUES = {
+  十: 10,
+  百: 100,
+  千: 1000,
+  万: 10000,
+  萬: 10000,
+};
+const ENGLISH_NUMBER_SEQUENCE_RE =
+  /\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion|and)(?:[\s-]+(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion|and))*\b/gi;
+const CHINESE_NUMBER_SEQUENCE_RE = /[零〇一二两三四五六七八九十百千万萬]+/g;
+const ASR_CONFUSION_REPLACEMENTS = [
+  ["claw", "cloud"],
+  ["cloud", "claw"],
+  ["flux", "flags"],
+  ["flags", "flux"],
+  ["bot", "board"],
+  ["board", "bot"],
+  ["boat", "bot"],
+  ["bot", "boat"],
+  ["rss", "2ss"],
+  ["2ss", "rss"],
+  ["rss", "ss"],
+];
+
+const parseEnglishNumberWords = (tokens) => {
+  if (!Array.isArray(tokens) || tokens.length === 0) return null;
+
+  let total = 0;
+  let current = 0;
+  let seenNumber = false;
+
+  for (const token of tokens) {
+    if (!token || token === "and") continue;
+
+    const numericValue = ENGLISH_NUMBER_WORD_VALUES[token];
+    if (Number.isFinite(numericValue)) {
+      current += numericValue;
+      seenNumber = true;
+      continue;
+    }
+
+    if (token === "hundred") {
+      current = Math.max(current, 1) * 100;
+      seenNumber = true;
+      continue;
+    }
+
+    if (token === "thousand" || token === "million" || token === "billion") {
+      const multiplier = token === "thousand" ? 1000 : token === "million" ? 1000000 : 1000000000;
+      total += Math.max(current, 1) * multiplier;
+      current = 0;
+      seenNumber = true;
+      continue;
+    }
+
+    return null;
+  }
+
+  if (!seenNumber) return null;
+  return String(total + current);
+};
+
+const normalizeSpokenEnglishNumbers = (value) =>
+  value.replace(ENGLISH_NUMBER_SEQUENCE_RE, (segment) => {
+    const tokens = segment
+      .toLowerCase()
+      .split(/[\s-]+/)
+      .map((token) => token.trim())
+      .filter(Boolean);
+    const parsed = parseEnglishNumberWords(tokens);
+    return parsed ?? segment;
+  });
+
+const parseChineseNumberWords = (segment) => {
+  if (!segment || typeof segment !== "string") return null;
+
+  let total = 0;
+  let section = 0;
+  let currentDigit = 0;
+  let seenNumberToken = false;
+  let hasUnit = false;
+
+  for (const char of segment) {
+    if (Object.prototype.hasOwnProperty.call(CHINESE_NUMBER_DIGIT_VALUES, char)) {
+      currentDigit = CHINESE_NUMBER_DIGIT_VALUES[char];
+      seenNumberToken = true;
+      continue;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(CHINESE_NUMBER_UNIT_VALUES, char)) {
+      const unit = CHINESE_NUMBER_UNIT_VALUES[char];
+      seenNumberToken = true;
+      hasUnit = true;
+
+      if (unit >= 10000) {
+        section += currentDigit;
+        if (section === 0) section = 1;
+        total += section * unit;
+        section = 0;
+        currentDigit = 0;
+        continue;
+      }
+
+      const base = currentDigit === 0 ? 1 : currentDigit;
+      section += base * unit;
+      currentDigit = 0;
+      continue;
+    }
+
+    return null;
+  }
+
+  if (!seenNumberToken) return null;
+
+  if (!hasUnit) {
+    const digits = [...segment]
+      .map((char) => CHINESE_NUMBER_DIGIT_VALUES[char])
+      .filter((value) => Number.isFinite(value));
+    if (digits.length !== segment.length) return null;
+    return String(Number(digits.join("")));
+  }
+
+  return String(total + section + currentDigit);
+};
+
+const normalizeSpokenChineseNumbers = (value) =>
+  value.replace(CHINESE_NUMBER_SEQUENCE_RE, (segment) => {
+    const parsed = parseChineseNumberWords(segment);
+    return parsed ?? segment;
+  });
+
+const buildTargetedCanonicalAliasKeys = (normalizedKey) => {
+  const aliases = new Set();
+  if (!normalizedKey) return aliases;
+
+  if (normalizedKey.includes("moltbot")) {
+    aliases.add(normalizedKey.replace(/moltbot/g, "modeboat"));
+    aliases.add(normalizedKey.replace(/moltbot/g, "modebot"));
+    aliases.add(normalizedKey.replace(/moltbot/g, "moltboat"));
+  }
+
+  if (normalizedKey.includes("rss")) {
+    aliases.add(normalizedKey.replace(/rss/g, "2ss"));
+    aliases.add(normalizedKey.replace(/rss/g, "ss"));
+
+    if (normalizedKey.startsWith("we")) {
+      aliases.add(normalizedKey.replace(/^we/, "v"));
+      aliases.add(normalizedKey.replace(/^we/, "wi"));
+      aliases.add(normalizedKey.replace(/^we/, "ve"));
+    }
+
+    if (normalizedKey.startsWith("wewe")) {
+      aliases.add(normalizedKey.replace(/^wewe/, "we"));
+      aliases.add(normalizedKey.replace(/^wewe/, "v"));
+    }
+  }
+
+  return aliases;
+};
+
+const collapseRepeatedLatinChars = (value) => value.replace(/([a-z])\1+/g, "$1");
+
+const toConsonantSkeleton = (value) => {
+  if (!value || value.length < 3) return value;
+  return `${value[0]}${value.slice(1).replace(/[aeiou]/g, "")}`;
+};
+
+const addKeyVariant = (set, candidate) => {
+  if (!candidate || candidate.length < 2 || set.has(candidate)) return;
+  if (set.size >= 32) return;
+  set.add(candidate);
+};
+
+const expandDictionaryKeyVariants = (key) => {
+  const variants = new Set();
+  if (!key) return variants;
+
+  const seeds = [
+    key,
+    collapseRepeatedLatinChars(key),
+    toConsonantSkeleton(key),
+    toConsonantSkeleton(collapseRepeatedLatinChars(key)),
+  ];
+
+  for (const seed of seeds) {
+    addKeyVariant(variants, seed);
+    addKeyVariant(variants, seed.replace(/w/g, "v"));
+    addKeyVariant(variants, seed.replace(/v/g, "w"));
+    addKeyVariant(variants, seed.replace(/y/g, "i"));
+    addKeyVariant(variants, seed.replace(/i/g, "y"));
+    addKeyVariant(variants, collapseRepeatedLatinChars(seed.replace(/y/g, "i")));
+    addKeyVariant(variants, collapseRepeatedLatinChars(seed.replace(/i/g, "y")));
+    addKeyVariant(variants, toConsonantSkeleton(seed.replace(/w/g, "v")));
+    addKeyVariant(variants, toConsonantSkeleton(seed.replace(/v/g, "w")));
+  }
+
+  return variants;
+};
+
+const normalizeDictionaryKey = (value) =>
+  normalizeSpokenEnglishNumbers(
+    normalizeSpokenChineseNumbers((value || "").toString().toLowerCase().normalize("NFKC"))
+  ).replace(/[^\p{L}\p{N}]+/gu, "");
+
+const buildAsrConfusionAliasKeys = (normalizedKey) => {
+  const aliases = new Set();
+  if (!normalizedKey) return aliases;
+
+  for (const [from, to] of ASR_CONFUSION_REPLACEMENTS) {
+    if (normalizedKey.includes(from)) {
+      aliases.add(normalizedKey.replace(new RegExp(from, "g"), to));
+    }
+  }
+
+  return aliases;
+};
+
+const splitCamelCase = (value) => value.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+
+const editDistance = (a, b) => {
+  const m = a.length;
+  const n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i += 1) dp[i][0] = i;
+  for (let j = 0; j <= n; j += 1) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i += 1) {
+    for (let j = 1; j <= n; j += 1) {
+      if (a[i - 1] === b[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      }
+    }
+  }
+
+  return dp[m][n];
+};
+
+const getMaxAllowedDictionaryDistance = (sourceKey, targetKey) => {
+  const maxLen = Math.max(sourceKey.length, targetKey.length);
+  if (maxLen < 6) return 0;
+  if (maxLen < 8) return 1;
+  if (maxLen < 16) return 2;
+  return 3;
+};
+
+const buildDictionaryCanonicalEntries = (dictionary) => {
+  const words = Array.isArray(dictionary) ? dictionary : [];
+  const entries = [];
+  const seenCanonical = new Set();
+
+  for (const rawWord of words) {
+    const canonical = typeof rawWord === "string" ? rawWord.trim() : "";
+    if (!canonical) continue;
+
+    const canonicalKey = normalizeDictionaryKey(canonical);
+    if (!canonicalKey || seenCanonical.has(canonicalKey)) continue;
+    seenCanonical.add(canonicalKey);
+
+    const aliasKeys = new Set([canonicalKey]);
+    const camelSplitKey = normalizeDictionaryKey(splitCamelCase(canonical));
+    if (camelSplitKey) aliasKeys.add(camelSplitKey);
+    for (const key of [...aliasKeys]) {
+      const confusionAliases = buildAsrConfusionAliasKeys(key);
+      for (const alias of confusionAliases) {
+        if (alias) aliasKeys.add(alias);
+      }
+      const targetedAliases = buildTargetedCanonicalAliasKeys(key);
+      for (const alias of targetedAliases) {
+        if (alias) aliasKeys.add(alias);
+      }
+    }
+    for (const key of [...aliasKeys]) {
+      const variants = expandDictionaryKeyVariants(key);
+      for (const variant of variants) {
+        aliasKeys.add(variant);
+      }
+    }
+
+    entries.push({
+      canonical,
+      canonicalKey,
+      aliasKeys: Array.from(aliasKeys),
+    });
+  }
+
+  return entries;
+};
+
+const applyDictionaryCanonicalization = (text, entries) => {
+  if (typeof text !== "string" || !text || !Array.isArray(entries) || entries.length === 0) {
+    return { text, replacements: 0, matches: [] };
+  }
+
+  const tokens = [];
+  DICTIONARY_TOKEN_RE.lastIndex = 0;
+  let match;
+  while ((match = DICTIONARY_TOKEN_RE.exec(text)) !== null) {
+    tokens.push({
+      start: match.index,
+      end: match.index + match[0].length,
+      value: match[0],
+    });
+  }
+
+  if (tokens.length === 0) {
+    return { text, replacements: 0, matches: [] };
+  }
+
+  let cursor = 0;
+  let output = "";
+  let tokenIndex = 0;
+  let replacements = 0;
+  const matches = [];
+
+  while (tokenIndex < tokens.length) {
+    let bestMatch = null;
+
+    const maxWindow = Math.min(MAX_DICTIONARY_NGRAM, tokens.length - tokenIndex);
+    for (let windowSize = maxWindow; windowSize >= 1; windowSize -= 1) {
+      const start = tokens[tokenIndex].start;
+      const end = tokens[tokenIndex + windowSize - 1].end;
+      const segment = text.slice(start, end);
+      const sourceKey = normalizeDictionaryKey(segment);
+      if (!sourceKey) continue;
+      const sourceKeyVariants = expandDictionaryKeyVariants(sourceKey);
+      sourceKeyVariants.add(sourceKey);
+
+      for (const entry of entries) {
+        for (const aliasKey of entry.aliasKeys) {
+          let bestDistance = Number.POSITIVE_INFINITY;
+          for (const sourceVariant of sourceKeyVariants) {
+            let distance = Number.POSITIVE_INFINITY;
+            if (sourceVariant === aliasKey) {
+              distance = 0;
+            } else {
+              const maxAllowedDistance = getMaxAllowedDictionaryDistance(sourceVariant, aliasKey);
+              if (maxAllowedDistance > 0 && Math.abs(sourceVariant.length - aliasKey.length) <= 2) {
+                const fuzzyDistance = editDistance(sourceVariant, aliasKey);
+                if (fuzzyDistance <= maxAllowedDistance) {
+                  distance = fuzzyDistance;
+                }
+              }
+            }
+
+            if (Number.isFinite(distance) && distance < bestDistance) {
+              bestDistance = distance;
+              if (distance === 0) break;
+            }
+          }
+
+          if (!Number.isFinite(bestDistance)) continue;
+
+          if (
+            !bestMatch ||
+            bestDistance < bestMatch.distance ||
+            (bestDistance === bestMatch.distance && windowSize > bestMatch.windowSize)
+          ) {
+            bestMatch = {
+              start,
+              end,
+              canonical: entry.canonical,
+              windowSize,
+              distance: bestDistance,
+            };
+          }
+        }
+      }
+    }
+
+    if (!bestMatch) {
+      tokenIndex += 1;
+      continue;
+    }
+
+    output += text.slice(cursor, bestMatch.start);
+    output += bestMatch.canonical;
+    if (matches.length < 8) {
+      matches.push({
+        from: text.slice(bestMatch.start, bestMatch.end),
+        to: bestMatch.canonical,
+        distance: bestMatch.distance,
+      });
+    }
+    cursor = bestMatch.end;
+    tokenIndex += bestMatch.windowSize;
+    replacements += 1;
+  }
+
+  if (replacements === 0) {
+    return { text, replacements: 0, matches: [] };
+  }
+
+  output += text.slice(cursor);
+  return { text: output, replacements, matches };
+};
+
 const QWEN_ASR_MODEL_RE = /^qwen[\w.-]*asr/i;
 
 const isQwenAsrModel = (model) => QWEN_ASR_MODEL_RE.test((model || "").trim());
@@ -914,11 +1391,124 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   }
 
   buildReasoningConfig(contextClassification) {
+    const strictOverlapThreshold = Math.max(
+      Number(contextClassification?.strictOverlapThreshold) || 0.72,
+      0.86
+    );
+
     return {
       contextClassification: contextClassification || undefined,
-      strictMode: contextClassification?.strictMode ?? false,
-      strictOverlapThreshold: contextClassification?.strictOverlapThreshold,
+      strictMode: contextClassification?.strictMode ?? true,
+      strictOverlapThreshold,
     };
+  }
+
+  enforceCleanupOnlyReasoningContext(contextClassification) {
+    if (!contextClassification) return null;
+
+    const strictThreshold = Math.max(
+      Number(contextClassification?.strictOverlapThreshold) || 0.72,
+      0.86
+    );
+    const signals = Array.isArray(contextClassification.signals)
+      ? [...contextClassification.signals]
+      : [];
+    if (!signals.includes("intent:forced_cleanup_transcription")) {
+      signals.push("intent:forced_cleanup_transcription");
+    }
+
+    const normalized = {
+      ...contextClassification,
+      intent: "cleanup",
+      strictMode: true,
+      strictOverlapThreshold: strictThreshold,
+      signals,
+    };
+
+    logger.logReasoning("REASONING_CONTEXT_FORCED_CLEANUP", {
+      context: normalized.context,
+      intent: normalized.intent,
+      strictMode: normalized.strictMode,
+      strictOverlapThreshold: normalized.strictOverlapThreshold,
+      targetApp: normalized?.targetApp?.appName || "unknown",
+      signals: normalized.signals,
+    });
+
+    return normalized;
+  }
+
+  basicDictationCleanup(text) {
+    if (typeof text !== "string") return "";
+    const normalized = text
+      .replace(CHINESE_FILLER_WORD_RE, "$1")
+      .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
+      .replace(ENGLISH_FILLER_WORD_RE, "")
+      .replace(CHINESE_STUTTER_RE, "$1")
+      .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
+      .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")
+      .replace(ENGLISH_STUTTER_RE, "$1")
+      .replace(/\s+([,.!?;:])/g, "$1")
+      .replace(/\s+([，。！？、])/g, "$1")
+      .replace(/([,.!?;:，。！？、])\1+/g, "$1")
+      .replace(/([，,、])[，,、]+/g, "$1")
+      .replace(/(^|[\n])\s*[，,、]+\s*/g, "$1")
+      .replace(/\s+,/g, ",")
+      .replace(/[，、]\s+/g, (match) => match.trim())
+      .replace(/([A-Za-z0-9]),\s*([A-Za-z])/g, "$1, $2")
+      .replace(/([，,、])([。！？!?])/g, "$2")
+      .replace(/([。！？!?])[，,、]+/g, "$1")
+      .replace(/[，,、](?=$|[\n])/g, "")
+      .replace(/[ \t]{2,}/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    return normalized;
+  }
+
+  applyDictionaryNormalization(text, source = "unknown") {
+    if (typeof text !== "string" || !text.trim()) return text;
+
+    const dictionary = this.getCustomDictionaryArray();
+    if (!Array.isArray(dictionary) || dictionary.length === 0) {
+      return text;
+    }
+
+    const entries = buildDictionaryCanonicalEntries(dictionary);
+    if (entries.length === 0) {
+      return text;
+    }
+
+    const { text: normalizedText, replacements, matches } = applyDictionaryCanonicalization(
+      text,
+      entries
+    );
+    if (replacements > 0 && normalizedText !== text) {
+      logger.logReasoning("DICTIONARY_CANONICALIZATION_APPLIED", {
+        source,
+        dictionarySize: dictionary.length,
+        replacements,
+        beforeLength: text.length,
+        afterLength: normalizedText.length,
+        matches,
+      });
+    }
+
+    return normalizedText;
+  }
+
+  isExplicitAgentInstruction(text, agentName) {
+    const normalizedText = typeof text === "string" ? text.trim() : "";
+    const normalizedAgentName = typeof agentName === "string" ? agentName.trim() : "";
+    if (!normalizedText || !normalizedAgentName) return false;
+
+    const escapedName = escapeRegExp(normalizedAgentName);
+    if (!escapedName) return false;
+
+    const directAddress = new RegExp(
+      `^(?:hey|hi|ok|okay|嘿|嗨|好|好的)?\\s*${escapedName}(?:\\s*[:,，：]\\s*|\\s+)(?:please\\s+)?`,
+      "i"
+    );
+
+    return directAddress.test(normalizedText);
   }
 
   async processWithReasoningModel(text, model, agentName, config = {}) {
@@ -1031,13 +1621,17 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
   async processTranscription(text, source) {
     const normalizedText = typeof text === "string" ? text.trim() : "";
+    const cleanedText = this.applyDictionaryNormalization(
+      this.basicDictationCleanup(normalizedText),
+      `${source}-cleanup`
+    );
 
     if (!normalizedText) {
       logger.logReasoning("TRANSCRIPTION_EMPTY_SKIPPING_REASONING", {
         source,
         reason: "Empty text after normalization",
       });
-      return normalizedText;
+      return cleanedText;
     }
 
     logger.logReasoning("TRANSCRIPTION_RECEIVED", {
@@ -1058,7 +1652,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       logger.logReasoning("REASONING_SKIPPED", {
         reason: "No reasoning model selected",
       });
-      return normalizedText;
+      return cleanedText;
     }
 
     const useReasoning = await this.isReasoningAvailable();
@@ -1070,6 +1664,15 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       agentName,
     });
 
+    const explicitInstruction = this.isExplicitAgentInstruction(normalizedText, agentName);
+    if (explicitInstruction) {
+      logger.logReasoning("AGENT_WAKE_PHRASE_DETECTED_CLEANUP_ONLY_ENFORCED", {
+        source,
+        textLength: normalizedText.length,
+        agentName,
+      });
+    }
+
     if (useReasoning) {
       try {
         logger.logReasoning("SENDING_TO_REASONING", {
@@ -1078,7 +1681,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           provider: reasoningProvider,
         });
 
-        const contextClassification = await this.buildReasoningContext(normalizedText, agentName);
+        let contextClassification = await this.buildReasoningContext(normalizedText, agentName);
+        contextClassification = this.enforceCleanupOnlyReasoningContext(contextClassification);
         const result = await this.processWithReasoningModel(
           normalizedText,
           reasoningModel,
@@ -1092,7 +1696,17 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           processingTime: new Date().toISOString(),
         });
 
-        return result;
+        const postProcessed = this.applyDictionaryNormalization(
+          this.basicDictationCleanup(result),
+          `${source}-reasoned`
+        );
+        if (postProcessed !== result) {
+          logger.logReasoning("REASONING_POST_CLEANUP_APPLIED", {
+            beforeLength: result.length,
+            afterLength: postProcessed.length,
+          });
+        }
+        return postProcessed;
       } catch (error) {
         logger.logReasoning("REASONING_FAILED", {
           error: error.message,
@@ -1107,7 +1721,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       reason: useReasoning ? "Reasoning failed" : "Reasoning not enabled",
     });
 
-    return normalizedText;
+    return cleanedText;
   }
 
   shouldStreamTranscription(model, provider) {
@@ -1334,8 +1948,17 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     if (settings.useReasoningModel && processedText && !this.skipReasoning) {
       const reasoningStart = performance.now();
       const agentName = localStorage.getItem("agentName") || "";
+      const explicitInstruction = this.isExplicitAgentInstruction(processedText, agentName);
+      if (explicitInstruction) {
+        logger.logReasoning("AGENT_WAKE_PHRASE_DETECTED_CLEANUP_ONLY_ENFORCED", {
+          source: "openwhispr-cloud",
+          textLength: processedText.length,
+          agentName,
+        });
+      }
       const cloudReasoningMode = settings.cloudReasoningMode || "openwhispr";
-      const contextClassification = await this.buildReasoningContext(processedText, agentName);
+      let contextClassification = await this.buildReasoningContext(processedText, agentName);
+      contextClassification = this.enforceCleanupOnlyReasoningContext(contextClassification);
       const reasoningConfig = this.buildReasoningConfig(contextClassification);
 
       if (cloudReasoningMode === "openwhispr") {
@@ -1397,6 +2020,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       }
       timings.reasoningProcessingDurationMs = Math.round(performance.now() - reasoningStart);
     }
+
+    processedText = this.applyDictionaryNormalization(
+      this.basicDictationCleanup(processedText),
+      "openwhispr-cloud-final"
+    );
 
     return {
       success: true,
@@ -1575,21 +2203,22 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         requestEndpoint = resolveCustomChatCompletionsEndpoint(endpoint);
 
         const audioBuffer = await optimizedAudio.arrayBuffer();
+        const qwenMessages = [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_audio",
+                input_audio: {
+                  data: `data:${mimeType};base64,${arrayBufferToBase64(audioBuffer)}`,
+                },
+              },
+            ],
+          },
+        ];
         const payload = {
           model,
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "input_audio",
-                  input_audio: {
-                    data: `data:${mimeType};base64,${arrayBufferToBase64(audioBuffer)}`,
-                  },
-                },
-              ],
-            },
-          ],
+          messages: qwenMessages,
           stream: false,
           asr_options: {
             enable_itn: false,
@@ -1603,6 +2232,10 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             method: "POST",
             hasAuthHeader: !!apiKey,
             payloadType: "chat-completions-input-audio",
+            dictionaryIgnoredForQwen: !!dictionaryPrompt,
+            dictionaryTermsCount: dictionaryPrompt
+              ? dictionaryPrompt.split(",").map((s) => s.trim()).filter(Boolean).length
+              : 0,
           },
           "transcription"
         );
@@ -1743,6 +2376,14 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
       // Check for text - handle both empty string and missing field
       if (transcribedText && transcribedText.trim().length > 0) {
+        if (isAnswerLikeTranscriptionOutput(transcribedText)) {
+          const err = new Error(
+            "ASR returned assistant-style response instead of transcript. Check provider/model configuration."
+          );
+          err.code = "ASR_ANSWER_LIKE_OUTPUT";
+          throw err;
+        }
+
         timings.transcriptionProcessingDurationMs = Math.round(performance.now() - apiCallStart);
 
         const reasoningStart = performance.now();
@@ -2504,8 +3145,17 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     if (stSettings.useReasoningModel && finalText && !this.skipReasoning) {
       const reasoningStart = performance.now();
       const agentName = localStorage.getItem("agentName") || "";
+      const explicitInstruction = this.isExplicitAgentInstruction(finalText, agentName);
+      if (explicitInstruction) {
+        logger.logReasoning("AGENT_WAKE_PHRASE_DETECTED_CLEANUP_ONLY_ENFORCED", {
+          source: "streaming",
+          textLength: finalText.length,
+          agentName,
+        });
+      }
       const cloudReasoningMode = stSettings.cloudReasoningMode || "openwhispr";
-      const contextClassification = await this.buildReasoningContext(finalText, agentName);
+      let contextClassification = await this.buildReasoningContext(finalText, agentName);
+      contextClassification = this.enforceCleanupOnlyReasoningContext(contextClassification);
       const reasoningConfig = this.buildReasoningConfig(contextClassification);
 
       try {
@@ -2614,6 +3264,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     }
 
     if (finalText) {
+      finalText = this.applyDictionaryNormalization(
+        this.basicDictationCleanup(finalText),
+        "streaming-final"
+      );
+
       const tBeforePaste = performance.now();
       const clientTotalMs = Math.round(tBeforePaste - t0);
       this.onTranscriptionComplete?.({

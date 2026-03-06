@@ -1,5 +1,6 @@
 const { app, globalShortcut, BrowserWindow, dialog, ipcMain, session } = require("electron");
 const path = require("path");
+const fs = require("fs");
 const http = require("http");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
@@ -456,6 +457,27 @@ async function startApp() {
   // Phase 1: Core managers + IPC handlers before windows
   initializeCoreManagers();
   startAuthBridgeServer();
+  const runtimeFingerprint = {
+    marker: process.env.OPENWHISPR_SESSION_MARKER || "",
+    pid: process.pid,
+    channel: APP_CHANNEL,
+    nodeEnv: process.env.NODE_ENV || "",
+    appPath: app.getAppPath(),
+    userDataPath: app.getPath("userData"),
+  };
+  try {
+    const fingerprintPath = path.join(runtimeFingerprint.userDataPath, "runtime-fingerprint.json");
+    const payload = {
+      ...runtimeFingerprint,
+      capturedAt: new Date().toISOString(),
+    };
+    fs.writeFileSync(fingerprintPath, JSON.stringify(payload, null, 2), "utf-8");
+    console.log("[RUNTIME_FINGERPRINT_FILE]", fingerprintPath);
+  } catch (fingerprintError) {
+    console.error("[RUNTIME_FINGERPRINT_FILE] write failed", fingerprintError?.message || fingerprintError);
+  }
+  debugLogger?.info("[RUNTIME_FINGERPRINT]", runtimeFingerprint, "startup");
+  console.log("[RUNTIME_FINGERPRINT]", JSON.stringify(runtimeFingerprint));
 
   // Electron's file:// sends no Origin header, which Neon Auth rejects.
   session.defaultSession.webRequest.onBeforeSendHeaders(
@@ -725,6 +747,8 @@ async function startApp() {
 
     windowsKeyManager.on("key-down", (_key) => {
       if (!isLiveWindow(windowManager.mainWindow)) return;
+
+      windowManager.textEditMonitor?.captureTargetPid?.();
 
       const activationMode = windowManager.getActivationMode();
       if (activationMode === "push") {

@@ -6,6 +6,7 @@ module.exports = [
     ignores: [
       "dist/**",
       "node_modules/**",
+      ".worktrees/**",
       "src/dist/**",
       "*.min.js",
       "build/**",
