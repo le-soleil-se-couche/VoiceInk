@@ -25,7 +25,8 @@ Scope: repository-wide quick legal/compliance leak scan + release-readiness note
 ### Confirmed
 
 - Repository contains MIT license file.
-- README now clearly states this project is a **community fork based on OpenWhispr** and not official hosted services.
+- README now clearly states this project is a **community fork based on OpenWhispr** (~95% inherited architecture/implementation) and not official hosted services.
+
 
 ### Risk Notes
 
@@ -47,6 +48,8 @@ Scope: repository-wide quick legal/compliance leak scan + release-readiness note
 
 - Model behavior may still produce incorrect transcription/rewrites.
 - If you accept PRs intermittently, security fixes may be delayed; this is now disclosed via maintenance-mode wording.
+- Disabling login/subscription reduces commercialization exposure, but does not fully eliminate trademark/IP/compliance disputes.
+
 
 ## 4) Community / Maintenance Policy Readiness
 

@@ -13,14 +13,18 @@
 
 - This project is an **open-source desktop dictation app** that converts speech to text with local and cloud model options.
 - **Default mode is BYOK (Bring Your Own Key)**: users provide their own API key / endpoint for cloud providers, or use local models.
-- This repository is a **community fork based on OpenWhispr** and is **not affiliated with Typeless or OpenWhispr official hosted services**.
+- This repository is a **community fork based on OpenWhispr** (roughly **95% inherited architecture / implementation**) and is **not affiliated with Typeless or OpenWhispr official hosted services**.
+
 - **Project status: Maintenance mode / archived release track**. Core features are considered complete, and only minimal follow-up is expected.
 
 ---
 
-## 对外说明（中文）
+## 对外说明
 
-本项目整体架构基于 OpenWhispr（Open Whisper 社区项目）实现，在其基础上针对日常中文/英文输入体验做了增强。
+
+本项目整体架构约 95% 基于 OpenWhispr（Open Whisper 社区项目）实现，在其基础上针对日常中文/英文输入体验做了增强。
+
+> 当前公开版本的“工程级优化”主要在 **Windows** 平台验证与打磨；macOS/Linux 以基础可用为目标。
 
 ### 当前定位
 
@@ -30,7 +34,7 @@
 
 ---
 
-## 主要增强（你可以在发布页重点说明）
+## 主要增强
 
 1. **上下文检测与输入环境路由**
    - 可安全输入场景：尝试自动粘贴到当前光标位置。
@@ -42,15 +46,20 @@
 
 3. **智能词典**
    - 支持自定义词典、批量导入。
+
+   - 批量导入规则：文本按空白拆分后，空格长度 `>=2` 即视为有效词条；实测可直接复制 Typeless 词库并一键导入。
    - 可将词典提示注入到转录/后处理链路，提升术语命中率。
 
 4. **纠错自动学习（可选）**
    - 用户手动修正后，可回流词典，持续优化后续识别效果。
 
-5. **发现并接入了两个极快模型链路（可选）**
+5. **发现并接入了两个极快模型链路**
    - 面向短文本实时润色/后处理场景，优先低延迟体验。
-
-6. **智能层做了更严格约束（重要说明）**
+   - **ASR**：千问链路（Qwen 3.5 Plus / DashScope）
+    - 在中文口语、方言和中文工作流场景通常更稳定，网络路径也较友好。
+   - **LLM 润色**：Cerebras `gpt-oss-120b`（high）
+ 
+6. **智能层做了更严格约束**
    - 为降低“模型回答问题而非转录”的风险，当前对智能层行为进行了较强限制。
    - 这会在一定程度上限制智能词典与语义改写能力，属于“稳定优先”的权衡。
 
@@ -58,9 +67,9 @@
 
 ## BYOK / 可选账号模式
 
-### BYOK（默认）
+### 自有渠道模式（通常称 BYOK）
 
-- 使用者提供自己的 API Key 与模型端点。
+- 使用者提供自己的 API Key 与模型端点（或兼容网关）。
 - 额度与费用由使用者对应平台账号结算。
 - 本项目本身不承诺代付、代管、代计费。
 
@@ -74,12 +83,11 @@
 ## 低延迟推荐链路（短文本实时润色）
 
 > 以下速度与价格来自公开资料和第三方实测整理，可能随时间变化，请以官方页面为准。
-
-### 推荐默认方案
-
+> 
 - **ASR**：千问链路（Qwen 3.5 Plus / DashScope）
   - 在中文口语、方言和中文工作流场景通常更稳定，网络路径也较友好。
 - **LLM 润色**：Cerebras `gpt-oss-120b`（high）
+
 
 ### 可选润色模型
 
@@ -137,6 +145,25 @@ OPENAI_BASE_URL=https://api.cerebras.ai/v1
 ```
 
 ---
+
+## Windows 一键启动（免黑框）
+
+为避免双击 `.bat` 时出现并停留 PowerShell/命令行窗口，仓库新增了 `core/` 启动器：
+
+- `core/VoiceInk-Launch.vbs`：推荐入口，后台静默启动（无黑框闪屏）。
+- `core/VoiceInk-Launch.bat`：实际启动逻辑。
+  - 优先启动已打包程序：`dist\win-unpacked\OpenWhispr.exe`
+  - 若未打包则回退到源码模式：`npm start`
+- `core/Create-VoiceInk-DesktopShortcut.ps1`：可一键创建桌面快捷方式（图标使用 `src/assets/icon.ico`，即原 OpenWhispr 图标资源）。
+
+使用方式：
+
+```powershell
+# 在仓库根目录执行（Windows PowerShell）
+powershell -ExecutionPolicy Bypass -File .\core\Create-VoiceInk-DesktopShortcut.ps1
+```
+
+之后双击桌面 `VoiceInk` 快捷方式即可。
 
 ## Quick Start
 
