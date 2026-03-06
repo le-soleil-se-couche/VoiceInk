@@ -38,3 +38,16 @@ Current direction is to keep intelligent-layer logic stricter to reduce drift.
 
 - Savepoint commit and tag are required.
 - Upload target is a dedicated checkpoint branch, not direct push to `main`.
+
+## Codex Cloud Pre-Public Scan Handoff
+
+After branch push succeeds, use this scope for cloud scan:
+
+1. Transcription-only guarantee (prevent answer-like drift).
+2. Paste reliability and fallback behavior on Windows/macOS/Linux.
+3. Smart dictionary parsing and performance under large dictionaries.
+4. Auth/BYOK gating behavior when auth URL is missing.
+
+Suggested prompt:
+
+`Please run a full pre-public quality scan on branch release/checkpoint-20260306. Focus on transcription drift vs answer-like output, paste fallback reliability, smart dictionary edge cases/performance, and auth/BYOK gating regressions. Return prioritized issues with file-level fixes.`
