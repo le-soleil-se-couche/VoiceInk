@@ -59,7 +59,8 @@
      - 在中文口语、方言和中文工作流场景通常更稳定，网络路径也较友好。
      - `qwen3-asr-flash-realtime`（2026-02-13 快照）目前实测不可用，暂不推荐。
    - **LLM 润色**：Cerebras `gpt-oss-120b`（high）
- 
+   - **千问 ASR / DashScope 入口**：申请 API Key、开通 `qwen3-asr-flash` / `qwen-3.5-plus` 等模型权限 — [大模型服务平台百炼控制台](https://bailian.console.aliyun.com/)
+
 6. **智能层做了更严格约束**
    - 为降低“模型回答问题而非转录”的风险，当前对智能层行为进行了较强限制。
    - 这会在一定程度上限制智能词典与语义改写能力，属于“稳定优先”的权衡。
@@ -201,11 +202,7 @@ npm run build
 - Cerebras Playground: https://chat.cerebras.ai
 - Cerebras GitHub 示例: https://github.com/Cerebras/inference-examples
 - Artificial Analysis（Cerebras）: https://artificialanalysis.ai/providers/cerebras
-
-> **千问 ASR / DashScope 入口**
->
-> **[大模型服务平台百炼控制台](https://bailian.console.aliyun.com/cn-beijing/?tab=model#/model-market/all)**
-> — 在此申请 DashScope API Key，开通 `qwen3-asr-flash` / `qwen-3.5-plus` 等模型权限。
+- 大模型服务平台百炼控制台（DashScope）: https://bailian.console.aliyun.com/
 
 ---
 
