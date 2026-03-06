@@ -12,6 +12,8 @@ const DEFAULT_OAUTH_PROTOCOL_BY_CHANNEL = {
 };
 const BASE_WINDOWS_APP_ID = "com.voiceink.app";
 const DEFAULT_AUTH_BRIDGE_PORT = 5199;
+const LEGACY_USER_DATA_BASENAME = "OpenWhispr";
+const CURRENT_USER_DATA_BASENAME = "VoiceInk";
 
 function isElectronBinaryExec() {
   const execPath = (process.execPath || "").toLowerCase();
@@ -44,13 +46,80 @@ function resolveAppChannel() {
 const APP_CHANNEL = resolveAppChannel();
 process.env.OPENWHISPR_CHANNEL = APP_CHANNEL;
 
-function configureChannelUserDataPath() {
-  if (APP_CHANNEL === "production") {
-    return;
+function buildUserDataDirName(baseName, channel) {
+  return channel === "production" ? baseName : `${baseName}-${channel}`;
+}
+
+function safeStatSize(filePath) {
+  try {
+    return fs.statSync(filePath).size || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function getUserDataStateScore(dirPath) {
+  // Prefer directories that already contain user settings/history.
+  return (
+    (safeStatSize(path.join(dirPath, ".env")) > 0 ? 8 : 0) +
+    (safeStatSize(path.join(dirPath, "transcriptions-dev.db-wal")) > 1024 ? 5 : 0) +
+    (safeStatSize(path.join(dirPath, "transcriptions.db-wal")) > 1024 ? 5 : 0) +
+    (safeStatSize(path.join(dirPath, "transcriptions-dev.db")) > 4096 ? 3 : 0) +
+    (safeStatSize(path.join(dirPath, "transcriptions.db")) > 4096 ? 3 : 0) +
+    (safeStatSize(path.join(dirPath, "Preferences")) > 64 ? 1 : 0)
+  );
+}
+
+function resolveUserDataPath() {
+  const override = (process.env.OPENWHISPR_USER_DATA_DIR || "").trim();
+  if (override) {
+    return { selectedPath: override, reason: "env-override" };
   }
 
-  const isolatedPath = path.join(app.getPath("appData"), `VoiceInk-${APP_CHANNEL}`);
-  app.setPath("userData", isolatedPath);
+  const appDataRoot = app.getPath("appData");
+  const legacyPath = path.join(
+    appDataRoot,
+    buildUserDataDirName(LEGACY_USER_DATA_BASENAME, APP_CHANNEL)
+  );
+  const currentPath = path.join(
+    appDataRoot,
+    buildUserDataDirName(CURRENT_USER_DATA_BASENAME, APP_CHANNEL)
+  );
+
+  const hasLegacy = fs.existsSync(legacyPath);
+  const hasCurrent = fs.existsSync(currentPath);
+
+  if (hasLegacy && !hasCurrent) {
+    return { selectedPath: legacyPath, reason: "legacy-only" };
+  }
+
+  if (!hasLegacy && hasCurrent) {
+    return { selectedPath: currentPath, reason: "current-only" };
+  }
+
+  if (hasLegacy && hasCurrent) {
+    const legacyScore = getUserDataStateScore(legacyPath);
+    const currentScore = getUserDataStateScore(currentPath);
+
+    if (legacyScore > currentScore) {
+      return { selectedPath: legacyPath, reason: "legacy-higher-score" };
+    }
+
+    return { selectedPath: currentPath, reason: "current-higher-or-equal-score" };
+  }
+
+  return { selectedPath: currentPath, reason: "fresh-current" };
+}
+
+function configureChannelUserDataPath() {
+  const { selectedPath, reason } = resolveUserDataPath();
+  app.setPath("userData", selectedPath);
+  process.env.OPENWHISPR_USER_DATA_DIR = selectedPath;
+  console.log("[startup] userData path resolved", {
+    channel: APP_CHANNEL,
+    userDataPath: selectedPath,
+    reason,
+  });
 }
 
 configureChannelUserDataPath();
