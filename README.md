@@ -202,6 +202,11 @@ npm run build
 - Cerebras GitHub 示例: https://github.com/Cerebras/inference-examples
 - Artificial Analysis（Cerebras）: https://artificialanalysis.ai/providers/cerebras
 
+> **千问 ASR / DashScope 入口**
+>
+> **[大模型服务平台百炼控制台](https://bailian.console.aliyun.com/)**
+> — 在此申请 DashScope API Key，开通 `qwen3-asr-flash` / `qwen-3.5-plus` 等模型权限。
+
 ---
 
 ## License
