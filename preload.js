@@ -1,5 +1,22 @@
 const { contextBridge, ipcRenderer, webUtils } = require("electron");
 
+let runtimeConfig = {
+  apiUrl: "",
+  authUrl: "",
+  oauthProtocol: "",
+  oauthAuthBridgeUrl: "",
+  oauthCallbackUrl: "",
+};
+
+try {
+  runtimeConfig = {
+    ...runtimeConfig,
+    ...(ipcRenderer.sendSync("get-runtime-config-sync") || {}),
+  };
+} catch {
+  // Leave empty defaults when the main-process runtime config is unavailable.
+}
+
 /**
  * Helper to register an IPC listener and return a cleanup function.
  * Ensures renderer code can easily remove listeners to avoid leaks.
@@ -23,6 +40,8 @@ const registerListener = (channel, handlerFactory) => {
 };
 
 contextBridge.exposeInMainWorld("electronAPI", {
+  runtimeConfig,
+  getRuntimeConfig: () => ipcRenderer.invoke("get-runtime-config"),
   pasteText: (text, options) => ipcRenderer.invoke("paste-text", text, options),
   hideWindow: () => ipcRenderer.invoke("hide-window"),
   showDictationPanel: () => ipcRenderer.invoke("show-dictation-panel"),
@@ -209,6 +228,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   windowClose: () => ipcRenderer.invoke("window-close"),
   windowIsMaximized: () => ipcRenderer.invoke("window-is-maximized"),
   getPlatform: () => process.platform,
+  getTargetAppInfo: () => ipcRenderer.invoke("get-target-app-info"),
   appQuit: () => ipcRenderer.invoke("app-quit"),
 
   // Cleanup function

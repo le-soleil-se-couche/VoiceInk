@@ -1,10 +1,12 @@
 import ReasoningService from "../services/ReasoningService";
-import { API_ENDPOINTS, buildApiUrl, normalizeBaseUrl } from "../config/constants";
+import { API_ENDPOINTS, NETWORK_TIMEOUTS, buildApiUrl, normalizeBaseUrl } from "../config/constants";
+import { getSystemPrompt } from "../config/prompts";
 import logger from "../utils/logger";
 import { isBuiltInMicrophone } from "../utils/audioDeviceUtils";
 import { isSecureEndpoint } from "../utils/urlUtils";
 import { withSessionRefresh } from "../lib/neonAuth";
 import { getBaseLanguageCode, validateLanguageForModel } from "../utils/languageSupport";
+import { classifyContext, getTargetAppInfo } from "../utils/contextClassifier";
 import {
   getSettings,
   getEffectiveReasoningModel,
@@ -24,6 +26,50 @@ const isValidApiKey = (key, provider = "openai") => {
   if (!key || key.trim() === "") return false;
   const placeholder = PLACEHOLDER_KEYS[provider] || PLACEHOLDER_KEYS.openai;
   return key !== placeholder;
+};
+
+const QWEN_ASR_MODEL_RE = /^qwen[\w.-]*asr/i;
+
+const isQwenAsrModel = (model) => QWEN_ASR_MODEL_RE.test((model || "").trim());
+
+const resolveCustomChatCompletionsEndpoint = (endpoint) => {
+  const trimmed = (endpoint || "").trim().replace(/\/+$/, "");
+  if (!trimmed) return "";
+  return /\/chat\/completions$/i.test(trimmed) ? trimmed : `${trimmed}/chat/completions`;
+};
+
+const extractChatCompletionText = (data) => {
+  const content = data?.choices?.[0]?.message?.content;
+
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (typeof item?.text === "string") return item.text;
+        if (typeof item?.content === "string") return item.content;
+        return "";
+      })
+      .join("\n")
+      .trim();
+  }
+
+  return "";
+};
+
+const arrayBufferToBase64 = (buffer) => {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+
+  return btoa(binary);
 };
 
 const STREAMING_PROVIDERS = {
@@ -838,17 +884,57 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     return new Blob([arrayBuffer], { type: "audio/wav" });
   }
 
-  async processWithReasoningModel(text, model, agentName) {
+  async buildReasoningContext(text, agentName) {
+    try {
+      const targetApp = await getTargetAppInfo();
+      const contextClassification = classifyContext({
+        text,
+        targetApp,
+        agentName,
+      });
+
+      logger.logReasoning("REASONING_CONTEXT_CLASSIFIED", {
+        context: contextClassification.context,
+        intent: contextClassification.intent,
+        confidence: contextClassification.confidence,
+        strictMode: contextClassification.strictMode,
+        strictOverlapThreshold: contextClassification.strictOverlapThreshold,
+        targetApp: targetApp.appName || "unknown",
+        source: targetApp.source,
+        signals: contextClassification.signals,
+      });
+
+      return contextClassification;
+    } catch (error) {
+      logger.logReasoning("REASONING_CONTEXT_CLASSIFICATION_FAILED", {
+        error: error.message,
+      });
+      return null;
+    }
+  }
+
+  buildReasoningConfig(contextClassification) {
+    return {
+      contextClassification: contextClassification || undefined,
+      strictMode: contextClassification?.strictMode ?? false,
+      strictOverlapThreshold: contextClassification?.strictOverlapThreshold,
+    };
+  }
+
+  async processWithReasoningModel(text, model, agentName, config = {}) {
     logger.logReasoning("CALLING_REASONING_SERVICE", {
       model,
       agentName,
       textLength: text.length,
+      context: config?.contextClassification?.context || "general",
+      intent: config?.contextClassification?.intent || "cleanup",
+      strictMode: config?.strictMode ?? config?.contextClassification?.strictMode ?? false,
     });
 
     const startTime = Date.now();
 
     try {
-      const result = await ReasoningService.processText(text, model, agentName);
+      const result = await ReasoningService.processText(text, model, agentName, config);
 
       const processingTime = Date.now() - startTime;
 
@@ -992,10 +1078,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           provider: reasoningProvider,
         });
 
+        const contextClassification = await this.buildReasoningContext(normalizedText, agentName);
         const result = await this.processWithReasoningModel(
           normalizedText,
           reasoningModel,
-          agentName
+          agentName,
+          this.buildReasoningConfig(contextClassification)
         );
 
         logger.logReasoning("REASONING_SUCCESS", {
@@ -1034,6 +1122,33 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       return true;
     }
     return normalized.startsWith("gpt-4o-mini-transcribe");
+  }
+
+  async fetchWithTimeout(endpoint, fetchOptions, timeoutMs) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      return await fetch(endpoint, {
+        ...fetchOptions,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      const wasAborted = controller.signal.aborted || error?.name === "AbortError";
+      if (wasAborted) {
+        const timeoutError = new Error(
+          `Transcription request timed out after ${Math.round(timeoutMs / 1000)}s`
+        );
+        timeoutError.code = "TRANSCRIPTION_TIMEOUT";
+        timeoutError.endpoint = endpoint;
+        timeoutError.timeoutMs = timeoutMs;
+        throw timeoutError;
+      }
+
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async readTranscriptionStream(response) {
@@ -1220,13 +1335,24 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       const reasoningStart = performance.now();
       const agentName = localStorage.getItem("agentName") || "";
       const cloudReasoningMode = settings.cloudReasoningMode || "openwhispr";
+      const contextClassification = await this.buildReasoningContext(processedText, agentName);
+      const reasoningConfig = this.buildReasoningConfig(contextClassification);
 
       if (cloudReasoningMode === "openwhispr") {
         const reasonResult = await withSessionRefresh(async () => {
+          const systemPrompt = getSystemPrompt(
+            agentName,
+            settings.customDictionary,
+            settings.preferredLanguage || "auto",
+            processedText,
+            settings.uiLanguage || "en",
+            contextClassification || undefined
+          );
           const res = await window.electronAPI.cloudReason(processedText, {
             agentName,
             customDictionary: settings.customDictionary,
             customPrompt: this.getCustomPrompt(),
+            systemPrompt,
             language: settings.preferredLanguage || "auto",
             locale: settings.uiLanguage || "en",
             sttProvider: result.sttProvider,
@@ -1246,8 +1372,14 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           return res;
         });
 
-        if (reasonResult.success) {
-          processedText = reasonResult.text;
+        if (reasonResult.success && reasonResult.text) {
+          processedText = ReasoningService.enforceStrictMode(
+            processedText,
+            reasonResult.text,
+            reasoningConfig,
+            "openwhispr-cloud",
+            reasonResult.model || "openwhispr-cloud"
+          );
         }
       } else {
         const effectiveModel = getEffectiveReasoningModel();
@@ -1255,7 +1387,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           const result = await this.processWithReasoningModel(
             processedText,
             effectiveModel,
-            agentName
+            agentName,
+            reasoningConfig
           );
           if (result) {
             processedText = result;
@@ -1346,7 +1479,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         shouldOptimize ? this.optimizeAudio(audioBlob) : Promise.resolve(audioBlob),
       ]);
 
-      const formData = new FormData();
       // Determine the correct file extension based on the blob type
       const mimeType = optimizedAudio.type || "audio/webm";
       const extension = mimeType.includes("webm")
@@ -1361,41 +1493,20 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
                 ? "wav"
                 : "webm";
 
-      logger.debug(
-        "FormData preparation",
-        {
-          mimeType,
-          extension,
-          optimizedSize: optimizedAudio.size,
-          hasApiKey: !!apiKey,
-        },
-        "transcription"
-      );
-
-      formData.append("file", optimizedAudio, `audio.${extension}`);
-      formData.append("model", model);
-
-      if (language) {
-        formData.append("language", language);
-      }
-
       // Add custom dictionary as prompt hint for cloud transcription
       const dictionaryPrompt = this.getCustomDictionaryPrompt();
-      if (dictionaryPrompt) {
-        formData.append("prompt", dictionaryPrompt);
-      }
-
       const shouldStream = this.shouldStreamTranscription(model, provider);
-      if (shouldStream) {
-        formData.append("stream", "true");
-      }
-
       const endpoint = this.getTranscriptionEndpoint();
+      const isCustomProvider = provider === "custom";
+      const isQwenAsr = isCustomProvider && isQwenAsrModel(model);
       const isCustomEndpoint =
-        provider === "custom" ||
+        isCustomProvider ||
         (!endpoint.includes("api.openai.com") &&
           !endpoint.includes("api.groq.com") &&
           !endpoint.includes("api.mistral.ai"));
+      const requestTimeoutMs = isCustomProvider
+        ? NETWORK_TIMEOUTS.CUSTOM_TRANSCRIPTION_REQUEST_MS
+        : NETWORK_TIMEOUTS.TRANSCRIPTION_REQUEST_MS;
 
       const apiCallStart = performance.now();
 
@@ -1431,6 +1542,10 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         throw new Error("No text transcribed - Mistral response was empty");
       }
 
+      if (isCustomProvider && !endpoint.trim()) {
+        throw new Error("Custom transcription endpoint is empty. Please configure it in Settings.");
+      }
+
       logger.debug(
         "Making transcription API request",
         {
@@ -1438,6 +1553,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           shouldStream,
           model,
           provider,
+          isQwenAsr,
+          requestTimeoutMs,
           isCustomEndpoint,
           hasApiKey: !!apiKey,
           apiKeyPreview: apiKey ? `${apiKey.substring(0, 8)}...` : "(none)",
@@ -1451,27 +1568,99 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         headers.Authorization = `Bearer ${apiKey}`;
       }
 
-      logger.debug(
-        "STT request details",
-        {
-          endpoint,
-          method: "POST",
-          hasAuthHeader: !!apiKey,
-          formDataFields: [
-            "file",
-            "model",
-            language && language !== "auto" ? "language" : null,
-            shouldStream ? "stream" : null,
-          ].filter(Boolean),
-        },
-        "transcription"
-      );
+      let requestEndpoint = endpoint;
+      let response;
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers,
-        body: formData,
-      });
+      if (isQwenAsr) {
+        requestEndpoint = resolveCustomChatCompletionsEndpoint(endpoint);
+
+        const audioBuffer = await optimizedAudio.arrayBuffer();
+        const payload = {
+          model,
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "input_audio",
+                  input_audio: {
+                    data: `data:${mimeType};base64,${arrayBufferToBase64(audioBuffer)}`,
+                  },
+                },
+              ],
+            },
+          ],
+          stream: false,
+          asr_options: {
+            enable_itn: false,
+          },
+        };
+
+        logger.debug(
+          "STT request details",
+          {
+            endpoint: requestEndpoint,
+            method: "POST",
+            hasAuthHeader: !!apiKey,
+            payloadType: "chat-completions-input-audio",
+          },
+          "transcription"
+        );
+
+        response = await this.fetchWithTimeout(
+          requestEndpoint,
+          {
+            method: "POST",
+            headers: {
+              ...headers,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          },
+          requestTimeoutMs
+        );
+      } else {
+        const formData = new FormData();
+        formData.append("file", optimizedAudio, `audio.${extension}`);
+        formData.append("model", model);
+
+        if (language) {
+          formData.append("language", language);
+        }
+        if (dictionaryPrompt) {
+          formData.append("prompt", dictionaryPrompt);
+        }
+        if (shouldStream) {
+          formData.append("stream", "true");
+        }
+
+        logger.debug(
+          "STT request details",
+          {
+            endpoint: requestEndpoint,
+            method: "POST",
+            hasAuthHeader: !!apiKey,
+            formDataFields: [
+              "file",
+              "model",
+              language && language !== "auto" ? "language" : null,
+              dictionaryPrompt ? "prompt" : null,
+              shouldStream ? "stream" : null,
+            ].filter(Boolean),
+          },
+          "transcription"
+        );
+
+        response = await this.fetchWithTimeout(
+          requestEndpoint,
+          {
+            method: "POST",
+            headers,
+            body: formData,
+          },
+          requestTimeoutMs
+        );
+      }
 
       const responseContentType = response.headers.get("content-type") || "";
 
@@ -1502,7 +1691,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       let result;
       const contentType = responseContentType;
 
-      if (shouldStream && contentType.includes("text/event-stream")) {
+      if (!isQwenAsr && shouldStream && contentType.includes("text/event-stream")) {
         logger.debug("Processing streaming response", { contentType }, "transcription");
         const streamedText = await this.readTranscriptionStream(response);
         result = { text: streamedText };
@@ -1538,32 +1727,33 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           );
           throw new Error(`Failed to parse API response: ${parseError.message}`);
         }
-
-        logger.debug(
-          "Parsed transcription result",
-          {
-            hasText: !!result.text,
-            textLength: result.text?.length,
-            resultKeys: Object.keys(result),
-            fullResult: result,
-          },
-          "transcription"
-        );
       }
 
+      const transcribedText = isQwenAsr ? extractChatCompletionText(result) : result?.text;
+
+      logger.debug(
+        "Parsed transcription result",
+        {
+          hasText: !!transcribedText,
+          textLength: transcribedText?.length,
+          resultKeys: result && typeof result === "object" ? Object.keys(result) : [],
+        },
+        "transcription"
+      );
+
       // Check for text - handle both empty string and missing field
-      if (result.text && result.text.trim().length > 0) {
+      if (transcribedText && transcribedText.trim().length > 0) {
         timings.transcriptionProcessingDurationMs = Math.round(performance.now() - apiCallStart);
 
         const reasoningStart = performance.now();
-        const text = await this.processTranscription(result.text, "openai");
+        const text = await this.processTranscription(transcribedText, "openai");
         timings.reasoningProcessingDurationMs = Math.round(performance.now() - reasoningStart);
 
         const source = (await this.isReasoningAvailable()) ? "openai-reasoned" : "openai";
         logger.debug(
           "Transcription successful",
           {
-            originalLength: result.text.length,
+            originalLength: transcribedText.length,
             processedLength: text.length,
             source,
             transcriptionProcessingDurationMs: timings.transcriptionProcessingDurationMs,
@@ -1579,13 +1769,13 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           {
             model,
             provider,
-            endpoint,
+            endpoint: requestEndpoint,
             blobSize: audioBlob.size,
             blobType: audioBlob.type,
             mimeType,
             extension,
-            resultText: result.text,
-            resultKeys: Object.keys(result),
+            resultText: transcribedText,
+            resultKeys: result && typeof result === "object" ? Object.keys(result) : [],
           },
           "transcription"
         );
@@ -1593,7 +1783,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           "No text in transcription result",
           {
             result,
-            resultKeys: Object.keys(result),
+            resultKeys: result && typeof result === "object" ? Object.keys(result) : [],
           },
           "transcription"
         );
@@ -1602,6 +1792,18 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         );
       }
     } catch (error) {
+      let normalizedError = error;
+      if (error?.code === "TRANSCRIPTION_TIMEOUT") {
+        const timeoutSeconds = Math.max(
+          1,
+          Math.round((error.timeoutMs || NETWORK_TIMEOUTS.TRANSCRIPTION_REQUEST_MS) / 1000)
+        );
+        normalizedError = new Error(
+          `Transcription request timed out after ${timeoutSeconds}s. The endpoint did not respond in time.`
+        );
+        normalizedError.code = "TRANSCRIPTION_TIMEOUT";
+      }
+
       const isOpenAIMode = !getSettings().useLocalWhisper;
 
       if (allowLocalFallback && isOpenAIMode) {
@@ -1620,15 +1822,15 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
               return { success: true, text, source: "local-fallback" };
             }
           }
-          throw error;
+          throw normalizedError;
         } catch (fallbackError) {
           throw new Error(
-            `OpenAI API failed: ${error.message}. Local fallback also failed: ${fallbackError.message}`
+            `OpenAI API failed: ${normalizedError.message}. Local fallback also failed: ${fallbackError.message}`
           );
         }
       }
 
-      throw error;
+      throw normalizedError;
     }
   }
 
@@ -1702,33 +1904,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     }
 
     try {
-      // Use custom URL only when provider is "custom", otherwise use provider-specific defaults
-      let base;
-      if (isCustomEndpoint) {
-        base = currentBaseUrl.trim() || API_ENDPOINTS.TRANSCRIPTION_BASE;
-      } else if (currentProvider === "groq") {
-        base = API_ENDPOINTS.GROQ_BASE;
-      } else if (currentProvider === "mistral") {
-        base = API_ENDPOINTS.MISTRAL_BASE;
-      } else {
-        // OpenAI or other standard providers
-        base = API_ENDPOINTS.TRANSCRIPTION_BASE;
-      }
-
-      const normalizedBase = normalizeBaseUrl(base);
-
-      logger.debug(
-        "STT endpoint resolution",
-        {
-          provider: currentProvider,
-          isCustomEndpoint,
-          rawBaseUrl: currentBaseUrl,
-          normalizedBase,
-          defaultBase: API_ENDPOINTS.TRANSCRIPTION_BASE,
-        },
-        "transcription"
-      );
-
       const cacheResult = (endpoint) => {
         this.cachedTranscriptionEndpoint = endpoint;
         this.cachedEndpointProvider = currentProvider;
@@ -1748,6 +1923,42 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         return endpoint;
       };
 
+      if (isCustomEndpoint) {
+        const customEndpoint = currentBaseUrl.trim();
+        if (customEndpoint) {
+          logger.debug(
+            "STT endpoint: using custom base URL as entered",
+            {
+              provider: currentProvider,
+              endpoint: customEndpoint,
+            },
+            "transcription"
+          );
+          return cacheResult(customEndpoint);
+        }
+
+        logger.debug(
+          "STT endpoint: custom provider has empty base URL, using default endpoint",
+          {
+            provider: currentProvider,
+            rawBaseUrl: currentBaseUrl,
+          },
+          "transcription"
+        );
+        return cacheResult(API_ENDPOINTS.TRANSCRIPTION);
+      }
+
+      let base;
+      if (currentProvider === "groq") {
+        base = API_ENDPOINTS.GROQ_BASE;
+      } else if (currentProvider === "mistral") {
+        base = API_ENDPOINTS.MISTRAL_BASE;
+      } else {
+        // OpenAI or other standard providers
+        base = API_ENDPOINTS.TRANSCRIPTION_BASE;
+      }
+
+      const normalizedBase = normalizeBaseUrl(base);
       if (!normalizedBase) {
         logger.debug(
           "STT endpoint: using default (normalization failed)",
@@ -1757,8 +1968,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         return cacheResult(API_ENDPOINTS.TRANSCRIPTION);
       }
 
-      // Only validate HTTPS for custom endpoints (known providers are already HTTPS)
-      if (isCustomEndpoint && !isSecureEndpoint(normalizedBase)) {
+      // Validate HTTPS for known provider endpoints.
+      if (!isSecureEndpoint(normalizedBase)) {
         logger.warn(
           "STT endpoint: HTTPS required, falling back to default",
           { attemptedUrl: normalizedBase },
@@ -1796,17 +2007,24 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
   async safePaste(text, options = {}) {
     try {
-      await window.electronAPI.pasteText(text, options);
-      return true;
+      const result = await window.electronAPI.pasteText(text, options);
+      if (result && typeof result === "object") {
+        return result;
+      }
+      return {
+        success: true,
+        mode: "pasted",
+      };
     } catch (error) {
       const message =
         error?.message ??
         (typeof error?.toString === "function" ? error.toString() : String(error));
-      this.onError?.({
-        title: "Paste Error",
-        description: `Failed to paste text. Please check accessibility permissions. ${message}`,
-      });
-      return false;
+      return {
+        success: false,
+        mode: "failed",
+        message,
+        reason: "paste_ipc_failed",
+      };
     }
   }
 
@@ -2287,14 +2505,25 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       const reasoningStart = performance.now();
       const agentName = localStorage.getItem("agentName") || "";
       const cloudReasoningMode = stSettings.cloudReasoningMode || "openwhispr";
+      const contextClassification = await this.buildReasoningContext(finalText, agentName);
+      const reasoningConfig = this.buildReasoningConfig(contextClassification);
 
       try {
         if (cloudReasoningMode === "openwhispr") {
           const reasonResult = await withSessionRefresh(async () => {
+            const systemPrompt = getSystemPrompt(
+              agentName,
+              stSettings.customDictionary,
+              stSettings.preferredLanguage || "auto",
+              finalText,
+              stSettings.uiLanguage || "en",
+              contextClassification || undefined
+            );
             const res = await window.electronAPI.cloudReason(finalText, {
               agentName,
               customDictionary: stSettings.customDictionary,
               customPrompt: this.getCustomPrompt(),
+              systemPrompt,
               language: stSettings.preferredLanguage || "auto",
               locale: stSettings.uiLanguage || "en",
               sttProvider: this.sttConfig?.streamingProvider || "deepgram",
@@ -2315,7 +2544,13 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           });
 
           if (reasonResult.success && reasonResult.text) {
-            finalText = reasonResult.text;
+            finalText = ReasoningService.enforceStrictMode(
+              finalText,
+              reasonResult.text,
+              reasoningConfig,
+              "openwhispr-cloud",
+              reasonResult.model || "openwhispr-cloud"
+            );
           }
           usedCloudReasoning = true;
 
@@ -2333,7 +2568,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             const result = await this.processWithReasoningModel(
               finalText,
               effectiveModel,
-              agentName
+              agentName,
+              reasoningConfig
             );
             if (result) {
               finalText = result;

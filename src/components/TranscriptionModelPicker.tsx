@@ -578,19 +578,17 @@ export default function TranscriptionModelPicker({
     const trimmed = (cloudTranscriptionBaseUrl || "").trim();
     if (!trimmed) return;
 
-    const normalized = normalizeBaseUrl(trimmed);
-
-    if (normalized && normalized !== cloudTranscriptionBaseUrl) {
-      setCloudTranscriptionBaseUrl(normalized);
+    if (trimmed !== cloudTranscriptionBaseUrl) {
+      setCloudTranscriptionBaseUrl(trimmed);
     }
-    if (normalized) {
-      for (const provider of cloudProviders) {
-        const providerNormalized = normalizeBaseUrl(provider.baseUrl);
-        if (normalized === providerNormalized) {
-          onCloudProviderSelect(provider.id);
-          onCloudModelSelect("whisper-1");
-          break;
-        }
+
+    const normalizedForProviderMatch = normalizeBaseUrl(trimmed);
+    for (const provider of cloudProviders) {
+      const providerNormalized = normalizeBaseUrl(provider.baseUrl);
+      if (normalizedForProviderMatch === providerNormalized) {
+        onCloudProviderSelect(provider.id);
+        onCloudModelSelect("whisper-1");
+        break;
       }
     }
   }, [

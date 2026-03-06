@@ -269,6 +269,7 @@ $RECYCLE.BIN/
 .claude/
 .agent/
 .agents/
+.worktrees/
 
 # AI agent skills (keep local)
 .agents/

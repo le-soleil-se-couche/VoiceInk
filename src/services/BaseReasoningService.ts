@@ -1,11 +1,15 @@
 import { getSystemPrompt } from "../config/prompts";
 import { getSettings } from "../stores/settingsStore";
+import type { ContextClassification } from "../utils/contextClassifier";
 
 export interface ReasoningConfig {
   maxTokens?: number;
   temperature?: number;
   contextSize?: number;
   systemPrompt?: string;
+  contextClassification?: ContextClassification;
+  strictMode?: boolean;
+  strictOverlapThreshold?: number;
 }
 
 export abstract class BaseReasoningService {
@@ -23,10 +27,21 @@ export abstract class BaseReasoningService {
     return getSettings().uiLanguage || "en";
   }
 
-  protected getSystemPrompt(agentName: string | null, transcript?: string): string {
+  protected getSystemPrompt(
+    agentName: string | null,
+    transcript?: string,
+    contextClassification?: ContextClassification
+  ): string {
     const language = this.getPreferredLanguage();
     const uiLanguage = this.getUiLanguage();
-    return getSystemPrompt(agentName, this.getCustomDictionary(), language, transcript, uiLanguage);
+    return getSystemPrompt(
+      agentName,
+      this.getCustomDictionary(),
+      language,
+      transcript,
+      uiLanguage,
+      contextClassification
+    );
   }
 
   protected calculateMaxTokens(

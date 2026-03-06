@@ -263,7 +263,12 @@ export const usePermissions = (
     // On macOS, actually test the accessibility permission
     if (platform === "darwin") {
       try {
-        await window.electronAPI.pasteText(t("hooks.permissions.accessibilityTestText"));
+        const result = await window.electronAPI.pasteText(
+          t("hooks.permissions.accessibilityTestText")
+        );
+        if (result?.mode !== "pasted") {
+          throw new Error(result?.message || "Automatic paste unavailable");
+        }
         setAccessibilityPermissionGranted(true);
       } catch (err) {
         console.error("Accessibility permission test failed:", err);

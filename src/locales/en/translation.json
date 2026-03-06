@@ -307,6 +307,10 @@
       "noAudio": {
         "title": "No Audio Detected",
         "description": "The recording contained no detectable audio. Please try again."
+      },
+      "pasteCopied": {
+        "title": "Copied to Clipboard",
+        "description": "Automatic paste did not complete. The text is in your clipboard. Paste it manually with Cmd+V or Ctrl+V."
       }
     },
     "clipboard": {

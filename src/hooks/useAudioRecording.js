@@ -16,7 +16,15 @@ export const useAudioRecording = (toast, options = {}) => {
   const audioManagerRef = useRef(null);
   const startLockRef = useRef(false);
   const stopLockRef = useRef(false);
-  const { onToggle } = options;
+  const pasteFallbackToastIdRef = useRef(null);
+  const { onToggle, dismiss } = options;
+
+  const clearPasteFallbackToast = useCallback(() => {
+    if (pasteFallbackToastIdRef.current && typeof dismiss === "function") {
+      dismiss(pasteFallbackToastIdRef.current);
+    }
+    pasteFallbackToastIdRef.current = null;
+  }, [dismiss]);
 
   const performStartRecording = useCallback(async () => {
     if (startLockRef.current) return false;
@@ -75,6 +83,9 @@ export const useAudioRecording = (toast, options = {}) => {
         setIsRecording(isRecording);
         setIsProcessing(isProcessing);
         setIsStreaming(isStreaming ?? false);
+        if (isRecording) {
+          clearPasteFallbackToast();
+        }
         if (!isStreaming) {
           setPartialTranscript("");
         }
@@ -103,16 +114,40 @@ export const useAudioRecording = (toast, options = {}) => {
 
           const isStreaming = result.source?.includes("streaming");
           const pasteStart = performance.now();
-          await audioManagerRef.current.safePaste(
+          const pasteResult = await audioManagerRef.current.safePaste(
             result.text,
             isStreaming ? { fromStreaming: true } : {}
           );
+          const pasteMode = pasteResult?.mode || (pasteResult?.success ? "pasted" : "failed");
+
+          if (pasteMode === "copied") {
+            window.electronAPI?.showDictationPanel?.();
+            clearPasteFallbackToast();
+            const stickyId = toast({
+              title: t("hooks.audioRecording.pasteCopied.title"),
+              description: t("hooks.audioRecording.pasteCopied.description"),
+              duration: 0,
+            });
+            pasteFallbackToastIdRef.current = stickyId;
+          } else if (pasteMode === "failed") {
+            clearPasteFallbackToast();
+            window.electronAPI?.showDictationPanel?.();
+            toast({
+              title: t("hooks.clipboard.pasteFailed.title"),
+              description: pasteResult?.message || t("hooks.clipboard.pasteFailed.description"),
+              variant: "destructive",
+              duration: 8000,
+            });
+          }
+
           logger.info(
             "Paste timing",
             {
               pasteMs: Math.round(performance.now() - pasteStart),
               source: result.source,
               textLength: result.text.length,
+              mode: pasteMode,
+              reason: pasteResult?.reason,
             },
             "streaming"
           );
@@ -202,6 +237,7 @@ export const useAudioRecording = (toast, options = {}) => {
 
     // Cleanup
     return () => {
+      clearPasteFallbackToast();
       disposeToggle?.();
       disposeStart?.();
       disposeStop?.();
@@ -210,7 +246,7 @@ export const useAudioRecording = (toast, options = {}) => {
         audioManagerRef.current.cleanup();
       }
     };
-  }, [toast, onToggle, performStartRecording, performStopRecording, t]);
+  }, [toast, onToggle, performStartRecording, performStopRecording, t, clearPasteFallbackToast]);
 
   const startRecording = async () => {
     return performStartRecording();

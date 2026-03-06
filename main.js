@@ -99,6 +99,7 @@ function getOAuthProtocol() {
 }
 
 const OAUTH_PROTOCOL = getOAuthProtocol();
+process.env.OPENWHISPR_PROTOCOL = OAUTH_PROTOCOL;
 
 function shouldRegisterProtocolWithAppArg() {
   return Boolean(process.defaultApp) || isElectronBinaryExec();
@@ -203,6 +204,9 @@ function parseAuthBridgePort() {
 const AUTH_BRIDGE_HOST = "127.0.0.1";
 const AUTH_BRIDGE_PORT = parseAuthBridgePort();
 const AUTH_BRIDGE_PATH = "/oauth/callback";
+process.env.OPENWHISPR_AUTH_BRIDGE_URL =
+  process.env.OPENWHISPR_AUTH_BRIDGE_URL ||
+  `http://${AUTH_BRIDGE_HOST}:${AUTH_BRIDGE_PORT}${AUTH_BRIDGE_PATH}`;
 
 // Set up PATH for production builds to find system tools (whisper.cpp, ffmpeg)
 function setupProductionPath() {

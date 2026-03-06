@@ -53,6 +53,8 @@ class TextEditMonitor extends EventEmitter {
     this._lastValue = null;
     this._stdoutBuffer = "";
     this.lastTargetPid = null;
+    this.lastTargetAppName = null;
+    this.lastTargetCapturedAt = null;
   }
 
   /**
@@ -64,16 +66,49 @@ class TextEditMonitor extends EventEmitter {
   captureTargetPid() {
     if (process.platform !== "darwin") return;
     const script =
-      'ObjC.import("AppKit"); $.NSWorkspace.sharedWorkspace.frontmostApplication.processIdentifier';
+      'ObjC.import("AppKit");' +
+      "const app = $.NSWorkspace.sharedWorkspace.frontmostApplication;" +
+      "const payload = {" +
+      "pid: Number(app.processIdentifier)," +
+      "name: ObjC.unwrap(app.localizedName) || null," +
+      "capturedAt: (new Date()).toISOString()" +
+      "};" +
+      "JSON.stringify(payload);";
     execFile("osascript", ["-l", "JavaScript", "-e", script], { timeout: 2000 }, (err, stdout) => {
       if (err) {
         this.lastTargetPid = null;
+        this.lastTargetAppName = null;
+        this.lastTargetCapturedAt = null;
       } else {
-        const pid = parseInt(stdout.trim(), 10);
-        this.lastTargetPid = isNaN(pid) ? null : pid;
+        try {
+          const parsed = JSON.parse(stdout.trim());
+          const pid = Number(parsed?.pid);
+          this.lastTargetPid = Number.isInteger(pid) ? pid : null;
+          this.lastTargetAppName =
+            typeof parsed?.name === "string" && parsed.name.trim() ? parsed.name.trim() : null;
+          this.lastTargetCapturedAt =
+            typeof parsed?.capturedAt === "string" ? parsed.capturedAt : new Date().toISOString();
+        } catch {
+          const pid = parseInt(stdout.trim(), 10);
+          this.lastTargetPid = isNaN(pid) ? null : pid;
+          this.lastTargetAppName = null;
+          this.lastTargetCapturedAt = new Date().toISOString();
+        }
       }
-      debugLogger.debug("[TextEditMonitor] Captured target PID", { pid: this.lastTargetPid });
+      debugLogger.debug("[TextEditMonitor] Captured target app", {
+        pid: this.lastTargetPid,
+        appName: this.lastTargetAppName,
+        capturedAt: this.lastTargetCapturedAt,
+      });
     });
+  }
+
+  getLastTargetAppInfo() {
+    return {
+      appName: this.lastTargetAppName || null,
+      processId: Number.isInteger(this.lastTargetPid) ? this.lastTargetPid : null,
+      capturedAt: this.lastTargetCapturedAt || null,
+    };
   }
 
   /**

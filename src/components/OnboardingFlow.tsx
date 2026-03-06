@@ -32,6 +32,7 @@ import EmailVerificationStep from "./EmailVerificationStep";
 import { setAgentName as saveAgentName } from "../utils/agentName";
 import { formatHotkeyLabel, getDefaultHotkey, isGlobeLikeHotkey } from "../utils/hotkeys";
 import { useAuth } from "../hooks/useAuth";
+import { NEON_AUTH_URL } from "../lib/neonAuth";
 import { HotkeyInput } from "./ui/HotkeyInput";
 import { useHotkeyRegistration } from "../hooks/useHotkeyRegistration";
 import { getValidationMessage } from "../utils/hotkeyValidator";
@@ -47,11 +48,13 @@ interface OnboardingFlowProps {
 export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const { t } = useTranslation();
   const { isSignedIn } = useAuth();
+  const cloudAuthAvailable = Boolean(NEON_AUTH_URL);
+  const hasCloudSession = cloudAuthAvailable && isSignedIn;
 
   // Max valid step index dynamically determined based on auth state
   // Signed-in users: 3 steps (Welcome, Setup, Activation) - index 0-2
   // Non-signed-in users: 4 steps (Welcome, Setup, Permissions, Activation) - index 0-3
-  const getMaxStep = () => (isSignedIn ? 2 : 3);
+  const getMaxStep = () => (hasCloudSession ? 2 : 3);
 
   const [currentStep, setCurrentStep, removeCurrentStep] = useLocalStorage(
     "onboardingCurrentStep",
@@ -126,7 +129,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   // For signed-in users, merge setup and permissions into one step
   const steps =
-    isSignedIn && !skipAuth
+    hasCloudSession && !skipAuth
       ? [
           { title: t("onboarding.steps.welcome"), icon: UserCircle },
           { title: t("onboarding.steps.setup"), icon: Settings },
@@ -182,7 +185,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   // Auto-register default hotkey when entering the activation step
   // (step 3 for non-signed-in, step 2 for signed-in users)
-  const activationStepIndex = isSignedIn && !skipAuth ? 2 : 3;
+  const activationStepIndex = hasCloudSession && !skipAuth ? 2 : 3;
 
   useEffect(() => {
     if (currentStep !== activationStepIndex) {
@@ -271,7 +274,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     }
 
     return true;
-  }, [hotkey, agentName, setDictationKey, ensureHotkeyRegistered]);
+  }, [hotkey, agentName, setDictationKey, ensureHotkeyRegistered, skipAuth]);
 
   const nextStep = useCallback(async () => {
     if (currentStep >= steps.length - 1) {
@@ -336,7 +339,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
       case 1: // Setup - Choose Mode & Configure (merged with permissions for signed-in users)
         // Simplified path for signed-in users (cloud-first) with permissions
-        if (isSignedIn && !skipAuth) {
+        if (hasCloudSession && !skipAuth) {
           const platform = permissionsHook.pasteToolsInfo?.platform;
           const isMacOS = platform === "darwin";
 
@@ -493,7 +496,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
       case 2: // Permissions (only for non-signed-in users) or Activation (for signed-in users)
         // For signed-in users, this is the activation step
-        if (isSignedIn && !skipAuth) {
+        if (hasCloudSession && !skipAuth) {
           return renderActivationStep();
         }
 
@@ -648,10 +651,10 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const canProceed = () => {
     switch (currentStep) {
       case 0:
-        return isSignedIn || skipAuth; // Authentication step
+        return hasCloudSession || skipAuth; // Authentication step
       case 1:
         // For signed-in users: Setup step includes permissions
-        if (isSignedIn && !skipAuth) {
+        if (hasCloudSession && !skipAuth) {
           // Check permissions
           if (!permissionsHook.micPermissionGranted) {
             return false;
@@ -684,7 +687,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         }
       case 2: {
         // For signed-in users, this is activation step
-        if (isSignedIn && !skipAuth) {
+        if (hasCloudSession && !skipAuth) {
           return hotkey.trim() !== "";
         }
 
@@ -762,7 +765,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           <TitleBar
             showTitle={true}
             className="bg-background backdrop-blur-xl border-b border-border shadow-sm"
-            actions={isSignedIn ? <SupportDropdown /> : undefined}
+            actions={hasCloudSession ? <SupportDropdown /> : undefined}
           ></TitleBar>
         </div>
       )}
@@ -794,7 +797,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         <div className="shrink-0 bg-background/80 backdrop-blur-2xl border-t border-white/5 px-6 md:px-12 py-3 z-10">
           <div className="max-w-3xl mx-auto flex items-center justify-between">
             {/* Hide back button on first step for signed-in users */}
-            {!(currentStep === 1 && isSignedIn && !skipAuth) && (
+            {!(currentStep === 1 && hasCloudSession && !skipAuth) && (
               <Button
                 onClick={prevStep}
                 variant="outline"
@@ -807,7 +810,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             )}
 
             {/* Spacer to push next button to the right when back button is hidden */}
-            {currentStep === 1 && isSignedIn && !skipAuth && <div />}
+            {currentStep === 1 && hasCloudSession && !skipAuth && <div />}
 
             <div className="flex items-center gap-2">
               {currentStep === steps.length - 1 ? (

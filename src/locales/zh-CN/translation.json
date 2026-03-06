@@ -307,6 +307,10 @@
       "noAudio": {
         "title": "未检测到音频",
         "description": "录音中未检测到音频，请重试。"
+      },
+      "pasteCopied": {
+        "title": "已复制到剪贴板",
+        "description": "自动粘贴未完成，文本已复制到剪贴板。请使用 Cmd+V 或 Ctrl+V 手动粘贴。"
       }
     },
     "clipboard": {

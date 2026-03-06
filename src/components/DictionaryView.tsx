@@ -1,26 +1,72 @@
-import { useState, useCallback } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BookOpen, X, CornerDownLeft, Info } from "lucide-react";
+import { FixedSizeList as List, type ListChildComponentProps } from "react-window";
 import { Input } from "./ui/input";
 import { ConfirmDialog } from "./ui/dialog";
 import { useSettings } from "../hooks/useSettings";
 import { getAgentName } from "../utils/agentName";
+import { parseDictionaryInput } from "../utils/parseDictionaryInput";
 
-export default function DictionaryView() {
+const VIRTUALIZATION_THRESHOLD = 300;
+const VIRTUALIZED_ROW_HEIGHT = 34;
+
+interface DictionaryRowData {
+  words: string[];
+  agentName: string;
+  autoManagedLabel: string;
+  getRemoveAriaLabel: (word: string) => string;
+  onRemove: (word: string) => void;
+}
+
+const DictionaryRow = memo(function DictionaryRow({
+  index,
+  style,
+  data,
+}: ListChildComponentProps<DictionaryRowData>) {
+  const word = data.words[index];
+  const isAgentName = word === data.agentName;
+
+  return (
+    <div style={style} className="pr-1">
+      <div
+        className={`group flex items-center gap-2 py-[5px] px-2.5 rounded-[5px] border transition-colors duration-150 ${
+          isAgentName
+            ? "bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30"
+            : "bg-foreground/[0.02] dark:bg-white/[0.03] text-foreground/60 dark:text-foreground/50 border-foreground/8 dark:border-white/6 hover:border-foreground/15 dark:hover:border-white/12 hover:bg-foreground/[0.04] dark:hover:bg-white/[0.06] hover:text-foreground/80 dark:hover:text-foreground/70"
+        }`}
+        title={isAgentName ? data.autoManagedLabel : undefined}
+      >
+        <span className="truncate">{word}</span>
+        {!isAgentName && (
+          <button
+            onClick={() => data.onRemove(word)}
+            aria-label={data.getRemoveAriaLabel(word)}
+            className="ml-auto p-0.5 rounded-sm text-foreground/25 hover:!text-destructive/70 transition-colors duration-150"
+          >
+            <X size={10} strokeWidth={2} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
+function DictionaryView() {
   const { t } = useTranslation();
   const { customDictionary, setCustomDictionary } = useSettings();
   const agentName = getAgentName();
   const [newWord, setNewWord] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
+  const [listHeight, setListHeight] = useState(320);
 
   const isEmpty = customDictionary.length === 0;
+  const shouldVirtualize = customDictionary.length >= VIRTUALIZATION_THRESHOLD;
 
   const handleAdd = useCallback(() => {
-    const words = newWord
-      .split(",")
-      .map((w) => w.trim())
-      .filter((w) => w && !customDictionary.includes(w));
+    const words = parseDictionaryInput(newWord, customDictionary);
     if (words.length > 0) {
       setCustomDictionary([...customDictionary, ...words]);
       setNewWord("");
@@ -33,6 +79,41 @@ export default function DictionaryView() {
       setCustomDictionary(customDictionary.filter((w) => w !== word));
     },
     [customDictionary, setCustomDictionary, agentName]
+  );
+
+  useEffect(() => {
+    if (!shouldVirtualize) return;
+
+    const container = listContainerRef.current;
+    if (!container) return;
+
+    const updateHeight = () => {
+      setListHeight(Math.max(VIRTUALIZED_ROW_HEIGHT * 4, container.clientHeight));
+    };
+
+    updateHeight();
+
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, [shouldVirtualize, customDictionary.length]);
+
+  const getRemoveAriaLabel = useCallback(
+    (word: string) => t("dictionary.removeWord", { word }),
+    [t]
+  );
+
+  const virtualizedRowData = useMemo<DictionaryRowData>(
+    () => ({
+      words: customDictionary,
+      agentName,
+      autoManagedLabel: t("dictionary.autoManaged"),
+      getRemoveAriaLabel,
+      onRemove: handleRemove,
+    }),
+    [customDictionary, agentName, getRemoveAriaLabel, handleRemove, t]
   );
 
   return (
@@ -165,40 +246,56 @@ export default function DictionaryView() {
 
           <div className="mx-5 h-px bg-border/8 dark:bg-white/3" />
 
-          <div className="flex-1 overflow-y-auto px-5 py-3">
-            <div className="flex flex-wrap gap-1.5">
-              {customDictionary.map((word) => {
-                const isAgentName = word === agentName;
-                return (
-                  <span
-                    key={word}
-                    className={`group inline-flex items-center gap-1 py-[3px]
-                      rounded-[5px] text-xs
-                      border transition-colors duration-150
-                      ${
-                        isAgentName
-                          ? "pl-2.5 pr-2.5 bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30"
-                          : "pl-2.5 pr-1 bg-foreground/[0.02] dark:bg-white/[0.03] text-foreground/60 dark:text-foreground/50 border-foreground/8 dark:border-white/6 hover:border-foreground/15 dark:hover:border-white/12 hover:bg-foreground/[0.04] dark:hover:bg-white/[0.06] hover:text-foreground/80 dark:hover:text-foreground/70"
-                      }`}
-                    title={isAgentName ? t("dictionary.autoManaged") : undefined}
-                  >
-                    {word}
-                    {!isAgentName && (
-                      <button
-                        onClick={() => handleRemove(word)}
-                        aria-label={t("dictionary.removeWord", { word })}
-                        className="p-0.5 rounded-sm
-                          opacity-0 group-hover:opacity-100
-                          text-foreground/25 hover:!text-destructive/70
-                          transition-colors duration-150"
-                      >
-                        <X size={10} strokeWidth={2} />
-                      </button>
-                    )}
-                  </span>
-                );
-              })}
-            </div>
+          <div
+            ref={listContainerRef}
+            className={`flex-1 px-5 py-3 ${shouldVirtualize ? "overflow-hidden" : "overflow-y-auto"}`}
+          >
+            {shouldVirtualize ? (
+              <List
+                className="scrollbar-thin"
+                height={listHeight}
+                width="100%"
+                itemCount={customDictionary.length}
+                itemData={virtualizedRowData}
+                itemSize={VIRTUALIZED_ROW_HEIGHT}
+              >
+                {DictionaryRow}
+              </List>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {customDictionary.map((word, index) => {
+                  const isAgentName = word === agentName;
+                  return (
+                    <span
+                      key={`${word}-${index}`}
+                      className={`group inline-flex items-center gap-1 py-[3px]
+                        rounded-[5px] text-xs
+                        border transition-colors duration-150
+                        ${
+                          isAgentName
+                            ? "pl-2.5 pr-2.5 bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30"
+                            : "pl-2.5 pr-1 bg-foreground/[0.02] dark:bg-white/[0.03] text-foreground/60 dark:text-foreground/50 border-foreground/8 dark:border-white/6 hover:border-foreground/15 dark:hover:border-white/12 hover:bg-foreground/[0.04] dark:hover:bg-white/[0.06] hover:text-foreground/80 dark:hover:text-foreground/70"
+                        }`}
+                      title={isAgentName ? t("dictionary.autoManaged") : undefined}
+                    >
+                      {word}
+                      {!isAgentName && (
+                        <button
+                          onClick={() => handleRemove(word)}
+                          aria-label={getRemoveAriaLabel(word)}
+                          className="p-0.5 rounded-sm
+                            opacity-0 group-hover:opacity-100
+                            text-foreground/25 hover:!text-destructive/70
+                            transition-colors duration-150"
+                        >
+                          <X size={10} strokeWidth={2} />
+                        </button>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="px-5 pb-3 flex items-start gap-1.5">
@@ -212,3 +309,5 @@ export default function DictionaryView() {
     </div>
   );
 }
+
+export default memo(DictionaryView);

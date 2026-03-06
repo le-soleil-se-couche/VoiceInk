@@ -7,6 +7,7 @@ import logger from "../utils/logger";
 import { isSecureEndpoint } from "../utils/urlUtils";
 import { withSessionRefresh } from "../lib/neonAuth";
 import { getSettings, isCloudReasoningMode } from "../stores/settingsStore";
+import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 
 class ReasoningService extends BaseReasoningService {
   private apiKeyCache: SecureCache<string>;
@@ -22,6 +23,130 @@ class ReasoningService extends BaseReasoningService {
     if (typeof window !== "undefined") {
       window.addEventListener("beforeunload", () => this.destroy());
     }
+  }
+
+  private resolveSystemPrompt(
+    agentName: string | null,
+    text: string,
+    config: ReasoningConfig
+  ): string {
+    return (
+      config.systemPrompt ||
+      this.getSystemPrompt(agentName, text, config.contextClassification)
+    );
+  }
+
+  private tokenizeForOverlap(text: string): string[] {
+    if (!text) return [];
+    return text
+      .toLowerCase()
+      .normalize("NFKC")
+      .replace(/[^\p{L}\p{N}'-]+/gu, " ")
+      .split(/\s+/)
+      .filter((token) => token.length > 1);
+  }
+
+  private calculateOverlapScore(source: string, candidate: string): number {
+    const sourceTokens = this.tokenizeForOverlap(source);
+    const candidateTokens = this.tokenizeForOverlap(candidate);
+
+    if (sourceTokens.length === 0 || candidateTokens.length === 0) {
+      return 0;
+    }
+
+    const sourceSet = new Set(sourceTokens);
+    const candidateSet = new Set(candidateTokens);
+
+    let outputMatches = 0;
+    for (const token of candidateTokens) {
+      if (sourceSet.has(token)) {
+        outputMatches++;
+      }
+    }
+
+    let sourceMatches = 0;
+    for (const token of sourceSet) {
+      if (candidateSet.has(token)) {
+        sourceMatches++;
+      }
+    }
+
+    const outputCoverage = outputMatches / candidateTokens.length;
+    const sourceCoverage = sourceMatches / sourceSet.size;
+
+    return Number(((outputCoverage + sourceCoverage) / 2).toFixed(4));
+  }
+
+  private localCleanupFallback(text: string): string {
+    return text
+      .replace(/\b(um+|uh+|er+|ah+|like|you know|basically)\b/gi, "")
+      .replace(/\s+([,.!?;:])/g, "$1")
+      .replace(/[ \t]{2,}/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  private applyStrictModeGuard(
+    source: string,
+    candidate: string,
+    config: ReasoningConfig,
+    provider: string,
+    model: string
+  ): string {
+    const strictMode = config.strictMode ?? config.contextClassification?.strictMode ?? false;
+    if (!strictMode) {
+      return candidate;
+    }
+
+    if (config.contextClassification?.intent === "instruction") {
+      return candidate;
+    }
+
+    if (source.trim().length < 24) {
+      return candidate;
+    }
+
+    const threshold =
+      config.strictOverlapThreshold ||
+      config.contextClassification?.strictOverlapThreshold ||
+      DEFAULT_STRICT_OVERLAP_THRESHOLD;
+    const overlap = this.calculateOverlapScore(source, candidate);
+
+    logger.logReasoning("STRICT_MODE_OVERLAP_CHECK", {
+      provider,
+      model,
+      overlap,
+      threshold,
+      context: config.contextClassification?.context || "unknown",
+      intent: config.contextClassification?.intent || "cleanup",
+    });
+
+    if (overlap >= threshold) {
+      return candidate;
+    }
+
+    const fallback = this.localCleanupFallback(source);
+    logger.logReasoning("STRICT_MODE_FALLBACK_TRIGGERED", {
+      provider,
+      model,
+      overlap,
+      threshold,
+      originalLength: source.length,
+      candidateLength: candidate.length,
+      fallbackLength: fallback.length,
+    });
+
+    return fallback;
+  }
+
+  public enforceStrictMode(
+    source: string,
+    candidate: string,
+    config: ReasoningConfig = {},
+    provider = "external",
+    model = "external"
+  ): string {
+    return this.applyStrictModeGuard(source, candidate, config, provider, model);
   }
 
   private getConfiguredOpenAIBase(): string {
@@ -259,7 +384,7 @@ class ReasoningService extends BaseReasoningService {
     config: ReasoningConfig,
     providerName: string
   ): Promise<string> {
-    const systemPrompt = config.systemPrompt || this.getSystemPrompt(agentName, text);
+    const systemPrompt = this.resolveSystemPrompt(agentName, text, config);
     const userPrompt = text;
 
     const messages = [
@@ -410,6 +535,9 @@ class ReasoningService extends BaseReasoningService {
       agentName,
       hasConfig: Object.keys(config).length > 0,
       textLength: text.length,
+      context: config.contextClassification?.context || "general",
+      intent: config.contextClassification?.intent || "cleanup",
+      strictMode: config.strictMode ?? config.contextClassification?.strictMode ?? false,
       timestamp: new Date().toISOString(),
     });
 
@@ -449,16 +577,24 @@ class ReasoningService extends BaseReasoningService {
       }
 
       const processingTime = Date.now() - startTime;
+      const guardedResult = this.applyStrictModeGuard(
+        text,
+        result,
+        config,
+        provider,
+        trimmedModel || model
+      );
 
       logger.logReasoning("PROVIDER_SUCCESS", {
         provider,
         model,
         processingTimeMs: processingTime,
-        resultLength: result.length,
-        resultPreview: result.substring(0, 100) + (result.length > 100 ? "..." : ""),
+        resultLength: guardedResult.length,
+        resultPreview:
+          guardedResult.substring(0, 100) + (guardedResult.length > 100 ? "..." : ""),
       });
 
-      return result;
+      return guardedResult;
     } catch (error) {
       logger.logReasoning("PROVIDER_ERROR", {
         provider,
@@ -500,7 +636,7 @@ class ReasoningService extends BaseReasoningService {
     this.isProcessing = true;
 
     try {
-      const systemPrompt = config.systemPrompt || this.getSystemPrompt(agentName, text);
+      const systemPrompt = this.resolveSystemPrompt(agentName, text, config);
       const userPrompt = text;
 
       const messages = [
@@ -716,7 +852,7 @@ class ReasoningService extends BaseReasoningService {
         textLength: text.length,
       });
 
-      const systemPrompt = config.systemPrompt || this.getSystemPrompt(agentName, text);
+      const systemPrompt = this.resolveSystemPrompt(agentName, text, config);
       const result = await window.electronAPI.processAnthropicReasoning(text, model, agentName, {
         ...config,
         systemPrompt,
@@ -767,7 +903,7 @@ class ReasoningService extends BaseReasoningService {
         textLength: text.length,
       });
 
-      const systemPrompt = config.systemPrompt || this.getSystemPrompt(agentName, text);
+      const systemPrompt = this.resolveSystemPrompt(agentName, text, config);
       const result = await window.electronAPI.processLocalReasoning(text, model, agentName, {
         ...config,
         systemPrompt,
@@ -824,7 +960,7 @@ class ReasoningService extends BaseReasoningService {
     this.isProcessing = true;
 
     try {
-      const systemPrompt = config.systemPrompt || this.getSystemPrompt(agentName, text);
+      const systemPrompt = this.resolveSystemPrompt(agentName, text, config);
       const userPrompt = text;
 
       const requestBody = {
@@ -1036,13 +1172,14 @@ class ReasoningService extends BaseReasoningService {
       const customDictionary = this.getCustomDictionary();
       const language = this.getPreferredLanguage();
       const locale = this.getUiLanguage();
+      const systemPrompt = this.resolveSystemPrompt(agentName, text, config);
 
       const result = await withSessionRefresh(async () => {
         const res = await (window as any).electronAPI.cloudReason(text, {
           agentName,
           customDictionary,
           customPrompt: this.getCustomPrompt(),
-          systemPrompt: config.systemPrompt,
+          systemPrompt,
           language,
           locale,
         });

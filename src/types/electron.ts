@@ -259,11 +259,55 @@ export interface ReferralItem {
   first_payment_at: string | null;
 }
 
+export type PasteMode = "pasted" | "copied" | "failed";
+export type PasteFailureReason =
+  | "accessibility_permission_required"
+  | "paste_timeout"
+  | "paste_tool_unavailable"
+  | "paste_simulation_failed"
+  | "clipboard_write_failed"
+  | "ipc_error";
+
+export interface TargetAppInfo {
+  appName: string | null;
+  processId: number | null;
+  platform: string;
+  source: "main-process" | "renderer-fallback";
+  capturedAt: string | null;
+}
+
+export interface PasteResult {
+  success: boolean;
+  mode: PasteMode;
+  message?: string;
+  reason?: PasteFailureReason;
+  method?: string;
+  platform?: string;
+}
+
 declare global {
   interface Window {
     electronAPI: {
+      runtimeConfig: {
+        apiUrl: string;
+        authUrl: string;
+        oauthProtocol: string;
+        oauthAuthBridgeUrl: string;
+        oauthCallbackUrl: string;
+      };
+      getRuntimeConfig?: () => Promise<{
+        apiUrl: string;
+        authUrl: string;
+        oauthProtocol: string;
+        oauthAuthBridgeUrl: string;
+        oauthCallbackUrl: string;
+      }>;
+
       // Basic window operations
-      pasteText: (text: string, options?: { fromStreaming?: boolean }) => Promise<void>;
+      pasteText: (
+        text: string,
+        options?: { fromStreaming?: boolean }
+      ) => Promise<PasteResult>;
       hideWindow: () => Promise<void>;
       showDictationPanel: () => Promise<void>;
       onToggleDictation: (callback: () => void) => () => void;
@@ -559,6 +603,7 @@ declare global {
       windowClose: () => Promise<void>;
       windowIsMaximized: () => Promise<boolean>;
       getPlatform: () => string;
+      getTargetAppInfo?: () => Promise<TargetAppInfo>;
       startWindowDrag: () => Promise<void>;
       stopWindowDrag: () => Promise<void>;
       setMainWindowInteractivity: (interactive: boolean) => Promise<void>;
@@ -702,6 +747,7 @@ declare global {
           agentName?: string;
           customDictionary?: string[];
           customPrompt?: string;
+          systemPrompt?: string;
           language?: string;
           locale?: string;
         }

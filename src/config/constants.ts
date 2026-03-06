@@ -1,3 +1,5 @@
+import { RUNTIME_CONFIG } from "./runtimeConfig";
+
 // API Configuration helpers
 export const normalizeBaseUrl = (value?: string | null): string => {
   if (!value) return "";
@@ -107,7 +109,7 @@ export const CACHE_CONFIG = {
 } as const;
 
 // OpenWhispr Cloud API
-export const OPENWHISPR_API_URL = (env.VITE_OPENWHISPR_API_URL as string) || "";
+export const OPENWHISPR_API_URL = RUNTIME_CONFIG.apiUrl;
 
 // Retry Configuration
 export const RETRY_CONFIG = {
@@ -115,4 +117,10 @@ export const RETRY_CONFIG = {
   INITIAL_DELAY: 1000, // 1 second
   MAX_DELAY: 10000, // 10 seconds
   BACKOFF_MULTIPLIER: 2,
+} as const;
+
+// Network timeout configuration (milliseconds)
+export const NETWORK_TIMEOUTS = {
+  TRANSCRIPTION_REQUEST_MS: 45000,
+  CUSTOM_TRANSCRIPTION_REQUEST_MS: 60000,
 } as const;

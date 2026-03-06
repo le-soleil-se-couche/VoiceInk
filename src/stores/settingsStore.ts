@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { API_ENDPOINTS } from "../config/constants";
+import { RUNTIME_CONFIG } from "../config/runtimeConfig";
 import i18n, { normalizeUiLanguage } from "../i18n";
-import { hasStoredByokKey } from "../utils/byokDetection";
+import { hasAnyByokKey, hasStoredByokKey } from "../utils/byokDetection";
 import { ensureAgentNameInDictionary } from "../utils/agentName";
 import logger from "../utils/logger";
 import type { LocalTranscriptionProvider } from "../types/electron";
@@ -18,6 +19,7 @@ import type {
 let _ReasoningService: typeof import("../services/ReasoningService").default | null = null;
 
 const isBrowser = typeof window !== "undefined";
+const CLOUD_AUTH_AVAILABLE = Boolean(RUNTIME_CONFIG.authUrl);
 
 function readString(key: string, fallback: string): string {
   if (!isBrowser) return fallback;
@@ -200,9 +202,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   ),
   cloudTranscriptionMode: readString(
     "cloudTranscriptionMode",
-    hasStoredByokKey() ? "byok" : "openwhispr"
+    hasStoredByokKey() || !CLOUD_AUTH_AVAILABLE ? "byok" : "openwhispr"
   ),
-  cloudReasoningMode: readString("cloudReasoningMode", "openwhispr"),
+  cloudReasoningMode: readString("cloudReasoningMode", CLOUD_AUTH_AVAILABLE ? "openwhispr" : "byok"),
   cloudReasoningBaseUrl: readString("cloudReasoningBaseUrl", API_ENDPOINTS.OPENAI_BASE),
   customDictionary: readStringArray("customDictionary", []),
   assemblyAiStreaming: readBoolean("assemblyAiStreaming", true),
@@ -236,7 +238,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   telemetryEnabled: readBoolean("telemetryEnabled", false),
   audioCuesEnabled: readBoolean("audioCuesEnabled", true),
   floatingIconAutoHide: readBoolean("floatingIconAutoHide", false),
-  isSignedIn: readBoolean("isSignedIn", false),
+  isSignedIn: CLOUD_AUTH_AVAILABLE ? readBoolean("isSignedIn", false) : false,
 
   setUseLocalWhisper: createBooleanSetter("useLocalWhisper"),
   setWhisperModel: createStringSetter("whisperModel"),
@@ -433,7 +435,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
 // --- Selectors (derived state, not stored) ---
 
 export const selectIsCloudReasoningMode = (state: SettingsState) =>
-  state.isSignedIn && state.cloudReasoningMode === "openwhispr";
+  CLOUD_AUTH_AVAILABLE && state.isSignedIn && state.cloudReasoningMode === "openwhispr";
 
 export const selectEffectiveReasoningProvider = (state: SettingsState) =>
   selectIsCloudReasoningMode(state) ? "openwhispr" : state.reasoningProvider;
@@ -505,6 +507,33 @@ export async function initializeSettings(): Promise<void> {
         { error: (err as Error).message },
         "settings"
       );
+    }
+
+    const refreshedState = useSettingsStore.getState();
+    const hasExplicitCloudMode = Boolean(localStorage.getItem("cloudTranscriptionMode"));
+    const hasEnvOrStoredByokKey = hasAnyByokKey([
+      refreshedState.openaiApiKey,
+      refreshedState.groqApiKey,
+      refreshedState.mistralApiKey,
+      refreshedState.customTranscriptionApiKey,
+    ]);
+
+    if (!CLOUD_AUTH_AVAILABLE) {
+      if (refreshedState.cloudTranscriptionMode !== "byok") {
+        createStringSetter("cloudTranscriptionMode")("byok");
+      }
+      if (refreshedState.cloudReasoningMode !== "byok") {
+        createStringSetter("cloudReasoningMode")("byok");
+      }
+      if (refreshedState.isSignedIn) {
+        createBooleanSetter("isSignedIn")(false);
+      }
+    } else if (
+      !hasExplicitCloudMode &&
+      hasEnvOrStoredByokKey &&
+      refreshedState.cloudTranscriptionMode !== "byok"
+    ) {
+      createStringSetter("cloudTranscriptionMode")("byok");
     }
 
     // Sync dictation key from main process

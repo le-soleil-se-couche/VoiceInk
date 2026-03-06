@@ -1,10 +1,11 @@
 import { createAuthClient } from "@neondatabase/auth";
 import { BetterAuthReactAdapter } from "@neondatabase/auth/react";
 import { OPENWHISPR_API_URL } from "../config/constants";
+import { RUNTIME_CONFIG } from "../config/runtimeConfig";
 import { openExternalLink } from "../utils/externalLinks";
 import logger from "../utils/logger";
 
-export const NEON_AUTH_URL = import.meta.env.VITE_NEON_AUTH_URL || "";
+export const NEON_AUTH_URL = RUNTIME_CONFIG.authUrl;
 export const authClient = NEON_AUTH_URL
   ? createAuthClient(NEON_AUTH_URL, { adapter: BetterAuthReactAdapter() })
   : null;
@@ -142,13 +143,12 @@ export async function withSessionRefresh<T>(operation: () => Promise<T>): Promis
 }
 
 function getElectronOAuthCallbackURL(): string {
-  const configuredUrl = (import.meta.env.VITE_OPENWHISPR_OAUTH_CALLBACK_URL || "").trim();
+  const configuredUrl = RUNTIME_CONFIG.oauthCallbackUrl;
   if (configuredUrl) return configuredUrl;
 
   if (window.location.protocol !== "file:") return `${window.location.origin}/?panel=true`;
 
-  const port = import.meta.env.VITE_DEV_SERVER_PORT || "5183";
-  return `http://localhost:${port}/?panel=true`;
+  return RUNTIME_CONFIG.oauthAuthBridgeUrl || "http://127.0.0.1:5199/oauth/callback";
 }
 
 export async function signInWithSocial(provider: SocialProvider): Promise<{ error?: Error }> {

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -132,6 +132,7 @@ function SectionHeader({ title, description }: { title: string; description?: st
 
 interface TranscriptionSectionProps {
   isSignedIn: boolean;
+  cloudAuthAvailable: boolean;
   cloudTranscriptionMode: string;
   setCloudTranscriptionMode: (mode: string) => void;
   useLocalWhisper: boolean;
@@ -167,6 +168,7 @@ interface TranscriptionSectionProps {
 
 function TranscriptionSection({
   isSignedIn,
+  cloudAuthAvailable,
   cloudTranscriptionMode,
   setCloudTranscriptionMode,
   useLocalWhisper,
@@ -195,8 +197,14 @@ function TranscriptionSection({
   toast,
 }: TranscriptionSectionProps) {
   const { t } = useTranslation();
+  const openWhisprSelected = cloudTranscriptionMode === "openwhispr" && !useLocalWhisper;
+  const openWhisprLocked = !cloudAuthAvailable || !isSignedIn;
+  const isCloudMode = openWhisprSelected && !openWhisprLocked;
   const isCustomMode = cloudTranscriptionMode === "byok" || useLocalWhisper;
-  const isCloudMode = isSignedIn && cloudTranscriptionMode === "openwhispr" && !useLocalWhisper;
+  const showCustomSetup = isCustomMode || openWhisprLocked;
+  const cloudLockedLabel = !cloudAuthAvailable
+    ? t("settingsPage.account.disabled")
+    : t("settingsPage.account.offline");
 
   return (
     <div className="space-y-4">
@@ -206,133 +214,143 @@ function TranscriptionSection({
       />
 
       {/* Mode selector */}
-      {isSignedIn && (
-        <SettingsPanel>
-          <SettingsPanelRow>
-            <button
-              onClick={() => {
-                if (!isCloudMode) {
-                  setCloudTranscriptionMode("openwhispr");
-                  setUseLocalWhisper(false);
-                  updateTranscriptionSettings({ useLocalWhisper: false });
-                  toast({
-                    title: t("settingsPage.transcription.toasts.switchedCloud.title"),
-                    description: t("settingsPage.transcription.toasts.switchedCloud.description"),
-                    variant: "success",
-                    duration: 3000,
-                  });
-                }
-              }}
-              className="w-full flex items-center gap-3 text-left cursor-pointer group"
+      <SettingsPanel>
+        <SettingsPanelRow>
+          <button
+            disabled={openWhisprLocked}
+            onClick={() => {
+              if (!isCloudMode) {
+                setCloudTranscriptionMode("openwhispr");
+                setUseLocalWhisper(false);
+                updateTranscriptionSettings({ useLocalWhisper: false });
+                toast({
+                  title: t("settingsPage.transcription.toasts.switchedCloud.title"),
+                  description: t("settingsPage.transcription.toasts.switchedCloud.description"),
+                  variant: "success",
+                  duration: 3000,
+                });
+              }
+            }}
+            className={cn(
+              "w-full flex items-center gap-3 text-left",
+              openWhisprLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer group"
+            )}
+          >
+            <div
+              className={cn(
+                "w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-colors",
+                isCloudMode
+                  ? "bg-primary/10 dark:bg-primary/15"
+                  : "bg-muted/60 dark:bg-surface-raised",
+                !openWhisprLocked && "group-hover:bg-muted dark:group-hover:bg-surface-3"
+              )}
             >
-              <div
-                className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-colors ${
-                  isCloudMode
-                    ? "bg-primary/10 dark:bg-primary/15"
-                    : "bg-muted/60 dark:bg-surface-raised group-hover:bg-muted dark:group-hover:bg-surface-3"
-                }`}
-              >
-                <Cloud
-                  className={`w-4 h-4 transition-colors ${
-                    isCloudMode ? "text-primary" : "text-muted-foreground"
-                  }`}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-foreground">
-                    {t("settingsPage.transcription.openwhisprCloud")}
-                  </span>
-                  {isCloudMode && (
-                    <span className="text-xs font-medium text-primary bg-primary/10 dark:bg-primary/15 px-1.5 py-px rounded-sm">
-                      {t("common.active")}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground/80 mt-0.5">
-                  {t("settingsPage.transcription.openwhisprCloudDescription")}
-                </p>
-              </div>
-              <div
-                className={`w-4 h-4 rounded-full border-2 shrink-0 transition-colors ${
-                  isCloudMode
-                    ? "border-primary bg-primary"
-                    : "border-border-hover dark:border-border-subtle"
-                }`}
-              >
-                {isCloudMode && (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
-                  </div>
+              <Cloud
+                className={cn(
+                  "w-4 h-4 transition-colors",
+                  isCloudMode ? "text-primary" : "text-muted-foreground"
                 )}
-              </div>
-            </button>
-          </SettingsPanelRow>
-          <SettingsPanelRow>
-            <button
-              onClick={() => {
-                if (!isCustomMode) {
-                  setCloudTranscriptionMode("byok");
-                  setUseLocalWhisper(false);
-                  updateTranscriptionSettings({ useLocalWhisper: false });
-                  toast({
-                    title: t("settingsPage.transcription.toasts.switchedCustom.title"),
-                    description: t("settingsPage.transcription.toasts.switchedCustom.description"),
-                    variant: "success",
-                    duration: 3000,
-                  });
-                }
-              }}
-              className="w-full flex items-center gap-3 text-left cursor-pointer group"
-            >
-              <div
-                className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-colors ${
-                  isCustomMode
-                    ? "bg-accent/10 dark:bg-accent/15"
-                    : "bg-muted/60 dark:bg-surface-raised group-hover:bg-muted dark:group-hover:bg-surface-3"
-                }`}
-              >
-                <Key
-                  className={`w-4 h-4 transition-colors ${
-                    isCustomMode ? "text-accent" : "text-muted-foreground"
-                  }`}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-foreground">
-                    {t("settingsPage.transcription.customSetup")}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-foreground">
+                  {t("settingsPage.transcription.openwhisprCloud")}
+                </span>
+                {isCloudMode ? (
+                  <span className="text-xs font-medium text-primary bg-primary/10 dark:bg-primary/15 px-1.5 py-px rounded-sm">
+                    {t("common.active")}
                   </span>
-                  {isCustomMode && (
-                    <span className="text-xs font-medium text-accent bg-accent/10 dark:bg-accent/15 px-1.5 py-px rounded-sm">
-                      {t("common.active")}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground/80 mt-0.5">
-                  {t("settingsPage.transcription.customSetupDescription")}
-                </p>
+                ) : openWhisprLocked ? (
+                  <span className="text-xs font-medium text-muted-foreground bg-muted/70 px-1.5 py-px rounded-sm">
+                    {cloudLockedLabel}
+                  </span>
+                ) : null}
               </div>
-              <div
-                className={`w-4 h-4 rounded-full border-2 shrink-0 transition-colors ${
-                  isCustomMode
-                    ? "border-accent bg-accent"
-                    : "border-border-hover dark:border-border-subtle"
+              <p className="text-xs text-muted-foreground/80 mt-0.5">
+                {t("settingsPage.transcription.openwhisprCloudDescription")}
+              </p>
+            </div>
+            <div
+              className={cn(
+                "w-4 h-4 rounded-full border-2 shrink-0 transition-colors",
+                isCloudMode
+                  ? "border-primary bg-primary"
+                  : "border-border-hover dark:border-border-subtle"
+              )}
+            >
+              {isCloudMode && (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
+                </div>
+              )}
+            </div>
+          </button>
+        </SettingsPanelRow>
+        <SettingsPanelRow>
+          <button
+            onClick={() => {
+              if (!isCustomMode) {
+                setCloudTranscriptionMode("byok");
+                setUseLocalWhisper(false);
+                updateTranscriptionSettings({ useLocalWhisper: false });
+                toast({
+                  title: t("settingsPage.transcription.toasts.switchedCustom.title"),
+                  description: t("settingsPage.transcription.toasts.switchedCustom.description"),
+                  variant: "success",
+                  duration: 3000,
+                });
+              }
+            }}
+            className="w-full flex items-center gap-3 text-left cursor-pointer group"
+          >
+            <div
+              className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-colors ${
+                isCustomMode
+                  ? "bg-accent/10 dark:bg-accent/15"
+                  : "bg-muted/60 dark:bg-surface-raised group-hover:bg-muted dark:group-hover:bg-surface-3"
+              }`}
+            >
+              <Key
+                className={`w-4 h-4 transition-colors ${
+                  isCustomMode ? "text-accent" : "text-muted-foreground"
                 }`}
-              >
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-foreground">
+                  {t("settingsPage.transcription.customSetup")}
+                </span>
                 {isCustomMode && (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-accent-foreground" />
-                  </div>
+                  <span className="text-xs font-medium text-accent bg-accent/10 dark:bg-accent/15 px-1.5 py-px rounded-sm">
+                    {t("common.active")}
+                  </span>
                 )}
               </div>
-            </button>
-          </SettingsPanelRow>
-        </SettingsPanel>
-      )}
+              <p className="text-xs text-muted-foreground/80 mt-0.5">
+                {t("settingsPage.transcription.customSetupDescription")}
+              </p>
+            </div>
+            <div
+              className={`w-4 h-4 rounded-full border-2 shrink-0 transition-colors ${
+                isCustomMode
+                  ? "border-accent bg-accent"
+                  : "border-border-hover dark:border-border-subtle"
+              }`}
+            >
+              {isCustomMode && (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-accent-foreground" />
+                </div>
+              )}
+            </div>
+          </button>
+        </SettingsPanelRow>
+      </SettingsPanel>
 
       {/* Custom Setup model picker — shown when Custom Setup is active or not signed in */}
-      {(isCustomMode || !isSignedIn) && (
+      {showCustomSetup && (
         <TranscriptionModelPicker
           selectedCloudProvider={cloudTranscriptionProvider}
           onCloudProviderSelect={setCloudTranscriptionProvider}
@@ -716,32 +734,6 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
   useClipboard(showAlertDialog);
   const { agentName, setAgentName } = useAgentName();
   const [agentNameInput, setAgentNameInput] = useState(agentName);
-  const [newDictionaryWord, setNewDictionaryWord] = useState("");
-
-  const handleAddDictionaryWord = useCallback(() => {
-    const existingWords = new Set(customDictionary.map((w) => w.toLowerCase()));
-    const words = newDictionaryWord
-      .split(",")
-      .map((w) => w.trim())
-      .filter((w) => {
-        const normalized = w.toLowerCase();
-        if (!w || existingWords.has(normalized)) return false;
-        existingWords.add(normalized);
-        return true;
-      });
-    if (words.length > 0) {
-      setCustomDictionary([...customDictionary, ...words]);
-      setNewDictionaryWord("");
-    }
-  }, [newDictionaryWord, customDictionary, setCustomDictionary]);
-
-  const handleRemoveDictionaryWord = useCallback(
-    (word: string) => {
-      if (word === agentName) return;
-      setCustomDictionary(customDictionary.filter((w) => w !== word));
-    },
-    [customDictionary, setCustomDictionary, agentName]
-  );
 
   const handleSaveAgentName = useCallback(() => {
     const trimmed = agentNameInput.trim();
@@ -774,6 +766,96 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
     showAlertDialog,
     t,
   ]);
+
+  const dictionaryAutoLearnCopy = useMemo(
+    () => ({
+      title: t("settingsPage.dictionary.autoLearnTitle", {
+        defaultValue: "Auto-learn from corrections",
+      }),
+      description: t("settingsPage.dictionary.autoLearnDescription", {
+        defaultValue:
+          "When you correct a transcription in the target app, the corrected word is automatically added to your dictionary.",
+      }),
+    }),
+    [t]
+  );
+
+  const themeOptions = useMemo(
+    () =>
+      [
+        {
+          value: "light",
+          icon: Sun,
+          label: t("settingsPage.general.appearance.light"),
+        },
+        {
+          value: "dark",
+          icon: Moon,
+          label: t("settingsPage.general.appearance.dark"),
+        },
+        {
+          value: "auto",
+          icon: Monitor,
+          label: t("settingsPage.general.appearance.auto"),
+        },
+      ] as const,
+    [t]
+  );
+
+  const instructionModeLabel = useMemo(() => t("settingsPage.agentConfig.instructionMode"), [t]);
+  const cleanupModeLabel = useMemo(() => t("settingsPage.agentConfig.cleanupMode"), [t]);
+
+  const agentExamplesCompact = useMemo(
+    () => [
+      {
+        input: `Hey ${agentName}, write a formal email about the budget`,
+        mode: instructionModeLabel,
+        isInstructionMode: true,
+      },
+      {
+        input: `Hey ${agentName}, make this more professional`,
+        mode: instructionModeLabel,
+        isInstructionMode: true,
+      },
+      {
+        input: `Hey ${agentName}, convert this to bullet points`,
+        mode: instructionModeLabel,
+        isInstructionMode: true,
+      },
+      {
+        input: t("settingsPage.agentConfig.cleanupExample"),
+        mode: cleanupModeLabel,
+        isInstructionMode: false,
+      },
+    ],
+    [agentName, cleanupModeLabel, instructionModeLabel, t]
+  );
+
+  const agentExamplesLocalized = useMemo(
+    () => [
+      {
+        input: t("settingsPage.agentConfig.examples.formalEmail", { agentName }),
+        mode: instructionModeLabel,
+        isInstructionMode: true,
+      },
+      {
+        input: t("settingsPage.agentConfig.examples.professional", { agentName }),
+        mode: instructionModeLabel,
+        isInstructionMode: true,
+      },
+      {
+        input: t("settingsPage.agentConfig.examples.bulletPoints", { agentName }),
+        mode: instructionModeLabel,
+        isInstructionMode: true,
+      },
+      {
+        input: t("settingsPage.agentConfig.cleanupExample"),
+        mode: cleanupModeLabel,
+        isInstructionMode: false,
+      },
+    ],
+    [agentName, cleanupModeLabel, instructionModeLabel, t]
+  );
 
   const { theme, setTheme } = useTheme();
   const usage = useUsage();
@@ -1625,25 +1707,7 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                     description={t("settingsPage.general.appearance.themeDescription")}
                   >
                     <div className="inline-flex items-center gap-px p-0.5 bg-muted/60 dark:bg-surface-2 rounded-md">
-                      {(
-                        [
-                          {
-                            value: "light",
-                            icon: Sun,
-                            label: t("settingsPage.general.appearance.light"),
-                          },
-                          {
-                            value: "dark",
-                            icon: Moon,
-                            label: t("settingsPage.general.appearance.dark"),
-                          },
-                          {
-                            value: "auto",
-                            icon: Monitor,
-                            label: t("settingsPage.general.appearance.auto"),
-                          },
-                        ] as const
-                      ).map((option) => {
+                      {themeOptions.map((option) => {
                         const Icon = option.icon;
                         const isSelected = theme === option.value;
                         return (
@@ -1782,20 +1846,13 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
             {/* Dictionary */}
             <div>
               <SectionHeader
-                title={t("settingsPage.dictionary.autoLearnTitle", {
-                  defaultValue: "Auto-learn from corrections",
-                })}
+                title={dictionaryAutoLearnCopy.title}
               />
               <SettingsPanel>
                 <SettingsPanelRow>
                   <SettingsRow
-                    label={t("settingsPage.dictionary.autoLearnTitle", {
-                      defaultValue: "Auto-learn from corrections",
-                    })}
-                    description={t("settingsPage.dictionary.autoLearnDescription", {
-                      defaultValue:
-                        "When you correct a transcription in the target app, the corrected word is automatically added to your dictionary.",
-                    })}
+                    label={dictionaryAutoLearnCopy.title}
+                    description={dictionaryAutoLearnCopy.description}
                   >
                     <Toggle checked={autoLearnCorrections} onChange={setAutoLearnCorrections} />
                   </SettingsRow>
@@ -1854,6 +1911,7 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
         return (
           <TranscriptionSection
             isSignedIn={isSignedIn ?? false}
+            cloudAuthAvailable={Boolean(NEON_AUTH_URL)}
             cloudTranscriptionMode={cloudTranscriptionMode}
             setCloudTranscriptionMode={setCloudTranscriptionMode}
             useLocalWhisper={useLocalWhisper}
@@ -1968,35 +2026,18 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
 
             {/* Examples */}
             <div>
-              <SectionHeader title={t("settingsPage.agentConfig.examplesTitle")} />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <div className="space-y-2.5">
-                    {[
-                      {
-                        input: `Hey ${agentName}, write a formal email about the budget`,
-                        mode: t("settingsPage.agentConfig.instructionMode"),
-                      },
-                      {
-                        input: `Hey ${agentName}, make this more professional`,
-                        mode: t("settingsPage.agentConfig.instructionMode"),
-                      },
-                      {
-                        input: `Hey ${agentName}, convert this to bullet points`,
-                        mode: t("settingsPage.agentConfig.instructionMode"),
-                      },
-                      {
-                        input: t("settingsPage.agentConfig.cleanupExample"),
-                        mode: t("settingsPage.agentConfig.cleanupMode"),
-                      },
-                    ].map((example, i) => (
-                      <div key={i} className="flex items-start gap-3">
-                        <span
-                          className={`shrink-0 mt-0.5 text-[10px] font-medium uppercase tracking-wider px-1.5 py-px rounded ${
-                            example.mode === t("settingsPage.agentConfig.instructionMode")
-                              ? "bg-primary/10 text-primary dark:bg-primary/15"
-                              : "bg-muted text-muted-foreground"
-                          }`}
+                  <SectionHeader title={t("settingsPage.agentConfig.examplesTitle")} />
+                  <SettingsPanel>
+                    <SettingsPanelRow>
+                      <div className="space-y-2.5">
+                        {agentExamplesCompact.map((example, i) => (
+                          <div key={i} className="flex items-start gap-3">
+                            <span
+                              className={`shrink-0 mt-0.5 text-[10px] font-medium uppercase tracking-wider px-1.5 py-px rounded ${
+                                example.isInstructionMode
+                                  ? "bg-primary/10 text-primary dark:bg-primary/15"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
                         >
                           {example.mode}
                         </span>
@@ -2110,34 +2151,11 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                   <SettingsPanel>
                     <SettingsPanelRow>
                       <div className="space-y-2.5">
-                        {[
-                          {
-                            input: t("settingsPage.agentConfig.examples.formalEmail", {
-                              agentName,
-                            }),
-                            mode: t("settingsPage.agentConfig.instructionMode"),
-                          },
-                          {
-                            input: t("settingsPage.agentConfig.examples.professional", {
-                              agentName,
-                            }),
-                            mode: t("settingsPage.agentConfig.instructionMode"),
-                          },
-                          {
-                            input: t("settingsPage.agentConfig.examples.bulletPoints", {
-                              agentName,
-                            }),
-                            mode: t("settingsPage.agentConfig.instructionMode"),
-                          },
-                          {
-                            input: t("settingsPage.agentConfig.cleanupExample"),
-                            mode: t("settingsPage.agentConfig.cleanupMode"),
-                          },
-                        ].map((example, i) => (
+                        {agentExamplesLocalized.map((example, i) => (
                           <div key={i} className="flex items-start gap-3">
                             <span
                               className={`shrink-0 mt-0.5 text-xs font-medium uppercase tracking-wider px-1.5 py-px rounded ${
-                                example.mode === t("settingsPage.agentConfig.instructionMode")
+                                example.isInstructionMode
                                   ? "bg-primary/10 text-primary dark:bg-primary/15"
                                   : "bg-muted text-muted-foreground"
                               }`}

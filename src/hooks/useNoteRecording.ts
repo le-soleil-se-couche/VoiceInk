@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import AudioManager from "../helpers/audioManager";
+import { getSettings } from "../stores/settingsStore";
 import logger from "../utils/logger";
 import { getRecordingErrorTitle } from "../utils/recordingErrors";
 
@@ -90,14 +91,23 @@ export function useNoteRecording({
     });
 
     manager.setContext("notes");
-    window.electronAPI.getSttConfig?.().then((config) => {
-      if (config && audioManagerRef.current) {
-        audioManagerRef.current.setSttConfig(config);
-        if (manager.shouldUseStreaming()) {
-          manager.warmupStreamingConnection();
+    const settings = getSettings();
+    const shouldLoadSttConfig =
+      Boolean(window.electronAPI?.runtimeConfig?.apiUrl) &&
+      settings.isSignedIn &&
+      !settings.useLocalWhisper &&
+      settings.cloudTranscriptionMode === "openwhispr";
+
+    if (shouldLoadSttConfig) {
+      window.electronAPI.getSttConfig?.().then((config) => {
+        if (config && audioManagerRef.current) {
+          audioManagerRef.current.setSttConfig(config);
+          if (manager.shouldUseStreaming()) {
+            manager.warmupStreamingConnection();
+          }
         }
-      }
-    });
+      });
+    }
 
     return () => {
       manager.cleanup();

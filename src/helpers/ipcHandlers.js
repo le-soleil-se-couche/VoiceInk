@@ -11,6 +11,8 @@ const { i18nMain, changeLanguage } = require("./i18nMain");
 const DeepgramStreaming = require("./deepgramStreaming");
 
 const MISTRAL_TRANSCRIPTION_URL = "https://api.mistral.ai/v1/audio/transcriptions";
+const HTTP_REQUEST_TIMEOUT_MS = 120000;
+const HTTP_TIMEOUT_ERROR_CODE = "REQUEST_TIMEOUT";
 
 // Debounce delay: wait for user to stop typing before processing corrections
 const AUTO_LEARN_DEBOUNCE_MS = 1500;
@@ -24,6 +26,46 @@ const AUDIO_MIME_TYPES = {
   flac: "audio/flac",
   aac: "audio/aac",
 };
+const QWEN_ASR_MODEL_RE = /^qwen[\w.-]*asr/i;
+
+function isQwenAsrModel(model) {
+  return QWEN_ASR_MODEL_RE.test((model || "").trim());
+}
+
+function resolveCustomChatCompletionsEndpoint(endpoint) {
+  const trimmed = (endpoint || "").trim().replace(/\/+$/, "");
+  if (!trimmed) return "";
+  return /\/chat\/completions$/i.test(trimmed) ? trimmed : `${trimmed}/chat/completions`;
+}
+
+function createTimeoutError(timeoutMs) {
+  const err = new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
+  err.code = HTTP_TIMEOUT_ERROR_CODE;
+  err.timeoutMs = timeoutMs;
+  return err;
+}
+
+function extractChatCompletionText(data) {
+  const content = data?.choices?.[0]?.message?.content;
+
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (typeof item?.text === "string") return item.text;
+        if (typeof item?.content === "string") return item.content;
+        return "";
+      })
+      .join("\n")
+      .trim();
+  }
+
+  return "";
+}
 
 function buildMultipartBody(fileBuffer, fileName, contentType, fields = {}) {
   const boundary = `----OpenWhispr${Date.now()}`;
@@ -53,14 +95,23 @@ function buildMultipartBody(fileBuffer, fileName, contentType, fields = {}) {
   return { body: Buffer.concat(bodyParts), boundary };
 }
 
-function postMultipart(url, body, boundary, headers = {}) {
+function postMultipart(url, body, boundary, headers = {}, timeoutMs = HTTP_REQUEST_TIMEOUT_MS) {
   const httpModule = url.protocol === "https:" ? https : http;
   return new Promise((resolve, reject) => {
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      abortController.abort(createTimeoutError(timeoutMs));
+    }, timeoutMs);
+
+    const clearRequestTimeout = () => {
+      clearTimeout(timeoutId);
+    };
+
     const req = httpModule.request(
       {
         hostname: url.hostname,
         port: url.port || (url.protocol === "https:" ? 443 : 80),
-        path: url.pathname,
+        path: `${url.pathname}${url.search || ""}`,
         method: "POST",
         headers: {
           "Content-Type": `multipart/form-data; boundary=${boundary}`,
@@ -72,6 +123,7 @@ function postMultipart(url, body, boundary, headers = {}) {
         let responseData = "";
         res.on("data", (chunk) => (responseData += chunk));
         res.on("end", () => {
+          clearRequestTimeout();
           try {
             resolve({ statusCode: res.statusCode, data: JSON.parse(responseData) });
           } catch (e) {
@@ -80,7 +132,69 @@ function postMultipart(url, body, boundary, headers = {}) {
         });
       }
     );
-    req.on("error", reject);
+
+    const abortHandler = () => {
+      req.destroy(abortController.signal.reason || createTimeoutError(timeoutMs));
+    };
+    abortController.signal.addEventListener("abort", abortHandler, { once: true });
+
+    req.on("error", (error) => {
+      clearRequestTimeout();
+      reject(error);
+    });
+    req.write(body);
+    req.end();
+  });
+}
+
+function postJson(url, payload, headers = {}, timeoutMs = HTTP_REQUEST_TIMEOUT_MS) {
+  const body = Buffer.from(JSON.stringify(payload));
+  const httpModule = url.protocol === "https:" ? https : http;
+  return new Promise((resolve, reject) => {
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      abortController.abort(createTimeoutError(timeoutMs));
+    }, timeoutMs);
+
+    const clearRequestTimeout = () => {
+      clearTimeout(timeoutId);
+    };
+
+    const req = httpModule.request(
+      {
+        hostname: url.hostname,
+        port: url.port || (url.protocol === "https:" ? 443 : 80),
+        path: `${url.pathname}${url.search || ""}`,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": body.length,
+          ...headers,
+        },
+      },
+      (res) => {
+        let responseData = "";
+        res.on("data", (chunk) => (responseData += chunk));
+        res.on("end", () => {
+          clearRequestTimeout();
+          try {
+            resolve({ statusCode: res.statusCode, data: JSON.parse(responseData) });
+          } catch (e) {
+            reject(new Error(`Invalid JSON response: ${responseData.slice(0, 200)}`));
+          }
+        });
+      }
+    );
+
+    const abortHandler = () => {
+      req.destroy(abortController.signal.reason || createTimeoutError(timeoutMs));
+    };
+    abortController.signal.addEventListener("abort", abortHandler, { once: true });
+
+    req.on("error", (error) => {
+      clearRequestTimeout();
+      reject(error);
+    });
     req.write(body);
     req.end();
   });
@@ -658,6 +772,19 @@ class IPCHandlers {
 
     ipcMain.handle("check-paste-tools", async () => {
       return this.clipboardManager.checkPasteTools();
+    });
+
+    ipcMain.handle("get-target-app-info", async () => {
+      const info = this.textEditMonitor?.getLastTargetAppInfo?.() || {};
+      const hasMainProcessData = Boolean(info.appName) || Number.isInteger(info.processId);
+
+      return {
+        appName: info.appName || null,
+        processId: Number.isInteger(info.processId) ? info.processId : null,
+        platform: process.platform,
+        source: hasMainProcessData ? "main-process" : "renderer-fallback",
+        capturedAt: info.capturedAt || null,
+      };
     });
 
     ipcMain.handle("transcribe-local-whisper", async (event, audioBlob, options = {}) => {
@@ -1765,6 +1892,12 @@ class IPCHandlers {
       return {};
     })();
 
+    const getOauthProtocol = () =>
+      process.env.OPENWHISPR_PROTOCOL ||
+      process.env.VITE_OPENWHISPR_PROTOCOL ||
+      runtimeEnv.VITE_OPENWHISPR_PROTOCOL ||
+      "";
+
     const getApiUrl = () =>
       process.env.OPENWHISPR_API_URL ||
       process.env.VITE_OPENWHISPR_API_URL ||
@@ -1776,6 +1909,47 @@ class IPCHandlers {
       process.env.VITE_NEON_AUTH_URL ||
       runtimeEnv.VITE_NEON_AUTH_URL ||
       "";
+
+    const getAuthBridgeUrl = () => {
+      const configured =
+        process.env.OPENWHISPR_AUTH_BRIDGE_URL ||
+        process.env.VITE_OPENWHISPR_AUTH_BRIDGE_URL ||
+        runtimeEnv.VITE_OPENWHISPR_AUTH_BRIDGE_URL ||
+        "";
+
+      if (configured) {
+        return configured;
+      }
+
+      const rawPort = (process.env.OPENWHISPR_AUTH_BRIDGE_PORT || "").trim();
+      const parsedPort = Number(rawPort);
+      const port =
+        Number.isInteger(parsedPort) && parsedPort >= 1 && parsedPort <= 65535
+          ? parsedPort
+          : 5199;
+
+      return `http://127.0.0.1:${port}/oauth/callback`;
+    };
+
+    const getOAuthCallbackUrl = () =>
+      process.env.OPENWHISPR_OAUTH_CALLBACK_URL ||
+      process.env.VITE_OPENWHISPR_OAUTH_CALLBACK_URL ||
+      runtimeEnv.VITE_OPENWHISPR_OAUTH_CALLBACK_URL ||
+      "";
+
+    const buildRuntimeConfig = () => ({
+      apiUrl: getApiUrl(),
+      authUrl: getAuthUrl(),
+      oauthProtocol: getOauthProtocol(),
+      oauthAuthBridgeUrl: getAuthBridgeUrl(),
+      oauthCallbackUrl: getOAuthCallbackUrl(),
+    });
+
+    ipcMain.on("get-runtime-config-sync", (event) => {
+      event.returnValue = buildRuntimeConfig();
+    });
+
+    ipcMain.handle("get-runtime-config", async () => buildRuntimeConfig());
 
     const getSessionCookiesFromWindow = async (win) => {
       const scopedUrls = [getAuthUrl(), getApiUrl()].filter(Boolean);
@@ -2097,21 +2271,26 @@ class IPCHandlers {
     );
 
     ipcMain.handle("get-stt-config", async (event) => {
-      try {
-        const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
+      const apiUrl = getApiUrl();
+      if (!apiUrl) {
+        return null;
+      }
 
+      try {
         const cookieHeader = await getSessionCookies(event);
-        if (!cookieHeader) throw new Error("No session cookies available");
+        if (!cookieHeader) {
+          return null;
+        }
 
         const response = await fetch(`${apiUrl}/api/stt-config`, {
           headers: { Cookie: cookieHeader },
         });
 
+        if (response.status === 401) {
+          return null;
+        }
+
         if (!response.ok) {
-          if (response.status === 401) {
-            return { success: false, error: "Session expired", code: "AUTH_EXPIRED" };
-          }
           throw new Error(`API error: ${response.status}`);
         }
 
@@ -2321,19 +2500,47 @@ class IPCHandlers {
           const contentType = AUDIO_MIME_TYPES[ext] || "audio/mpeg";
           const fileName = path.basename(filePath);
 
-          let transcriptionUrl = baseUrl.replace(/\/+$/, "");
-          if (!transcriptionUrl.endsWith("/audio/transcriptions")) {
-            transcriptionUrl += "/audio/transcriptions";
+          const trimmedModel = (model || "whisper-1").trim();
+          let data;
+
+          if (isQwenAsrModel(trimmedModel)) {
+            const transcriptionUrl = resolveCustomChatCompletionsEndpoint(baseUrl);
+            const payload = {
+              model: trimmedModel,
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    {
+                      type: "input_audio",
+                      input_audio: {
+                        data: `data:${contentType};base64,${audioBuffer.toString("base64")}`,
+                      },
+                    },
+                  ],
+                },
+              ],
+              stream: false,
+              asr_options: {
+                enable_itn: false,
+              },
+            };
+
+            const url = new URL(transcriptionUrl);
+            data = await postJson(url, payload, {
+              Authorization: `Bearer ${apiKey}`,
+            });
+          } else {
+            const transcriptionUrl = baseUrl.trim();
+            const { body, boundary } = buildMultipartBody(audioBuffer, fileName, contentType, {
+              model: trimmedModel,
+            });
+
+            const url = new URL(transcriptionUrl);
+            data = await postMultipart(url, body, boundary, {
+              Authorization: `Bearer ${apiKey}`,
+            });
           }
-
-          const { body, boundary } = buildMultipartBody(audioBuffer, fileName, contentType, {
-            model: model || "whisper-1",
-          });
-
-          const url = new URL(transcriptionUrl);
-          const data = await postMultipart(url, body, boundary, {
-            Authorization: `Bearer ${apiKey}`,
-          });
 
           if (data.statusCode === 401) {
             return { success: false, error: "Invalid API key. Check your key in Settings." };
@@ -2347,9 +2554,20 @@ class IPCHandlers {
             );
           }
 
-          return { success: true, text: data.data.text };
+          const text = isQwenAsrModel(trimmedModel)
+            ? extractChatCompletionText(data.data)
+            : data.data.text;
+
+          return { success: true, text };
         } catch (error) {
           debugLogger.error("BYOK audio file transcription error", { error: error.message });
+          if (error?.code === HTTP_TIMEOUT_ERROR_CODE) {
+            return {
+              success: false,
+              error:
+                "Transcription request timed out. The custom endpoint did not respond in time.",
+            };
+          }
           return { success: false, error: error.message };
         }
       }

@@ -29,7 +29,7 @@ import { findDefaultFolder, MEETINGS_FOLDER_NAME } from "./shared";
 import { useAuth } from "../../hooks/useAuth";
 import { useUsage } from "../../hooks/useUsage";
 import { useSettings } from "../../hooks/useSettings";
-import { withSessionRefresh } from "../../lib/neonAuth";
+import { NEON_AUTH_URL, withSessionRefresh } from "../../lib/neonAuth";
 import reasoningService from "../../services/ReasoningService";
 import { getAllReasoningModels } from "../../models/ModelRegistry";
 import { useSettingsStore, selectIsCloudReasoningMode } from "../../stores/settingsStore";
@@ -93,6 +93,8 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
   const [providerReady, setProviderReady] = useState<boolean | null>(null);
 
   const { isSignedIn } = useAuth();
+  const cloudAuthAvailable = Boolean(NEON_AUTH_URL);
+  const hasCloudSession = cloudAuthAvailable && isSignedIn;
   const usage = useUsage();
   const isProUser = usage?.isSubscribed || usage?.isTrial;
 
@@ -131,10 +133,10 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
   const useReasoningModel = useSettingsStore((s) => s.useReasoningModel);
 
   const isOpenWhisprCloud =
-    isSignedIn && cloudTranscriptionMode === "openwhispr" && !useLocalWhisper;
+    hasCloudSession && cloudTranscriptionMode === "openwhispr" && !useLocalWhisper;
   const usageLoaded = usage?.hasLoaded ?? false;
   const showSetup = usageLoaded && !isProUser && !setupDismissed && state === "idle";
-  const showModelPicker = !isSignedIn || cloudTranscriptionMode === "byok" || useLocalWhisper;
+  const showModelPicker = !hasCloudSession || cloudTranscriptionMode === "byok" || useLocalWhisper;
   const shouldCenter = !showSetup && !advancedOpen;
 
   // Mode detection
@@ -156,7 +158,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
       // Local transcription: no file size restrictions
     } else if (isByok) {
       byokTooLarge = file.sizeBytes > BYOK_MAX_FILE_SIZE;
-      if (byokTooLarge && !isSignedIn) {
+      if (byokTooLarge && cloudAuthAvailable && !isSignedIn) {
         requiresAccount = true;
       }
     } else {
@@ -474,7 +476,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     return t("notes.upload.transcribingProvider", { provider: cloudTranscriptionProvider });
   };
 
-  const modeSelector = isSignedIn ? (
+  const modeSelector = hasCloudSession ? (
     <div className="flex items-center rounded-md border border-foreground/6 dark:border-white/6 bg-surface-1/30 dark:bg-white/[0.02] p-0.5 mb-3">
       <button
         onClick={() => {
@@ -602,6 +604,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
           {state === "selected" && file && (
             <SelectedView
               t={t}
+              cloudAuthAvailable={cloudAuthAvailable}
               file={file}
               getActiveModelLabel={getActiveModelLabel}
               reset={reset}
@@ -868,6 +871,7 @@ function IdleView({
 
 interface SelectedViewProps {
   t: (key: string) => string;
+  cloudAuthAvailable: boolean;
   file: { name: string; path: string; size: string; sizeBytes: number };
   getActiveModelLabel: () => string;
   reset: () => void;
@@ -886,6 +890,7 @@ interface SelectedViewProps {
 
 function SelectedView({
   t,
+  cloudAuthAvailable,
   file,
   getActiveModelLabel,
   reset,
@@ -994,7 +999,7 @@ function SelectedView({
         )}
 
         {/* BYOK too large — signed in, Free: Upgrade */}
-        {byokTooLarge && !requiresAccount && !isProUser && (
+        {byokTooLarge && cloudAuthAvailable && !requiresAccount && !isProUser && (
           <Button variant="default" size="sm" onClick={onUpgrade} className="h-8 text-xs px-5">
             {t("notes.upload.upgrade")}
           </Button>

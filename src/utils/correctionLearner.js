@@ -28,7 +28,7 @@ function editDistance(a, b) {
 function tokenize(text) {
   return text
     .split(/\s+/)
-    .map((w) => w.replace(/^[^\w]+|[^\w]+$/g, ""))
+    .map((w) => w.replace(/^[^\p{L}\p{N}'-]+|[^\p{L}\p{N}'-]+$/gu, ""))
     .filter((w) => w.length > 0);
 }
 
@@ -79,7 +79,10 @@ function findEditedRegion(originalText, fieldValue) {
   return fieldWords.slice(bestStart, bestStart + windowSize).join(" ");
 }
 
-/** Word-level LCS to find [originalWord, editedWord] substitution pairs. */
+/**
+ * Word-level LCS to find [originalWord, editedWord] substitution pairs.
+ * Returns substitution pairs plus LCS length for rewrite detection.
+ */
 function findSubstitutions(origWords, editedWords) {
   const m = origWords.length;
   const n = editedWords.length;
@@ -123,7 +126,10 @@ function findSubstitutions(origWords, editedWords) {
     }
   }
 
-  return subs;
+  return {
+    substitutions: subs,
+    lcsLength: dp[m][n],
+  };
 }
 
 /**
@@ -146,9 +152,15 @@ function extractCorrections(originalText, fieldValue, existingDictionary) {
 
   if (origWords.length === 0 || editedWords.length === 0) return [];
 
-  // If more than 50% of words changed, this is a rewrite, not corrections
-  const subs = findSubstitutions(origWords, editedWords);
-  if (subs.length > origWords.length * 0.5) return [];
+  const lengthDeltaRatio =
+    Math.abs(editedWords.length - origWords.length) / Math.max(origWords.length, 1);
+  if (lengthDeltaRatio > 0.4) return [];
+
+  // If too much changed, treat this as a rewrite and learn nothing.
+  const { substitutions: subs, lcsLength } = findSubstitutions(origWords, editedWords);
+  const changedRatio = subs.length / Math.max(origWords.length, 1);
+  const unchangedRatio = lcsLength / Math.max(origWords.length, editedWords.length, 1);
+  if (changedRatio > 0.35 || unchangedRatio < 0.45) return [];
 
   const safeDict = Array.isArray(existingDictionary) ? existingDictionary : [];
   const dictSet = new Set(safeDict.map((w) => w.toLowerCase()));
@@ -156,20 +168,28 @@ function extractCorrections(originalText, fieldValue, existingDictionary) {
   const results = [];
 
   for (const [origWord, correctedWord] of subs) {
-    const normalizedCorrected = correctedWord.toLowerCase();
+    if (!origWord || !correctedWord) continue;
+
+    const cleanedCorrected = correctedWord.trim();
+    if (!cleanedCorrected) continue;
+    if (cleanedCorrected.length < 3 || cleanedCorrected.length > 40) continue;
+    if (!/\p{L}/u.test(cleanedCorrected)) continue;
+    if (/[/@\\]/.test(cleanedCorrected)) continue;
+
+    const normalizedCorrected = cleanedCorrected.toLowerCase();
 
     if (dictSet.has(normalizedCorrected)) continue;
     if (seenCorrections.has(normalizedCorrected)) continue;
     if (origWord.toLowerCase() === normalizedCorrected) continue;
-    if (correctedWord.length < 3) continue;
 
-    // 0.65 threshold allows phonetic corrections like "Shunade" → "Sinead" (dist 4/7 = 0.57)
-    // while filtering out unrelated word replacements.
-    const dist = editDistance(origWord.toLowerCase(), correctedWord.toLowerCase());
-    const maxLen = Math.max(origWord.length, correctedWord.length);
-    if (dist / maxLen > 0.65) continue;
+    // Allow phonetic corrections, but make short words stricter.
+    const dist = editDistance(origWord.toLowerCase(), normalizedCorrected);
+    const maxLen = Math.max(origWord.length, cleanedCorrected.length);
+    const distanceRatio = dist / maxLen;
+    const maxDistanceRatio = maxLen <= 4 ? 0.5 : 0.65;
+    if (distanceRatio > maxDistanceRatio) continue;
 
-    results.push(correctedWord);
+    results.push(cleanedCorrected);
     seenCorrections.add(normalizedCorrected);
   }
 

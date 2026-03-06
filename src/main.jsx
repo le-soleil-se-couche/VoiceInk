@@ -10,6 +10,7 @@ import { ToastProvider } from "./components/ui/Toast.tsx";
 import { SettingsProvider } from "./hooks/useSettings";
 import { useTheme } from "./hooks/useTheme";
 import { useAuth } from "./hooks/useAuth";
+import { RUNTIME_CONFIG } from "./config/runtimeConfig";
 import i18n from "./i18n";
 import "./index.css";
 
@@ -33,10 +34,14 @@ const configuredChannel = (import.meta.env.VITE_OPENWHISPR_CHANNEL || inferredCh
 const APP_CHANNEL = VALID_CHANNELS.has(configuredChannel) ? configuredChannel : inferredChannel;
 const defaultOAuthProtocol =
   DEFAULT_OAUTH_PROTOCOL_BY_CHANNEL[APP_CHANNEL] || DEFAULT_OAUTH_PROTOCOL_BY_CHANNEL.production;
-const OAUTH_PROTOCOL = (import.meta.env.VITE_OPENWHISPR_PROTOCOL || defaultOAuthProtocol)
+const OAUTH_PROTOCOL = (RUNTIME_CONFIG.oauthProtocol || import.meta.env.VITE_OPENWHISPR_PROTOCOL || defaultOAuthProtocol)
   .trim()
   .toLowerCase();
-const OAUTH_AUTH_BRIDGE_URL = (import.meta.env.VITE_OPENWHISPR_AUTH_BRIDGE_URL || "").trim();
+const OAUTH_AUTH_BRIDGE_URL = (
+  RUNTIME_CONFIG.oauthAuthBridgeUrl ||
+  import.meta.env.VITE_OPENWHISPR_AUTH_BRIDGE_URL ||
+  ""
+).trim();
 
 // OAuth callback handler: when the browser redirects back from Google/Neon Auth
 // with a session verifier, redirect to the configured custom protocol so Electron
@@ -271,6 +276,7 @@ if (!isOAuthBrowserRedirect()) {
 function AppRouter() {
   useTheme();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
+  const cloudAuthAvailable = Boolean(RUNTIME_CONFIG.authUrl);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [needsReauth, setNeedsReauth] = useState(false);
@@ -308,7 +314,7 @@ function AppRouter() {
     if (isControlPanel) {
       if (!resolved) {
         setShowOnboarding(true);
-      } else if (!isSignedIn && !authSkipped) {
+      } else if (cloudAuthAvailable && !isSignedIn && !authSkipped) {
         setNeedsReauth(true);
       }
     }
@@ -322,7 +328,7 @@ function AppRouter() {
     }
 
     setIsLoading(false);
-  }, [isControlPanel, isDictationPanel, isSignedIn, authLoaded]);
+  }, [isControlPanel, isDictationPanel, isSignedIn, authLoaded, cloudAuthAvailable]);
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);

@@ -2,6 +2,7 @@ import promptData from "./promptData.json";
 import i18n, { normalizeUiLanguage } from "../i18n";
 import { en as enPrompts, type PromptBundle } from "../locales/prompts";
 import { getLanguageInstruction } from "../utils/languageSupport";
+import type { ContextClassification } from "../utils/contextClassifier";
 
 export const CLEANUP_PROMPT = promptData.CLEANUP_PROMPT;
 export const FULL_PROMPT = promptData.FULL_PROMPT;
@@ -31,12 +32,41 @@ function detectAgentName(transcript: string, agentName: string): boolean {
   return variants.some((v) => lower.includes(v));
 }
 
+function getContextInstruction(context?: ContextClassification): string {
+  if (!context) return "";
+
+  const contextLabels: Record<ContextClassification["context"], string> = {
+    general: "general writing",
+    code: "code or technical content",
+    email: "email drafting",
+    chat: "chat/message writing",
+    document: "document or notes writing",
+  };
+
+  const focusHints: Record<ContextClassification["context"], string> = {
+    general: "Keep output natural and concise.",
+    code: "Preserve syntax, symbols, casing, and code blocks exactly where possible.",
+    email: "Preserve recipient intent and structure it like a clear, professional email.",
+    chat: "Keep it concise and conversational, but still polished.",
+    document: "Preserve headings, bullets, and list structure when they aid readability.",
+  };
+
+  const appSuffix = context.targetApp?.appName ? ` Target app: ${context.targetApp.appName}.` : "";
+  const intentHint =
+    context.intent === "instruction"
+      ? "Likely direct instruction mode."
+      : "Likely cleanup mode; stay anchored to user content.";
+
+  return `Context hint: ${contextLabels[context.context]}.${appSuffix} ${focusHints[context.context]} ${intentHint}`;
+}
+
 export function getSystemPrompt(
   agentName: string | null,
   customDictionary?: string[],
   language?: string,
   transcript?: string,
-  uiLanguage?: string
+  uiLanguage?: string,
+  context?: ContextClassification
 ): string {
   const name = agentName?.trim() || "Assistant";
   const prompts = getPromptBundle(uiLanguage);
@@ -67,6 +97,11 @@ export function getSystemPrompt(
   const langInstruction = getLanguageInstruction(language);
   if (langInstruction) {
     prompt += "\n\n" + langInstruction;
+  }
+
+  const contextInstruction = getContextInstruction(context);
+  if (contextInstruction) {
+    prompt += "\n\n" + contextInstruction;
   }
 
   if (customDictionary && customDictionary.length > 0) {

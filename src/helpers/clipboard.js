@@ -67,6 +67,44 @@ function writeClipboardInRenderer(webContents, text) {
   return webContents.executeJavaScript(`navigator.clipboard.writeText(${escaped})`);
 }
 
+function buildPasteResult({ success, mode, message, reason, method, platform }) {
+  return {
+    success,
+    mode,
+    ...(message ? { message } : {}),
+    ...(reason ? { reason } : {}),
+    ...(method ? { method } : {}),
+    ...(platform ? { platform } : {}),
+  };
+}
+
+function inferPasteFailureReason(error, clipboardWritten) {
+  const code = typeof error?.code === "string" ? error.code.toLowerCase() : "";
+  if (code.includes("accessibility")) return "accessibility_permission_required";
+  if (code.includes("timeout")) return "paste_timeout";
+  if (code.includes("simulation")) return "paste_simulation_failed";
+
+  const message = String(error?.message || "").toLowerCase();
+  if (message.includes("accessibility")) return "accessibility_permission_required";
+  if (message.includes("timed out")) return "paste_timeout";
+  if (
+    message.includes("automatic pasting requires") ||
+    message.includes("please install") ||
+    message.includes("ydotoold daemon")
+  ) {
+    return "paste_tool_unavailable";
+  }
+  if (
+    message.includes("clipboard copied") ||
+    message.includes("copied to clipboard") ||
+    message.includes("paste simulation failed")
+  ) {
+    return "paste_simulation_failed";
+  }
+
+  return clipboardWritten ? "paste_simulation_failed" : "clipboard_write_failed";
+}
+
 class ClipboardManager {
   constructor() {
     this.accessibilityCache = { value: null, expiresAt: 0 };
@@ -449,6 +487,7 @@ class ClipboardManager {
     const platform = process.platform;
     let method = "unknown";
     const webContents = options.webContents;
+    let clipboardWritten = false;
 
     try {
       const originalClipboard = clipboard.readText();
@@ -462,6 +501,7 @@ class ClipboardManager {
       } else {
         clipboard.writeText(text);
       }
+      clipboardWritten = true;
       this.safeLog("📋 Text copied to clipboard:", text.substring(0, 50) + "...");
 
       if (platform === "darwin") {
@@ -504,14 +544,36 @@ class ClipboardManager {
         elapsedMs: Date.now() - startTime,
         textLength: text.length,
       });
+      return buildPasteResult({
+        success: true,
+        mode: "pasted",
+        method,
+        platform,
+      });
     } catch (error) {
-      this.safeLog("❌ Paste operation failed", {
+      const message =
+        error?.message ??
+        (typeof error?.toString === "function" ? error.toString() : String(error));
+      const mode = clipboardWritten ? "copied" : "failed";
+      const reason = inferPasteFailureReason(error, clipboardWritten);
+
+      this.safeLog(clipboardWritten ? "⚠️ Paste automation failed, clipboard preserved" : "❌ Paste operation failed", {
         platform,
         method,
+        mode,
+        reason,
+        clipboardWritten,
         elapsedMs: Date.now() - startTime,
-        error: error.message,
+        error: message,
       });
-      throw error;
+      return buildPasteResult({
+        success: false,
+        mode,
+        message,
+        reason,
+        method,
+        platform,
+      });
     }
   }
 
