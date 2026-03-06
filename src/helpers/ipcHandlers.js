@@ -68,7 +68,7 @@ function extractChatCompletionText(data) {
 }
 
 function buildMultipartBody(fileBuffer, fileName, contentType, fields = {}) {
-  const boundary = `----OpenWhispr${Date.now()}`;
+  const boundary = `----VoiceInk${Date.now()}`;
   const parts = [];
 
   parts.push(
@@ -2026,7 +2026,7 @@ class IPCHandlers {
     ipcMain.handle("cloud-transcribe", async (event, audioBuffer, opts = {}) => {
       try {
         const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
+        if (!apiUrl) throw new Error("VoiceInk API URL not configured");
 
         const cookieHeader = await getSessionCookies(event);
         if (!cookieHeader) throw new Error("No session cookies available");
@@ -2096,7 +2096,7 @@ class IPCHandlers {
     ipcMain.handle("cloud-reason", async (event, text, opts = {}) => {
       try {
         const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
+        if (!apiUrl) throw new Error("VoiceInk API URL not configured");
 
         const cookieHeader = await getSessionCookies(event);
         if (!cookieHeader) throw new Error("No session cookies available");
@@ -2172,7 +2172,7 @@ class IPCHandlers {
       async (event, text, audioDurationSeconds, opts = {}) => {
         try {
           const apiUrl = getApiUrl();
-          if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
+          if (!apiUrl) throw new Error("VoiceInk API URL not configured");
 
           const cookieHeader = await getSessionCookies(event);
           if (!cookieHeader) throw new Error("No session cookies available");
@@ -2220,7 +2220,7 @@ class IPCHandlers {
     ipcMain.handle("cloud-usage", async (event) => {
       try {
         const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
+        if (!apiUrl) throw new Error("VoiceInk API URL not configured");
 
         const cookieHeader = await getSessionCookies(event);
         if (!cookieHeader) throw new Error("No session cookies available");
@@ -2247,7 +2247,7 @@ class IPCHandlers {
     const fetchStripeUrl = async (event, endpoint, errorPrefix, body) => {
       try {
         const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
+        if (!apiUrl) throw new Error("VoiceInk API URL not configured");
 
         const cookieHeader = await getSessionCookies(event);
         if (!cookieHeader) throw new Error("No session cookies available");
@@ -2330,7 +2330,7 @@ class IPCHandlers {
       const CONCURRENCY_LIMIT = 5;
       try {
         const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
+        if (!apiUrl) throw new Error("VoiceInk API URL not configured");
 
         const cookieHeader = await getSessionCookies(event);
         if (!cookieHeader) throw new Error("No session cookies available");
@@ -2597,7 +2597,7 @@ class IPCHandlers {
       try {
         const apiUrl = getApiUrl();
         if (!apiUrl) {
-          throw new Error("OpenWhispr API URL not configured");
+          throw new Error("VoiceInk API URL not configured");
         }
 
         const cookieHeader = await getSessionCookies(event);
@@ -2630,7 +2630,7 @@ class IPCHandlers {
       try {
         const apiUrl = getApiUrl();
         if (!apiUrl) {
-          throw new Error("OpenWhispr API URL not configured");
+          throw new Error("VoiceInk API URL not configured");
         }
 
         const cookieHeader = await getSessionCookies(event);
@@ -2668,7 +2668,7 @@ class IPCHandlers {
       try {
         const apiUrl = getApiUrl();
         if (!apiUrl) {
-          throw new Error("OpenWhispr API URL not configured");
+          throw new Error("VoiceInk API URL not configured");
         }
 
         const cookieHeader = await getSessionCookies(event);
@@ -2816,7 +2816,7 @@ class IPCHandlers {
     const fetchStreamingToken = async (event) => {
       const apiUrl = getApiUrl();
       if (!apiUrl) {
-        throw new Error("OpenWhispr API URL not configured");
+        throw new Error("VoiceInk API URL not configured");
       }
 
       const cookieHeader = await getSessionCookies(event);
@@ -3017,7 +3017,7 @@ class IPCHandlers {
 
     const fetchDeepgramStreamingTokenFromWindow = async (windowId) => {
       const apiUrl = getApiUrl();
-      if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
+      if (!apiUrl) throw new Error("VoiceInk API URL not configured");
 
       const win = BrowserWindow.fromId(windowId);
       if (!win || win.isDestroyed()) throw new Error("Window not available for token refresh");
@@ -3047,7 +3047,7 @@ class IPCHandlers {
     const fetchDeepgramStreamingToken = async (event) => {
       const apiUrl = getApiUrl();
       if (!apiUrl) {
-        throw new Error("OpenWhispr API URL not configured");
+        throw new Error("VoiceInk API URL not configured");
       }
 
       const cookieHeader = await getSessionCookies(event);

@@ -228,7 +228,7 @@ class WhisperCudaManager {
           url,
           {
             headers: {
-              "User-Agent": "OpenWhispr/1.0",
+              "User-Agent": "VoiceInk/1.0",
               Accept: "application/vnd.github+json",
             },
             timeout: 15000,

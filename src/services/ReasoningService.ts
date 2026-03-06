@@ -637,7 +637,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
           result = await this.processWithGroq(text, model, agentName, config);
           break;
         case "openwhispr":
-          result = await this.processWithOpenWhispr(text, model, agentName, config);
+          result = await this.processWithVoiceInk(text, model, agentName, config);
           break;
         case "custom":
           result = await this.processWithOpenAI(text, trimmedModel, agentName, config);
@@ -1224,7 +1224,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
   }
 
-  private async processWithOpenWhispr(
+  private async processWithVoiceInk(
     text: string,
     model: string,
     agentName: string | null = null,
@@ -1255,7 +1255,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         });
 
         if (!res.success) {
-          const err: any = new Error(res.error || "OpenWhispr cloud reasoning failed");
+          const err: any = new Error(res.error || "VoiceInk cloud reasoning failed");
           err.code = res.code;
           throw err;
         }

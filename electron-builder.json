@@ -1,9 +1,9 @@
 {
-  "appId": "com.herotools.openwispr",
-  "productName": "OpenWhispr",
+  "appId": "com.voiceink.app",
+  "productName": "VoiceInk",
   "protocols": {
-    "name": "OpenWhispr Protocol",
-    "schemes": ["openwhispr"]
+    "name": "VoiceInk Protocol",
+    "schemes": ["voiceink"]
   },
   "directories": {
     "output": "dist"
@@ -115,12 +115,10 @@
     "hardenedRuntime": true,
     "entitlements": "resources/mac/entitlements.mac.plist",
     "entitlementsInherit": "resources/mac/entitlements.mac.plist",
-    "identity": "HeroTools Inc. (9R85XFMH59)",
-    "notarize": true,
     "extendInfo": {
       "LSUIElement": false,
-      "NSMicrophoneUsageDescription": "OpenWhispr needs microphone access for speech-to-text transcription.",
-      "NSAccessibilityUsageDescription": "OpenWhispr needs accessibility permissions to paste transcribed text into other applications."
+      "NSMicrophoneUsageDescription": "VoiceInk needs microphone access for speech-to-text transcription.",
+      "NSAccessibilityUsageDescription": "VoiceInk needs accessibility permissions to paste transcribed text into other applications."
     }
   },
   "win": {
@@ -190,7 +188,7 @@
     "include": "resources/nsis/cleanup-models.nsh"
   },
   "dmg": {
-    "title": "OpenWhispr",
+    "title": "VoiceInk",
     "icon": "src/assets/icon.icns",
     "window": {
       "width": 540,
@@ -199,8 +197,8 @@
   },
   "publish": {
     "provider": "github",
-    "owner": "OpenWhispr",
-    "repo": "openwhispr",
+    "owner": "le-soleil-se-couche",
+    "repo": "VoiceInk",
     "private": false,
     "releaseType": "draft"
   }

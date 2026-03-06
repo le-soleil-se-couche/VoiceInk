@@ -167,7 +167,7 @@ class EnvironmentManager {
   async createProductionEnvFile(apiKey) {
     const envPath = path.join(app.getPath("userData"), ".env");
 
-    const envContent = `# OpenWhispr Environment Variables
+    const envContent = `# VoiceInk Environment Variables
 # This file was created automatically for production use
 OPENAI_API_KEY=${apiKey}
 `;
@@ -181,7 +181,7 @@ OPENAI_API_KEY=${apiKey}
   async saveAllKeysToEnvFile() {
     const envPath = path.join(app.getPath("userData"), ".env");
 
-    let envContent = "# OpenWhispr Environment Variables\n";
+    let envContent = "# VoiceInk Environment Variables\n";
 
     for (const key of PERSISTED_KEYS) {
       if (process.env[key]) {
