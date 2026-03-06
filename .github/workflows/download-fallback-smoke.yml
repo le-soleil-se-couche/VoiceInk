@@ -1,0 +1,34 @@
+name: Download Fallback Smoke
+
+on:
+  push:
+    branches: [main, develop, "release/**"]
+    paths:
+      - "scripts/lib/download-utils.js"
+      - "scripts/check-download-utils-fallback.js"
+      - ".github/workflows/download-fallback-smoke.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/lib/download-utils.js"
+      - "scripts/check-download-utils-fallback.js"
+      - ".github/workflows/download-fallback-smoke.yml"
+  workflow_dispatch:
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run fallback smoke check
+        run: node scripts/check-download-utils-fallback.js
