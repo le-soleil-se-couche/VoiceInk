@@ -4,7 +4,7 @@
       "sectionTitle": "Sprache",
       "sectionDescription": "Oberflächen- und Transkriptionssprache unabhängig einstellen",
       "uiLabel": "Sprache der Oberfläche",
-      "uiDescription": "Wählen Sie die Sprache für die OpenWhispr-Oberfläche",
+      "uiDescription": "Wählen Sie die Sprache für die VoiceInk-Oberfläche",
       "transcriptionLabel": "Transkriptionssprache",
       "transcriptionDescription": "Wählen Sie die Sprache, die Sie sprechen, für genauere Transkription"
     }
@@ -15,12 +15,12 @@
       "hide": "Diktierfeld ausblenden"
     },
     "openControlPanel": "Kontrollzentrum öffnen",
-    "quit": "OpenWhispr beenden",
-    "tooltip": "OpenWhispr – Sprachdiktat"
+    "quit": "VoiceInk beenden",
+    "tooltip": "VoiceInk – Sprachdiktat"
   },
   "menu": {
-    "appLabel": "OpenWhispr",
-    "quit": "OpenWhispr beenden",
+    "appLabel": "VoiceInk",
+    "quit": "VoiceInk beenden",
     "speech": "Sprache",
     "help": "Hilfe",
     "learnMore": "Mehr erfahren",
@@ -37,8 +37,8 @@
       "message": "Der Link konnte im Browser nicht geöffnet werden:\n{{url}}\n\nFehler: {{error}}"
     },
     "loadFailure": {
-      "title": "OpenWhispr konnte nicht geladen werden",
-      "message": "OpenWhispr konnte die Benutzeroberfläche nicht laden.",
+      "title": "VoiceInk konnte nicht geladen werden",
+      "message": "VoiceInk konnte die Benutzeroberfläche nicht laden.",
       "detail": {
         "window": "Fenster: {{windowName}}",
         "error": "Fehler {{errorCode}}: {{errorDescription}}",
@@ -49,17 +49,17 @@
   },
   "startup": {
     "error": {
-      "title": "OpenWhispr-Startfehler",
+      "title": "VoiceInk-Startfehler",
       "message": "Die Anwendung konnte nicht gestartet werden:\n\n{{error}}\n\nBitte melden Sie dieses Problem."
     },
     "globeHotkey": {
       "title": "Globe-Hotkey nicht verfügbar",
-      "message": "OpenWhispr konnte den Globe-Hotkey nicht aktivieren.",
+      "message": "VoiceInk konnte den Globe-Hotkey nicht aktivieren.",
       "details": {
         "unknown": "Unbekannter Fehler beim Starten des Globe-Listeners.",
         "fallback": "Der Globe-Hotkey bleibt deaktiviert; vorhandene Tastenkürzel funktionieren weiterhin.",
         "devHint": "Führen Sie `npm run compile:globe` aus und bauen Sie die App neu, um die Binary neu zu erzeugen.",
-        "reinstallHint": "Installieren Sie OpenWhispr neu oder kontaktieren Sie den Support, wenn das Problem bestehen bleibt."
+        "reinstallHint": "Installieren Sie VoiceInk neu oder kontaktieren Sie den Support, wenn das Problem bestehen bleibt."
       }
     }
   },
@@ -79,9 +79,9 @@
     "accessibility": "Bedienungshilfen-Einstellungen sind auf dieser Plattform nicht verfügbar."
   },
   "titleBar": {
-    "quitTitle": "OpenWhispr beenden",
-    "quitConfirmTitle": "OpenWhispr beenden?",
-    "quitConfirmDescription": "Dadurch wird OpenWhispr geschlossen und Hintergrundprozesse werden gestoppt.",
+    "quitTitle": "VoiceInk beenden",
+    "quitConfirmTitle": "VoiceInk beenden?",
+    "quitConfirmDescription": "Dadurch wird VoiceInk geschlossen und Hintergrundprozesse werden gestoppt.",
     "quit": "Beenden",
     "cancel": "Abbrechen"
   },
@@ -157,7 +157,7 @@
       "accessibilityTitle": "Bedienungshilfen",
       "accessibilityDescription": "Zum Einfügen von Text in Apps",
       "testAndGrant": "Testen & erteilen",
-      "requiredForApp": "Erforderlich, damit OpenWhispr funktioniert",
+      "requiredForApp": "Erforderlich, damit VoiceInk funktioniert",
       "microphoneRequired": "Mikrofonzugriff erforderlich"
     },
     "transcription": {
@@ -185,7 +185,7 @@
       "problemTitle": "Beim Update ist ein Problem aufgetreten",
       "problemDescription": "Das Update konnte nicht abgeschlossen werden. Bitte versuchen Sie es später erneut.",
       "installTitle": "Update installieren",
-      "installDescription": "OpenWhispr startet neu, um das Update anzuwenden. Laufende Arbeit wird gespeichert.",
+      "installDescription": "VoiceInk startet neu, um das Update anzuwenden. Laufende Arbeit wird gespeichert.",
       "couldNotInstallTitle": "Update konnte nicht installiert werden",
       "couldNotInstallDescription": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
       "couldNotDownloadTitle": "Update konnte nicht heruntergeladen werden",
@@ -225,8 +225,8 @@
       }
     },
     "cloudMigration": {
-      "title": "Willkommen bei OpenWhispr Pro",
-      "description": "Ihre 7-Tage-Testphase ist aktiv! Wir haben die Transkription auf OpenWhispr Cloud umgestellt für schnellere und genauere Ergebnisse. Ihre bisherigen Einstellungen sind gespeichert – wechseln Sie jederzeit in den Einstellungen zurück.",
+      "title": "Willkommen bei VoiceInk Pro",
+      "description": "Ihre 7-Tage-Testphase ist aktiv! Wir haben die Transkription auf VoiceInk Cloud umgestellt für schnellere und genauere Ergebnisse. Ihre bisherigen Einstellungen sind gespeichert – wechseln Sie jederzeit in den Einstellungen zurück.",
       "viewSettings": "Einstellungen anzeigen"
     },
     "aiCta": {
@@ -378,7 +378,7 @@
       "micErrors": {
         "accessFailed": "Mikrofonzugriff fehlgeschlagen. Bitte versuchen Sie es erneut.",
         "noMicrophones": "Keine Mikrofone erkannt. Verbinden oder wählen Sie ein Mikrofon in {{settingsPath}}.",
-        "permissionDenied": "Berechtigung verweigert. Öffnen Sie {{privacyPath}} und erlauben Sie OpenWhispr.",
+        "permissionDenied": "Berechtigung verweigert. Öffnen Sie {{privacyPath}} und erlauben Sie VoiceInk.",
         "couldNotStart": "Ausgewähltes Mikrofon konnte nicht gestartet werden. Wählen Sie ein Eingabegerät in {{settingsPath}} und führen Sie den Test erneut aus.",
         "noActiveInput": "Keine aktive Audioeingabe gefunden. Wählen Sie ein Mikrofon in {{settingsPath}}.",
         "unknown": "Mikrofonzugriff fehlgeschlagen: {{error}}. Wählen Sie ein anderes Eingabegerät und versuchen Sie es erneut.",
@@ -407,8 +407,8 @@
         "accessibilityNeeded": "Bitte gewähren Sie Bedienungshilfen-Berechtigungen in den Systemeinstellungen, um automatisches Einfügen zu ermöglichen.",
         "windowsReady": "Windows benötigt keine speziellen Berechtigungen für automatisches Einfügen. Alles bereit!",
         "linuxReadyWithMethod": "Automatisches Einfügen ist mit {{method}} verfügbar. Alles bereit!",
-        "waylandClipboardMode": "Automatisches Einfügen ist in dieser Wayland-Sitzung nicht verfügbar. OpenWhispr kopiert den Text in die Zwischenablage und Sie können mit Ctrl+V einfügen.",
-        "optionalPasteTool": "Für automatisches Einfügen installieren Sie {{tool}}:\n\n{{installCmd}}{{waylandNote}}\n\nOhne dieses Tool können Sie OpenWhispr weiterhin nutzen – Text wird in die Zwischenablage kopiert und Sie können mit Ctrl+V einfügen."
+        "waylandClipboardMode": "Automatisches Einfügen ist in dieser Wayland-Sitzung nicht verfügbar. VoiceInk kopiert den Text in die Zwischenablage und Sie können mit Ctrl+V einfügen.",
+        "optionalPasteTool": "Für automatisches Einfügen installieren Sie {{tool}}:\n\n{{installCmd}}{{waylandNote}}\n\nOhne dieses Tool können Sie VoiceInk weiterhin nutzen – Text wird in die Zwischenablage kopiert und Sie können mit Ctrl+V einfügen."
       },
       "alerts": {
         "accessibilityNeeded": "Bedienungshilfen-Berechtigungen erforderlich! Bitte erlauben Sie diese in den Systemeinstellungen."
@@ -421,7 +421,7 @@
         "defaultPasteTool": "xdotool",
         "xdotoolXwayland": "xdotool (XWayland-Apps)"
       },
-      "accessibilityTestText": "OpenWhispr Bedienungshilfen-Test",
+      "accessibilityTestText": "VoiceInk Bedienungshilfen-Test",
       "warning": {
         "messages": {
           "macos": "Prüfen Sie die Toneinstellungen, um Ihr Eingabegerät auszuwählen",
@@ -491,7 +491,7 @@
       "continueWithGoogle": "Weiter mit Google"
     },
     "welcomeSubtitle": "Diktieren Sie überall mit Ihrer Stimme",
-    "welcomeTitle": "Willkommen bei OpenWhispr",
+    "welcomeTitle": "Willkommen bei VoiceInk",
     "sessionExpired": "Sitzung abgelaufen"
   },
   "cleanupPrompt": "Textbereinigung",
@@ -697,10 +697,10 @@
     "recheckChecking": "Wird geprüft...",
     "title": "Automatisches Einfügen",
     "usingMethodPrefix": "Verwendet",
-    "waylandClipboardDescription": "Automatisches Einfügen ist in dieser Wayland-Sitzung nicht verfügbar. OpenWhispr kopiert den Text in Ihre Zwischenablage, damit Sie ihn manuell mit Ctrl+V einfügen können.",
+    "waylandClipboardDescription": "Automatisches Einfügen ist in dieser Wayland-Sitzung nicht verfügbar. VoiceInk kopiert den Text in Ihre Zwischenablage, damit Sie ihn manuell mit Ctrl+V einfügen können.",
     "waylandClipboardTitle": "Zwischenablage-Modus unter Wayland",
     "windowsReady": "Windows unterstützt automatisches Einfügen direkt. Keine Einrichtung erforderlich!",
-    "withoutToolPrefix": "Ohne dieses Tool kopiert OpenWhispr den Text in Ihre Zwischenablage. Sie können ihn dann manuell mit Ctrl+V einfügen.",
+    "withoutToolPrefix": "Ohne dieses Tool kopiert VoiceInk den Text in Ihre Zwischenablage. Sie können ihn dann manuell mit Ctrl+V einfügen.",
     "xwaylandAppsOnly": "Automatisches Einfügen funktioniert nur für XWayland-Apps"
   },
   "promptStudio": {
@@ -750,7 +750,7 @@
       "none": "Keine",
       "outputLabel": "Ausgabe",
       "processing": "Verarbeitung...",
-      "openwhisprCloud": "OpenWhispr Cloud",
+      "openwhisprCloud": "VoiceInk Cloud",
       "providerLabel": "Anbieter",
       "run": "Test ausführen",
       "customEndpoint": "Benutzerdefinierter Endpoint"
@@ -980,13 +980,13 @@
       "description": "Bereinigt Transkriptionen, verarbeitet Befehle und korrigiert Fehler unter Beibehaltung Ihres Stils.",
       "enableTextCleanup": "Textbereinigung aktivieren",
       "enableTextCleanupDescription": "KI verbessert die Transkriptionsqualität",
-      "openwhisprCloud": "OpenWhispr Cloud",
+      "openwhisprCloud": "VoiceInk Cloud",
       "openwhisprCloudDescription": "Funktioniert sofort. Keine Konfiguration nötig.",
       "title": "KI-Textverbesserung",
       "toasts": {
         "switchedCloud": {
-          "description": "Textverbesserung verwendet jetzt den OpenWhispr-Cloud-Dienst.",
-          "title": "Zu OpenWhispr Cloud gewechselt"
+          "description": "Textverbesserung verwendet jetzt den VoiceInk-Cloud-Dienst.",
+          "title": "Zu VoiceInk Cloud gewechselt"
         },
         "switchedCustom": {
           "description": "Konfigurieren Sie Ihren eigenen Anbieter und API-Schlüssel.",
@@ -1049,7 +1049,7 @@
       "appearance": {
         "auto": "Auto",
         "dark": "Dunkel",
-        "description": "Steuern Sie das Erscheinungsbild von OpenWhispr",
+        "description": "Steuern Sie das Erscheinungsbild von VoiceInk",
         "light": "Hell",
         "theme": "Design",
         "themeDescription": "Wählen Sie zwischen Hell, Dunkel oder Systemstandard",
@@ -1078,7 +1078,7 @@
       },
       "startup": {
         "launchAtLogin": "Beim Anmelden starten",
-        "launchAtLoginDescription": "OpenWhispr automatisch starten, wenn Sie sich anmelden",
+        "launchAtLoginDescription": "VoiceInk automatisch starten, wenn Sie sich anmelden",
         "title": "Autostart"
       },
       "updates": {
@@ -1110,7 +1110,7 @@
           },
           "installUpdate": {
             "confirmText": "Installieren & neu starten",
-            "description": "OpenWhispr startet neu, um das Update anzuwenden.",
+            "description": "VoiceInk startet neu, um das Update anzuwenden.",
             "title": "Update installieren"
           },
           "noUpdates": {
@@ -1141,13 +1141,13 @@
     "permissions": {
       "accessibilityDescription": "Erforderlich, damit automatisches Einfügen nach der Transkription funktioniert",
       "accessibilityTitle": "Bedienungshilfen",
-      "description": "Systemberechtigungen testen und verwalten, die OpenWhispr für den ordnungsgemäßen Betrieb benötigt",
+      "description": "Systemberechtigungen testen und verwalten, die VoiceInk für den ordnungsgemäßen Betrieb benötigt",
       "microphoneDescription": "Erforderlich für Sprachaufnahme und Diktat",
       "microphoneTitle": "Mikrofon",
       "resetAccessibility": {
-        "description": "Dadurch wird OpenWhispr aus den Bedienungshilfen-Berechtigungen entfernt. Sie müssen den Zugriff unter Systemeinstellungen > Datenschutz & Sicherheit > Bedienungshilfen erneut gewähren.",
+        "description": "Dadurch wird VoiceInk aus den Bedienungshilfen-Berechtigungen entfernt. Sie müssen den Zugriff unter Systemeinstellungen > Datenschutz & Sicherheit > Bedienungshilfen erneut gewähren.",
         "label": "Bedienungshilfen-Berechtigungen zurücksetzen",
-        "rowDescription": "Probleme nach Neuinstallation oder Neuerstellung der App beheben, indem OpenWhispr in den Systemeinstellungen entfernt und erneut hinzugefügt wird",
+        "rowDescription": "Probleme nach Neuinstallation oder Neuerstellung der App beheben, indem VoiceInk in den Systemeinstellungen entfernt und erneut hinzugefügt wird",
         "title": "Bedienungshilfen-Berechtigungen zurücksetzen"
       },
       "test": "Testen",
@@ -1162,7 +1162,7 @@
       "description": "Steuern Sie, welche Daten Ihr Gerät verlassen. Standardmäßig ist alles deaktiviert.",
       "title": "Datenschutz",
       "usageAnalytics": "Nutzungsanalysen",
-      "usageAnalyticsDescription": "Helfen Sie uns, OpenWhispr zu verbessern, indem Sie anonyme Leistungsdaten teilen. Wir senden niemals Transkriptionsinhalte – nur Timing- und Fehlerdaten."
+      "usageAnalyticsDescription": "Helfen Sie uns, VoiceInk zu verbessern, indem Sie anonyme Leistungsdaten teilen. Wir senden niemals Transkriptionsinhalte – nur Timing- und Fehlerdaten."
     },
     "prompts": {
       "description": "Den einheitlichen System-Prompt anzeigen, anpassen und testen, der Textbereinigung und Anweisungserkennung steuert",
@@ -1171,14 +1171,14 @@
     "transcription": {
       "customSetup": "Benutzerdefinierte Einrichtung",
       "customSetupDescription": "Verwenden Sie Ihren eigenen Anbieter und API-Schlüssel.",
-      "description": "Wählen Sie, wie OpenWhispr Ihre Stimme transkribiert",
-      "openwhisprCloud": "OpenWhispr Cloud",
+      "description": "Wählen Sie, wie VoiceInk Ihre Stimme transkribiert",
+      "openwhisprCloud": "VoiceInk Cloud",
       "openwhisprCloudDescription": "Funktioniert sofort. Keine Konfiguration nötig.",
       "title": "Sprache-zu-Text",
       "toasts": {
         "switchedCloud": {
-          "description": "Transkription verwendet jetzt den OpenWhispr-Cloud-Dienst.",
-          "title": "Zu OpenWhispr Cloud gewechselt"
+          "description": "Transkription verwendet jetzt den VoiceInk-Cloud-Dienst.",
+          "title": "Zu VoiceInk Cloud gewechselt"
         },
         "switchedCustom": {
           "description": "Konfigurieren Sie Ihren eigenen Anbieter und API-Schlüssel.",
@@ -1314,7 +1314,7 @@
     },
     "tryAgain": "Erneut versuchen",
     "card": {
-      "brand": "OpenWhispr",
+      "brand": "VoiceInk",
       "signalId": "Signal ID",
       "audioSignature": "Deine Audio-Signatur",
       "stop": "Stopp",
@@ -1385,7 +1385,7 @@
       "setupTitle": "Transkription einrichten",
       "setupDescription": "Wähle, wie dein Audio transkribiert werden soll. Dies gilt auch für die Live-Diktierfunktion.",
       "continue": "Weiter",
-      "openwhisprCloud": "OpenWhispr Cloud",
+      "openwhisprCloud": "VoiceInk Cloud",
       "custom": "Benutzerdefiniert",
       "selectFolder": "Ordner auswählen",
       "transcriptionFailed": "Transkription fehlgeschlagen",
@@ -1396,15 +1396,15 @@
       "fileTooLarge": "Diese Datei überschreitet das Limit von 500 MB.",
       "largeFileNote": "Große Dateien werden aufgeteilt und parallel transkribiert.",
       "chunkProgress": "Transkribiere Teil {{completed}} von {{total}}...",
-      "paidPlanRequired": "Cloud-Transkription für Dateien über 25 MB erfordert einen kostenpflichtigen Plan. Große Dateien werden mit OpenWhispr Cloud für zuverlässige, hochwertige Ergebnisse verarbeitet.",
+      "paidPlanRequired": "Cloud-Transkription für Dateien über 25 MB erfordert einen kostenpflichtigen Plan. Große Dateien werden mit VoiceInk Cloud für zuverlässige, hochwertige Ergebnisse verarbeitet.",
       "byokTooLarge": "API-Schlüssel von Drittanbietern unterstützen nur Dateien bis 25 MB.",
-      "byokTooLargeDetail": "Für Dateien über 25 MB übernimmt OpenWhispr Cloud das Aufteilen, die parallele Verarbeitung und das Zusammenführen — so erhältst du zuverlässige Ergebnisse ohne die Einschränkungen von Drittanbietern.",
-      "byokTooLargeNeedsAccount": "Erstelle ein Konto und wechsle zu einem kostenpflichtigen Plan, um größere Dateien mit OpenWhispr Cloud zu transkribieren.",
-      "byokTooLargeNeedsUpgrade": "Wechsle zu einem kostenpflichtigen Plan, um größere Dateien mit OpenWhispr Cloud zu transkribieren.",
-      "switchToCloudForLargeFiles": "Wechsle zu OpenWhispr Cloud, um diese Datei zu transkribieren.",
+      "byokTooLargeDetail": "Für Dateien über 25 MB übernimmt VoiceInk Cloud das Aufteilen, die parallele Verarbeitung und das Zusammenführen — so erhältst du zuverlässige Ergebnisse ohne die Einschränkungen von Drittanbietern.",
+      "byokTooLargeNeedsAccount": "Erstelle ein Konto und wechsle zu einem kostenpflichtigen Plan, um größere Dateien mit VoiceInk Cloud zu transkribieren.",
+      "byokTooLargeNeedsUpgrade": "Wechsle zu einem kostenpflichtigen Plan, um größere Dateien mit VoiceInk Cloud zu transkribieren.",
+      "switchToCloudForLargeFiles": "Wechsle zu VoiceInk Cloud, um diese Datei zu transkribieren.",
       "createAccount": "Konto erstellen",
       "upgrade": "Upgraden",
-      "switchToCloud": "OpenWhispr Cloud"
+      "switchToCloud": "VoiceInk Cloud"
     },
     "meeting": {
       "title": "Besprechungsnotizen",

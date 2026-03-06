@@ -28,14 +28,14 @@ if (-not $Marker) {
   $Marker = "dev-" + (Get-Date -Format "yyyyMMdd-HHmmss")
 }
 
-Write-Host "=== OpenWhispr Pinned Dev Start ==="
+Write-Host "=== VoiceInk Pinned Dev Start ==="
 Write-Host "Repo: $repoRoot"
 Write-Host "Marker: $Marker"
 
 $shouldKill = Convert-ToBool -Value $KillExisting -Default $true
 
 if ($shouldKill) {
-  Write-Host "Stopping existing electron/OpenWhispr processes..."
+  Write-Host "Stopping existing electron/VoiceInk processes..."
   $currentPid = $PID
   $targets = Get-CimInstance Win32_Process |
     Where-Object {

@@ -6,7 +6,7 @@ MODELS_DIR="$CACHE_DIR/models"
 
 if [ -d "$MODELS_DIR" ]; then
   rm -rf "$MODELS_DIR"
-  echo "Removed OpenWhispr cached models"
+  echo "Removed VoiceInk cached models"
 fi
 
 if [ -d "$CACHE_DIR" ]; then

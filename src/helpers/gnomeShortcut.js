@@ -1,9 +1,9 @@
 const { execFileSync } = require("child_process");
 const debugLogger = require("./debugLogger");
 
-const DBUS_SERVICE_NAME = "com.openwhispr.App";
+const DBUS_SERVICE_NAME = "com.voiceink.App";
 const DBUS_OBJECT_PATH = "/com/openwhispr/App";
-const DBUS_INTERFACE = "com.openwhispr.App";
+const DBUS_INTERFACE = "com.voiceink.App";
 
 const KEYBINDING_PATH =
   "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/openwhispr/";
@@ -89,7 +89,7 @@ class GnomeShortcutManager {
   }
 
   _createInterfaceClass(dbusModule, callback) {
-    class OpenWhisprInterface extends dbusModule.interface.Interface {
+    class VoiceInkInterface extends dbusModule.interface.Interface {
       constructor() {
         super(DBUS_INTERFACE);
         this._callback = callback;
@@ -102,13 +102,13 @@ class GnomeShortcutManager {
       }
     }
 
-    OpenWhisprInterface.configureMembers({
+    VoiceInkInterface.configureMembers({
       methods: {
         Toggle: { inSignature: "", outSignature: "" },
       },
     });
 
-    return OpenWhisprInterface;
+    return VoiceInkInterface;
   }
 
   static isValidShortcut(shortcut) {
@@ -137,7 +137,7 @@ class GnomeShortcutManager {
 
       execFileSync(
         "gsettings",
-        ["set", `${KEYBINDING_SCHEMA}:${KEYBINDING_PATH}`, "name", "OpenWhispr Toggle"],
+        ["set", `${KEYBINDING_SCHEMA}:${KEYBINDING_PATH}`, "name", "VoiceInk Toggle"],
         { stdio: "pipe" }
       );
       execFileSync(
