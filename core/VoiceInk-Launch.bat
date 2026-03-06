@@ -2,13 +2,13 @@
 setlocal EnableExtensions
 
 REM One-click launcher for Windows users.
-REM 1) Prefer packaged app: dist\win-unpacked\OpenWhispr.exe
+REM 1) Prefer packaged app: dist\win-unpacked\VoiceInk.exe
 REM 2) Fallback to source mode: npm start (hidden/minimized by VBS wrapper)
 
 set "ROOT_DIR=%~dp0.."
 for %%I in ("%ROOT_DIR%") do set "ROOT_DIR=%%~fI"
 
-set "PACKAGED_EXE=%ROOT_DIR%\dist\win-unpacked\OpenWhispr.exe"
+set "PACKAGED_EXE=%ROOT_DIR%\dist\win-unpacked\VoiceInk.exe"
 
 if exist "%PACKAGED_EXE%" (
   start "VoiceInk" "%PACKAGED_EXE%"

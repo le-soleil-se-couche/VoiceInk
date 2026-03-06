@@ -146,29 +146,25 @@ OPENAI_BASE_URL=https://api.cerebras.ai/v1
 
 ---
 
-## Windows 一键启动（免黑框）
+## Windows 启动方式
 
-为避免双击 `.bat` 时出现并停留 PowerShell/命令行窗口，仓库新增了 `core/` 启动器：
+**安装包用户（推荐）**：直接运行 NSIS 安装程序，安装器会自动在桌面和开始菜单创建 `VoiceInk` 快捷方式，双击即可。
 
-- `core/VoiceInk-Launch.vbs`：推荐入口，后台静默启动（无黑框闪屏）。
-- `core/VoiceInk-Launch.bat`：实际启动逻辑。
-  - 优先启动已打包程序：`dist\win-unpacked\OpenWhispr.exe`
-  - 若未打包则回退到源码模式：`npm start`
-- `core/Create-VoiceInk-DesktopShortcut.ps1`：可一键创建桌面快捷方式（图标使用 `src/assets/icon.ico`，即原 OpenWhispr 图标资源）。
+**源码 / 便携版用户**：仓库提供了 `core/` 启动器，避免双击 `.bat` 时出现黑色命令行窗口：
 
-使用方式：
+- `core/VoiceInk-Launch.vbs`：推荐入口，静默启动（无黑框闪屏）。
+- `core/VoiceInk-Launch.bat`：启动逻辑，优先找 `dist\win-unpacked\VoiceInk.exe`，若不存在则回退到 `npm start`。
+- `core/Create-VoiceInk-DesktopShortcut.ps1`：为源码用户创建桌面快捷方式。
 
 ```powershell
 # 在仓库根目录执行（Windows PowerShell）
 powershell -ExecutionPolicy Bypass -File .\core\Create-VoiceInk-DesktopShortcut.ps1
 ```
 
-之后双击桌面 `VoiceInk` 快捷方式即可。
-
 ## Quick Start
 
 ```bash
-git clone https://github.com/<your-org>/VoiceInk.git
+git clone https://github.com/le-soleil-se-couche/VoiceInk.git
 cd VoiceInk
 npm install
 npm run dev
