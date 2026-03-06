@@ -55,8 +55,9 @@
 
 5. **发现并接入了两个极快模型链路**
    - 面向短文本实时润色/后处理场景，优先低延迟体验。
-   - **ASR**：千问链路（Qwen 3.5 Plus / DashScope）
-    - 在中文口语、方言和中文工作流场景通常更稳定，网络路径也较友好。
+   - **ASR**：千问链路（`qwen-3.5-plus` / `qwen3-asr-flash` / DashScope）
+     - 在中文口语、方言和中文工作流场景通常更稳定，网络路径也较友好。
+     - `qwen3-asr-flash-realtime`（2026-02-13 快照）目前实测不可用，暂不推荐。
    - **LLM 润色**：Cerebras `gpt-oss-120b`（high）
  
 6. **智能层做了更严格约束**
@@ -84,8 +85,9 @@
 
 > 以下速度与价格来自公开资料和第三方实测整理，可能随时间变化，请以官方页面为准。
 > 
-- **ASR**：千问链路（Qwen 3.5 Plus / DashScope）
+- **ASR**：千问链路（`qwen-3.5-plus` / `qwen3-asr-flash` / DashScope）
   - 在中文口语、方言和中文工作流场景通常更稳定，网络路径也较友好。
+  - `qwen3-asr-flash-realtime`（2026-02-13 快照）目前实测不可用，暂不推荐。
 - **LLM 润色**：Cerebras `gpt-oss-120b`（high）
 
 
