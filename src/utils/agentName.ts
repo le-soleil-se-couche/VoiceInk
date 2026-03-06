@@ -2,7 +2,7 @@ import { useState } from "react";
 import { getSettings, useSettingsStore } from "../stores/settingsStore";
 
 const AGENT_NAME_KEY = "agentName";
-const DEFAULT_AGENT_NAME = "OpenWhispr";
+const DEFAULT_AGENT_NAME = "VoiceInk";
 
 export const getAgentName = (): string => {
   return localStorage.getItem(AGENT_NAME_KEY) || DEFAULT_AGENT_NAME;

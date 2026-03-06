@@ -6,8 +6,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 function Get-LogDir {
-  $devLogDir = Join-Path $env:APPDATA "OpenWhispr-development\logs"
-  $prodLogDir = Join-Path $env:APPDATA "OpenWhispr\logs"
+  $devLogDir = Join-Path $env:APPDATA "VoiceInk-development\logs"
+  $prodLogDir = Join-Path $env:APPDATA "VoiceInk\logs"
 
   if (Test-Path $devLogDir) { return $devLogDir }
   if (Test-Path $prodLogDir) { return $prodLogDir }
@@ -20,7 +20,7 @@ if (-not $logDir) {
   exit 2
 }
 
-Write-Host "=== OpenWhispr Paste Protocol Watcher ==="
+Write-Host "=== VoiceInk Paste Protocol Watcher ==="
 Write-Host "Log dir: $logDir"
 Write-Host "TailLines: $TailLines"
 Write-Host "IncludeFingerprint: $IncludeFingerprint"

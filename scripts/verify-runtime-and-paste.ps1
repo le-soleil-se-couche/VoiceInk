@@ -5,7 +5,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== OpenWhispr Runtime Verification ==="
+Write-Host "=== VoiceInk Runtime Verification ==="
 Write-Host "Expected repo: $ExpectedRepoPath"
 
 $procs = Get-CimInstance Win32_Process |
@@ -28,7 +28,7 @@ $procs = Get-CimInstance Win32_Process |
   Select-Object ProcessId, Name, ExecutablePath, CommandLine
 
 if (-not $procs) {
-  Write-Host "[WARN] No running OpenWhispr/Electron process found."
+  Write-Host "[WARN] No running VoiceInk/Electron process found."
 } else {
   Write-Host "`n-- Running processes --"
   $procs | Format-Table -AutoSize | Out-String | Write-Host
@@ -39,8 +39,8 @@ $logDir = $null
 $latestLog = $null
 
 $fingerprintFileCandidates = @(
-  (Join-Path $env:APPDATA "OpenWhispr-development\runtime-fingerprint.json"),
-  (Join-Path $env:APPDATA "OpenWhispr\runtime-fingerprint.json")
+  (Join-Path $env:APPDATA "VoiceInk-development\runtime-fingerprint.json"),
+  (Join-Path $env:APPDATA "VoiceInk\runtime-fingerprint.json")
 )
 
 $fingerprintFile = $fingerprintFileCandidates |
@@ -69,8 +69,8 @@ if ($fingerprintJson -and $fingerprintJson.pid) {
   }
 }
 
-$devLogDir = Join-Path $env:APPDATA "OpenWhispr-development\logs"
-$prodLogDir = Join-Path $env:APPDATA "OpenWhispr\logs"
+$devLogDir = Join-Path $env:APPDATA "VoiceInk-development\logs"
+$prodLogDir = Join-Path $env:APPDATA "VoiceInk\logs"
 if (Test-Path $devLogDir) {
   $logDir = $devLogDir
 } elseif (Test-Path $prodLogDir) {

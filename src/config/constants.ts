@@ -108,7 +108,7 @@ export const CACHE_CONFIG = {
   PASTE_DELAY_MS: 50, // Delay before paste simulation to allow clipboard to settle
 } as const;
 
-// OpenWhispr Cloud API
+// VoiceInk Cloud API
 export const OPENWHISPR_API_URL = RUNTIME_CONFIG.apiUrl;
 
 // Retry Configuration

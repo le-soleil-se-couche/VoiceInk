@@ -50,7 +50,7 @@ async function askUserConsent(needsInstall, needsUinput) {
     defaultId: 0,
     cancelId: 1,
     title: "Wayland Paste Setup",
-    message: "OpenWhispr needs to set up ydotool for reliable paste on Wayland.",
+    message: "VoiceInk needs to set up ydotool for reliable paste on Wayland.",
     detail: `This requires administrator privileges to:\n${actions.map((a) => `\u2022 ${a}`).join("\n")}`,
   });
 

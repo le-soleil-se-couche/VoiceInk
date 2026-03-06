@@ -727,7 +727,7 @@ declare global {
       // Auth
       authClearSession?: () => Promise<void>;
 
-      // OpenWhispr Cloud API
+      // VoiceInk Cloud API
       cloudTranscribe?: (
         audioBuffer: ArrayBuffer,
         opts: { language?: string; prompt?: string }

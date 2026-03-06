@@ -1405,7 +1405,7 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                         <Button
                           onClick={() =>
                             window.electronAPI?.openExternal?.(
-                              `https://openwhispr.com/get-started?plan=${billingPeriod}`
+                              "https://github.com/le-soleil-se-couche/VoiceInk"
                             )
                           }
                           size="sm"
@@ -1449,7 +1449,9 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                         size="sm"
                         className="mt-2 w-full h-6 text-[10px]"
                         onClick={() =>
-                          window.electronAPI?.openExternal?.("mailto:gabe@openwhispr.com")
+                          window.electronAPI?.openExternal?.(
+                            "https://github.com/le-soleil-se-couche/VoiceInk/issues"
+                          )
                         }
                       >
                         <Mail size={10} />
