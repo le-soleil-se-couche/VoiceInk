@@ -12,9 +12,10 @@ const MAX_REDIRECTS = 5;
  * Fetch JSON from a URL with proper error handling.
  * @param {string} url - URL to fetch
  * @param {number} [redirectCount=0] - Current redirect count (internal use)
+ * @param {boolean} [useAuthToken=true] - Whether to include GITHUB_TOKEN/GH_TOKEN
  * @returns {Promise<object>} - Parsed JSON response
  */
-function fetchJson(url, redirectCount = 0) {
+function fetchJson(url, redirectCount = 0, useAuthToken = true) {
   return new Promise((resolve, reject) => {
     if (redirectCount > MAX_REDIRECTS) {
       reject(new Error("Too many redirects"));
@@ -27,7 +28,7 @@ function fetchJson(url, redirectCount = 0) {
     };
 
     // Use GitHub token if available (increases rate limit from 60 to 5000/hour)
-    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    const token = useAuthToken ? process.env.GITHUB_TOKEN || process.env.GH_TOKEN : null;
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
@@ -45,7 +46,17 @@ function fetchJson(url, redirectCount = 0) {
             reject(new Error("Redirect without location header"));
             return;
           }
-          fetchJson(redirectUrl, redirectCount + 1)
+          fetchJson(redirectUrl, redirectCount + 1, useAuthToken)
+            .then(resolve)
+            .catch(reject);
+          return;
+        }
+
+        // Bad/expired token can cause HTTP 401 even for public repos.
+        // Retry once without auth headers to avoid blocking public downloads.
+        if (res.statusCode === 401 && token) {
+          console.warn("  GitHub token returned 401; retrying without token...");
+          fetchJson(url, redirectCount, false)
             .then(resolve)
             .catch(reject);
           return;
