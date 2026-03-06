@@ -1093,21 +1093,35 @@ class ReasoningService extends BaseReasoningService {
     provider: string,
     config: ReasoningConfig & { systemPrompt: string }
   ): AsyncGenerator<string, void, unknown> {
-    const providerKey = provider as "openai" | "groq" | "gemini" | "anthropic" | "custom";
-    const apiKey = await this.getApiKey(providerKey);
+    const cloudProviders = ["openai", "groq", "gemini", "anthropic", "custom"];
+    const isLocalProvider = !cloudProviders.includes(provider);
 
     let endpoint: string;
-    switch (providerKey) {
-      case "groq":
-        endpoint = buildApiUrl(API_ENDPOINTS.GROQ_BASE, "/chat/completions");
-        break;
-      case "openai":
-      case "custom":
-        endpoint = buildApiUrl(this.getConfiguredOpenAIBase(), "/chat/completions");
-        break;
-      default:
-        endpoint = buildApiUrl(API_ENDPOINTS.OPENAI_BASE, "/chat/completions");
-        break;
+    let apiKey = "";
+
+    if (isLocalProvider) {
+      // Local model via llama.cpp server
+      const serverResult = await window.electronAPI.llamaServerStart(model);
+      if (!serverResult.success || !serverResult.port) {
+        throw new Error(serverResult.error || "Failed to start local model server");
+      }
+      endpoint = `http://127.0.0.1:${serverResult.port}/v1/chat/completions`;
+    } else {
+      const providerKey = provider as "openai" | "groq" | "gemini" | "anthropic" | "custom";
+      apiKey = await this.getApiKey(providerKey);
+
+      switch (providerKey) {
+        case "groq":
+          endpoint = buildApiUrl(API_ENDPOINTS.GROQ_BASE, "/chat/completions");
+          break;
+        case "openai":
+        case "custom":
+          endpoint = buildApiUrl(this.getConfiguredOpenAIBase(), "/chat/completions");
+          break;
+        default:
+          endpoint = buildApiUrl(API_ENDPOINTS.OPENAI_BASE, "/chat/completions");
+          break;
+      }
     }
 
     const requestBody: Record<string, unknown> = {
@@ -1122,15 +1136,20 @@ class ReasoningService extends BaseReasoningService {
       endpoint,
       model,
       provider,
+      isLocal: isLocalProvider,
       messageCount: messages.length,
     });
 
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey) {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+    }
+
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers,
       body: JSON.stringify(requestBody),
     });
 
@@ -1156,6 +1175,7 @@ class ReasoningService extends BaseReasoningService {
 
     const decoder = new TextDecoder();
     let buffer = "";
+    let insideThinkBlock = false;
 
     try {
       while (true) {
@@ -1175,8 +1195,36 @@ class ReasoningService extends BaseReasoningService {
 
           try {
             const parsed = JSON.parse(data);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) yield content;
+            let content = parsed.choices?.[0]?.delta?.content;
+            if (!content) continue;
+
+            // Strip Qwen3 <think> blocks from streamed output
+            if (isLocalProvider) {
+              if (insideThinkBlock) {
+                const endIdx = content.indexOf("</think>");
+                if (endIdx !== -1) {
+                  insideThinkBlock = false;
+                  content = content.slice(endIdx + 8);
+                } else {
+                  continue;
+                }
+              }
+              const startIdx = content.indexOf("<think>");
+              if (startIdx !== -1) {
+                const before = content.slice(0, startIdx);
+                const after = content.slice(startIdx + 7);
+                const endIdx = after.indexOf("</think>");
+                if (endIdx !== -1) {
+                  content = before + after.slice(endIdx + 8);
+                } else {
+                  insideThinkBlock = true;
+                  content = before;
+                }
+              }
+              if (!content) continue;
+            }
+
+            yield content;
           } catch {
             // skip malformed SSE chunks
           }

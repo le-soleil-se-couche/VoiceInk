@@ -136,6 +136,7 @@ class LlamaServerManager {
     this.port = await this.findAvailablePort();
     this.modelPath = modelPath;
 
+    // Let llama.cpp's auto-fit system choose --ctx-size based on available GPU memory
     const baseArgs = [
       "--model",
       modelPath,
@@ -143,8 +144,6 @@ class LlamaServerManager {
       "127.0.0.1",
       "--port",
       String(this.port),
-      "--ctx-size",
-      String(options.contextSize || 4096),
       "--threads",
       String(options.threads || 4),
     ];
