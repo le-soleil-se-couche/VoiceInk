@@ -14,11 +14,13 @@
 - This project is an **open-source desktop dictation app** that converts speech to text with local and cloud model options.
 - **Default mode is BYOK (Bring Your Own Key)**: users provide their own API key / endpoint for cloud providers, or use local models.
 - This repository is a **community fork based on OpenWhispr** (roughly **95% inherited architecture / implementation**) and is **not affiliated with Typeless or OpenWhispr official hosted services**.
+
 - **Project status: Maintenance mode / archived release track**. Core features are considered complete, and only minimal follow-up is expected.
 
 ---
 
-## 对外说明（中文）
+## 对外说明
+
 
 本项目整体架构约 95% 基于 OpenWhispr（Open Whisper 社区项目）实现，在其基础上针对日常中文/英文输入体验做了增强。
 
@@ -45,16 +47,19 @@
 3. **智能词典**
    - 支持自定义词典、批量导入。
 
-   - 批量导入规则：文本按空白拆分后，单元长度 `>=2` 即视为有效词条；实测可直接复制 Typeless 词库并一键导入。
+   - 批量导入规则：文本按空白拆分后，空格长度 `>=2` 即视为有效词条；实测可直接复制 Typeless 词库并一键导入。
    - 可将词典提示注入到转录/后处理链路，提升术语命中率。
 
 4. **纠错自动学习（可选）**
    - 用户手动修正后，可回流词典，持续优化后续识别效果。
 
-5. **发现并接入了两个极快模型链路（可选）**
+5. **发现并接入了两个极快模型链路**
    - 面向短文本实时润色/后处理场景，优先低延迟体验。
-
-6. **智能层做了更严格约束（重要说明）**
+   - **ASR**：千问链路（Qwen 3.5 Plus / DashScope）
+    - 在中文口语、方言和中文工作流场景通常更稳定，网络路径也较友好。
+   - **LLM 润色**：Cerebras `gpt-oss-120b`（high）
+ 
+6. **智能层做了更严格约束**
    - 为降低“模型回答问题而非转录”的风险，当前对智能层行为进行了较强限制。
    - 这会在一定程度上限制智能词典与语义改写能力，属于“稳定优先”的权衡。
 
@@ -62,7 +67,7 @@
 
 ## BYOK / 可选账号模式
 
-### 自有渠道模式（通常称 BYOK，默认）
+### 自有渠道模式（通常称 BYOK）
 
 - 使用者提供自己的 API Key 与模型端点（或兼容网关）。
 - 额度与费用由使用者对应平台账号结算。
@@ -78,12 +83,11 @@
 ## 低延迟推荐链路（短文本实时润色）
 
 > 以下速度与价格来自公开资料和第三方实测整理，可能随时间变化，请以官方页面为准。
-
-### 推荐默认方案
-
+> 
 - **ASR**：千问链路（Qwen 3.5 Plus / DashScope）
   - 在中文口语、方言和中文工作流场景通常更稳定，网络路径也较友好。
 - **LLM 润色**：Cerebras `gpt-oss-120b`（high）
+
 
 ### 可选润色模型
 
@@ -186,8 +190,6 @@ npm run build
 2. 使用云端模型时，数据将按你所选提供商策略处理；请自行确认其隐私政策与合规要求。
 3. 语音转文本和智能后处理可能出现误识别、误改写，涉及法律、医疗、财务等高风险场景请务必人工复核。
 4. 本项目不提供投资、医疗、法律等专业建议功能。
-5. 禁用登录/订阅与不直接收费**可以降低商业化相关争议风险**，但**不能构成对侵权或合规争议的绝对豁免**；如涉及商标、品牌、模型服务条款等问题，仍需按适用法律与平台条款处理。
-6. 若继续使用上游 Logo/名称元素，请确认其商标与品牌使用政策；更稳妥做法是逐步替换为 VoiceInk 自有品牌素材。
 
 ---
 
