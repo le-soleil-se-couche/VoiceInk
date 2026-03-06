@@ -300,13 +300,30 @@ class IPCHandlers {
       const { extractCorrections } = require("../utils/correctionLearner");
       const currentDict = this._getDictionarySafe();
       const corrections = extractCorrections(originalText, newFieldValue, currentDict);
+      const normalizeKey = (value) =>
+        String(value || "")
+          .trim()
+          .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "")
+          .toLowerCase();
+      const currentKeys = new Set(currentDict.map(normalizeKey).filter(Boolean));
+      const dedupedCorrections = [];
+      const dedupedKeys = new Set();
+      for (const correction of corrections) {
+        const cleaned = String(correction || "").trim();
+        const key = normalizeKey(cleaned);
+        if (!cleaned || !key) continue;
+        if (currentKeys.has(key) || dedupedKeys.has(key)) continue;
+        dedupedCorrections.push(cleaned);
+        dedupedKeys.add(key);
+      }
+
       debugLogger.debug("[AutoLearn] Corrections result", {
-        corrections,
+        corrections: dedupedCorrections,
         dictSize: currentDict.length,
       });
 
-      if (corrections.length > 0) {
-        const updatedDict = [...currentDict, ...corrections];
+      if (dedupedCorrections.length > 0) {
+        const updatedDict = [...currentDict, ...dedupedCorrections];
         const saveResult = this.databaseManager.setDictionary(updatedDict);
 
         if (saveResult?.success === false) {
@@ -318,8 +335,8 @@ class IPCHandlers {
 
         // Show the overlay so the toast is visible (it may have been hidden after dictation)
         this.windowManager.showDictationPanel();
-        this.broadcastToWindows("corrections-learned", corrections);
-        debugLogger.debug("[AutoLearn] Saved corrections", { corrections });
+        this.broadcastToWindows("corrections-learned", dedupedCorrections);
+        debugLogger.debug("[AutoLearn] Saved corrections", { corrections: dedupedCorrections });
       }
     } catch (error) {
       debugLogger.debug("[AutoLearn] Error processing corrections", { error: error.message });

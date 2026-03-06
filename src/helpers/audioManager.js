@@ -60,7 +60,9 @@ const isAnswerLikeTranscriptionOutput = (text) => {
 };
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const DICTIONARY_TOKEN_RE = /[\p{L}\p{N}]+/gu;
+// Split by script family so mixed tokens like "readme在" become ["readme", "在"].
+const DICTIONARY_TOKEN_RE =
+  /[\p{Script=Latin}\p{N}]+|[\p{Script=Han}\p{N}]+|[\p{L}\p{N}]+/gu;
 const MAX_DICTIONARY_NGRAM = 12;
 const ENGLISH_NUMBER_WORD_VALUES = {
   zero: 0,
@@ -236,6 +238,27 @@ const normalizeSpokenChineseNumbers = (value) =>
     const parsed = parseChineseNumberWords(segment);
     return parsed ?? segment;
   });
+
+const toArabicNumeral = (value) => {
+  const parsed = parseChineseNumberWords(value);
+  return parsed ?? value;
+};
+
+const normalizeChineseDateExpressions = (value) => {
+  if (typeof value !== "string" || !value) return value;
+
+  return value
+    .replace(
+      /([零〇一二两三四五六七八九十百千万萬]{2,})\s*年\s*([零〇一二两三四五六七八九十百千万萬]{1,3})\s*月\s*([零〇一二两三四五六七八九十百千万萬]{1,3})\s*(日|号)/g,
+      (_match, yearText, monthText, dayText, suffix) =>
+        `${toArabicNumeral(yearText)}年${toArabicNumeral(monthText)}月${toArabicNumeral(dayText)}${suffix}`
+    )
+    .replace(
+      /([零〇一二两三四五六七八九十百千万萬]{1,3})\s*月\s*([零〇一二两三四五六七八九十百千万萬]{1,3})\s*(日|号)/g,
+      (_match, monthText, dayText, suffix) =>
+        `${toArabicNumeral(monthText)}月${toArabicNumeral(dayText)}${suffix}`
+    );
+};
 
 const buildTargetedCanonicalAliasKeys = (normalizedKey) => {
   const aliases = new Set();
@@ -1461,7 +1484,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(/[ \t]{2,}/g, " ")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
-    return normalized;
+    return normalizeChineseDateExpressions(normalized);
   }
 
   applyDictionaryNormalization(text, source = "unknown") {

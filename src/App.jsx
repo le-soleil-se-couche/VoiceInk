@@ -8,6 +8,7 @@ import { useHotkey } from "./hooks/useHotkey";
 import { useWindowDrag } from "./hooks/useWindowDrag";
 import { useAudioRecording } from "./hooks/useAudioRecording";
 import { useSettingsStore } from "./stores/settingsStore";
+import { formatHotkeyLabel } from "./utils/hotkeys";
 
 // Sound Wave Icon Component (for idle/hover states)
 const SoundWaveIcon = ({ size = 16 }) => {
@@ -70,7 +71,7 @@ const Tooltip = ({ children, content, emoji }) => {
         return;
       }
 
-      const margin = 8;
+      const margin = 2;
       const triggerRect = triggerEl.getBoundingClientRect();
       const tooltipRect = tooltipEl.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
@@ -112,12 +113,11 @@ const Tooltip = ({ children, content, emoji }) => {
       {isVisible && (
         <div
           ref={tooltipRef}
-          className="fixed px-1 py-1 text-popover-foreground bg-popover border border-border rounded-md z-10 transition-opacity duration-150 shadow-lg"
+          className="fixed px-1.5 py-1 text-popover-foreground bg-popover border border-border rounded-md z-10 transition-opacity duration-150 shadow-lg font-medium"
           style={{
-            fontSize: "9.7px",
-            whiteSpace: "normal",
-            lineHeight: 1.2,
-            maxWidth: "calc(100vw - 16px)",
+            fontSize: "9.4px",
+            whiteSpace: "nowrap",
+            maxWidth: "calc(100vw - 4px)",
             left: `${tooltipPosition.left}px`,
             top: `${tooltipPosition.top}px`,
           }}
@@ -325,6 +325,7 @@ export default function App() {
   };
 
   const micState = getMicState();
+  const hotkeyLabel = formatHotkeyLabel(hotkey);
 
   const getMicButtonProps = () => {
     const baseClasses =
@@ -335,7 +336,7 @@ export default function App() {
       case "hover":
         return {
           className: `${baseClasses} bg-black/50 cursor-pointer`,
-          tooltip: t("app.mic.hotkeyToSpeak", { hotkey }),
+          tooltip: hotkeyLabel,
         };
       case "recording":
         return {
