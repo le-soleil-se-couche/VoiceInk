@@ -53,7 +53,7 @@
 4. **纠错自动学习（可选）**
    - 用户手动修正后，可回流词典，持续优化后续识别效果。
 
-5. **发现并接入了两个极快模型链路** — DashScope API Key 申请入口：[**大模型服务平台百炼控制台**](https://bailian.console.aliyun.com/)
+5. **发现并接入了两个极快模型链路**，DashScope API Key 申请入口：[**大模型服务平台百炼控制台**](https://bailian.console.aliyun.com/)
    - 面向短文本实时润色/后处理场景，优先低延迟体验。
    - **ASR**：千问链路（`qwen-3.5-plus` / `qwen3-asr-flash` / DashScope）
      - 在中文口语、方言和中文工作流场景通常更稳定，网络路径也较友好。
