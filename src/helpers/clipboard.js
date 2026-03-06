@@ -88,6 +88,7 @@ try {
 
   [pscustomobject]@{
     ok = $true
+    processId = [int]$el.Current.ProcessId
     controlType = $el.Current.ControlType.ProgrammaticName
     className = $el.Current.ClassName
     automationId = $el.Current.AutomationId
@@ -564,12 +565,14 @@ class ClipboardManager {
       }
 
       const controlType = String(parsed.controlType || "");
+      const processId = Number(parsed.processId);
       const className = String(parsed.className || "").toLowerCase();
       const windowClass = String(parsed.windowClass || "").toLowerCase();
       const hasTextPattern = !!parsed.hasTextPattern;
       const hasValuePattern = !!parsed.hasValuePattern;
       const isEnabled = parsed.isEnabled !== false;
       const hasFocus = parsed.hasKeyboardFocus !== false;
+      const focusProcessId = Number.isInteger(processId) && processId > 0 ? processId : null;
 
       const definitelyNonTextControlTypes = new Set([
         "ControlType.Button",
@@ -597,11 +600,19 @@ class ClipboardManager {
       );
       const controlLooksNonText =
         definitelyNonTextControlTypes.has(controlType) && !hasTextPattern && !hasValuePattern;
+      // Some apps expose focus as a top-level window/container (custom input
+      // controls, embedded editors). Treat these as "unknown" instead of
+      // immediately downgrading to clipboard-only.
+      const isTopLevelContainer =
+        controlType === "ControlType.Window" || controlType === "ControlType.Pane";
       const noEditablePattern =
         !hasTextPattern &&
         !hasValuePattern &&
         controlType !== "ControlType.Edit" &&
         controlType !== "ControlType.Document";
+      const ambiguousContainerTarget = isTopLevelContainer && !classLooksNonText;
+      const shouldSkipForLikelyNonText =
+        classLooksNonText || controlLooksNonText || (noEditablePattern && !ambiguousContainerTarget);
 
       debugLogger.debug(
         "Windows focus probe",
@@ -613,32 +624,39 @@ class ClipboardManager {
           hasValuePattern,
           isEnabled,
           hasFocus,
+          processId: focusProcessId,
+          isTopLevelContainer,
+          ambiguousContainerTarget,
         },
         "clipboard"
       );
 
-      if ((classLooksNonText || controlLooksNonText || noEditablePattern) && isEnabled && hasFocus) {
+      if (shouldSkipForLikelyNonText && isEnabled && hasFocus) {
         return {
           shouldSkipAutoPaste: true,
           reason: "target_not_text_input",
+          processId: focusProcessId,
           details: {
             controlType,
             className: parsed.className || "",
             windowClass: parsed.windowClass || "",
             hasTextPattern,
             hasValuePattern,
+            processId: focusProcessId,
           },
         };
       }
 
       return {
         shouldSkipAutoPaste: false,
+        processId: focusProcessId,
         details: {
           controlType,
           className: parsed.className || "",
           windowClass: parsed.windowClass || "",
           hasTextPattern,
           hasValuePattern,
+          processId: focusProcessId,
         },
       };
     } catch (error) {
@@ -714,7 +732,16 @@ class ClipboardManager {
         }
 
         const winFastPaste = this.resolveWindowsFastPasteBinary();
-        const hasTargetPid = Number.isInteger(options?.targetPid) && options.targetPid > 0;
+        const requestedTargetPid =
+          Number.isInteger(options?.targetPid) && options.targetPid > 0 ? options.targetPid : null;
+        const focusedTargetPid =
+          Number.isInteger(focusProbe?.processId) && focusProbe.processId > 0
+            ? focusProbe.processId
+            : null;
+        const hasMatchingTargetPid =
+          requestedTargetPid !== null &&
+          focusedTargetPid !== null &&
+          requestedTargetPid === focusedTargetPid;
         if (winFastPaste) {
           method = "sendinput";
         } else {
@@ -722,17 +749,19 @@ class ClipboardManager {
           method = nircmdPath ? "nircmd" : "powershell";
         }
         const preserveClipboardForManualFallback =
-          method === "powershell" || (method === "nircmd" && !hasTargetPid);
+          method === "powershell" || (method === "nircmd" && !hasMatchingTargetPid);
 
         await this.pasteWindows(originalClipboard, {
           preserveClipboard: preserveClipboardForManualFallback,
         });
 
-        if (method === "nircmd" && !hasTargetPid) {
+        if (method === "nircmd" && !hasMatchingTargetPid) {
           debugLogger.info(
             "Windows paste treated as clipboard fallback (unverified nircmd sendkeypress)",
             {
               reason: "paste_unverified_nircmd",
+              requestedTargetPid,
+              focusedTargetPid,
             },
             "clipboard"
           );

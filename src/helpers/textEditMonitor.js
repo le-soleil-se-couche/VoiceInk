@@ -84,6 +84,77 @@ public static class Win32ForegroundWindow {
 }
 `;
 
+const WINDOWS_TEXT_MONITOR_FALLBACK_SCRIPT = `
+try {
+  Add-Type -AssemblyName UIAutomationClient | Out-Null
+
+  # Read the pasted transcription line from stdin (same contract as native binaries).
+  $original = [Console]::In.ReadLine()
+  if ([string]::IsNullOrEmpty($original)) {
+    [Console]::Out.WriteLine("NO_VALUE")
+    exit 0
+  }
+
+  function Get-FocusedValue {
+    try {
+      $el = [System.Windows.Automation.AutomationElement]::FocusedElement
+      if ($null -eq $el) { return $null }
+
+      # 1) ValuePattern (typical input controls)
+      $valuePatternRef = $null
+      $hasValuePattern = $el.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$valuePatternRef)
+      if ($hasValuePattern -and $null -ne $valuePatternRef) {
+        $value = $valuePatternRef.Current.Value
+        if (-not [string]::IsNullOrEmpty($value)) { return $value }
+      }
+
+      # 2) TextPattern (some rich editors expose text this way)
+      $textPatternRef = $null
+      $hasTextPattern = $el.TryGetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern, [ref]$textPatternRef)
+      if ($hasTextPattern -and $null -ne $textPatternRef -and $null -ne $textPatternRef.DocumentRange) {
+        $text = $textPatternRef.DocumentRange.GetText(-1)
+        if ($null -ne $text) {
+          $text = $text.TrimEnd([char]0)
+          if (-not [string]::IsNullOrEmpty($text)) { return $text }
+        }
+      }
+
+      return $null
+    } catch {
+      return $null
+    }
+  }
+
+  # Retry briefly: paste may not be visible yet when monitor starts.
+  $lastValue = $null
+  for ($i = 0; $i -lt 8; $i++) {
+    $lastValue = Get-FocusedValue
+    if (-not [string]::IsNullOrEmpty($lastValue)) { break }
+    Start-Sleep -Milliseconds 250
+  }
+  if ([string]::IsNullOrEmpty($lastValue)) {
+    [Console]::Out.WriteLine("NO_VALUE")
+    exit 0
+  }
+
+  $deadline = (Get-Date).AddSeconds(30)
+  while ((Get-Date) -lt $deadline) {
+    Start-Sleep -Milliseconds 500
+    $currentValue = Get-FocusedValue
+    if ($null -eq $currentValue) { continue }
+
+    if ($currentValue -ne $lastValue) {
+      $lastValue = $currentValue
+      $b64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($currentValue))
+      [Console]::Out.WriteLine("CHANGED_B64:$b64")
+      [Console]::Out.Flush()
+    }
+  }
+} catch {
+  [Console]::Out.WriteLine("NO_VALUE")
+}
+`;
+
 class TextEditMonitor extends EventEmitter {
   constructor() {
     super();
@@ -215,8 +286,14 @@ class TextEditMonitor extends EventEmitter {
     const { command, args } = resolved;
     debugLogger.debug("[TextEditMonitor] Resolved binary", { command, args });
 
-    // For native binaries, verify executable permission
-    if (command !== "python3") {
+    // For native binaries, verify executable permission.
+    // Skip shell commands resolved via PATH (python/powershell).
+    const lowerCommand = String(command || "").toLowerCase();
+    const isPathResolvedShellCommand =
+      lowerCommand === "python3" ||
+      lowerCommand === "powershell.exe" ||
+      lowerCommand === "pwsh.exe";
+    if (!isPathResolvedShellCommand) {
       try {
         fs.accessSync(command, fs.constants.X_OK);
       } catch {
@@ -562,7 +639,24 @@ class TextEditMonitor extends EventEmitter {
 
     if (platform === "win32") {
       const binaryPath = this._findFile("windows-text-monitor.exe");
-      return binaryPath ? { command: binaryPath, args: [] } : null;
+      if (binaryPath) return { command: binaryPath, args: [] };
+
+      // Fallback for dev machines without compiled monitor binary.
+      const encodedScript = Buffer.from(
+        WINDOWS_TEXT_MONITOR_FALLBACK_SCRIPT,
+        "utf16le"
+      ).toString("base64");
+      return {
+        command: "powershell.exe",
+        args: [
+          "-NoProfile",
+          "-NonInteractive",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-EncodedCommand",
+          encodedScript,
+        ],
+      };
     }
 
     if (platform === "darwin") {
