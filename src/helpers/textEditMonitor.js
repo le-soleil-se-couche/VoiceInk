@@ -167,6 +167,7 @@ class TextEditMonitor extends EventEmitter {
     this.lastTargetPid = null;
     this.lastTargetAppName = null;
     this.lastTargetCapturedAt = null;
+    this._activeMonitorMeta = null;
   }
 
   /**
@@ -263,6 +264,12 @@ class TextEditMonitor extends EventEmitter {
   startMonitoring(originalText, timeoutMs = 30000, options = {}) {
     this.stopMonitoring();
     this.currentOriginalText = originalText;
+    this._activeMonitorMeta = {
+      timeoutMs,
+      targetPid: Number.isInteger(options.targetPid) ? options.targetPid : null,
+      forceFallback: Boolean(options.forceFallback),
+      fallbackAttempted: Boolean(options.fallbackAttempted),
+    };
 
     if (process.platform === "darwin") {
       const resolved = this.resolveBinary();
@@ -274,17 +281,24 @@ class TextEditMonitor extends EventEmitter {
       return;
     }
 
-    const resolved = this.resolveBinary();
+    const resolved = this.resolveBinary({
+      forceFallback: this._activeMonitorMeta.forceFallback,
+    });
     if (!resolved) {
       debugLogger.debug("[TextEditMonitor] No binary found for platform", {
         platform: process.platform,
       });
       this.currentOriginalText = null;
+      this._activeMonitorMeta = null;
       return;
     }
 
     const { command, args } = resolved;
-    debugLogger.debug("[TextEditMonitor] Resolved binary", { command, args });
+    debugLogger.debug("[TextEditMonitor] Resolved binary", {
+      command,
+      args,
+      forceFallback: this._activeMonitorMeta.forceFallback,
+    });
 
     // For native binaries, verify executable permission.
     // Skip shell commands resolved via PATH (python/powershell).
@@ -299,6 +313,7 @@ class TextEditMonitor extends EventEmitter {
       } catch {
         debugLogger.debug("[TextEditMonitor] Binary not executable", { command });
         this.currentOriginalText = null;
+        this._activeMonitorMeta = null;
         return;
       }
     }
@@ -361,6 +376,7 @@ class TextEditMonitor extends EventEmitter {
       this.process = null;
     }
     this.currentOriginalText = null;
+    this._activeMonitorMeta = null;
   }
 
   _handleProcessStdoutChunk(chunk) {
@@ -415,6 +431,35 @@ class TextEditMonitor extends EventEmitter {
 
     if (line === "NO_ELEMENT" || line === "NO_VALUE") {
       debugLogger.debug("[TextEditMonitor] No target element", { status: line });
+
+      const shouldRetryWithFallback =
+        process.platform === "win32" &&
+        line === "NO_VALUE" &&
+        this._activeMonitorMeta &&
+        !this._activeMonitorMeta.forceFallback &&
+        !this._activeMonitorMeta.fallbackAttempted;
+
+      if (shouldRetryWithFallback) {
+        const originalText = this.currentOriginalText;
+        const timeoutMs = this._activeMonitorMeta.timeoutMs || 30000;
+        const targetPid = this._activeMonitorMeta.targetPid;
+
+        debugLogger.debug("[TextEditMonitor] Retrying with PowerShell fallback monitor", {
+          timeoutMs,
+          targetPid,
+        });
+
+        this.stopMonitoring();
+        if (typeof originalText === "string" && originalText.length > 0) {
+          this.startMonitoring(originalText, timeoutMs, {
+            targetPid,
+            forceFallback: true,
+            fallbackAttempted: true,
+          });
+          return;
+        }
+      }
+
       this.stopMonitoring();
     }
   }
@@ -627,8 +672,9 @@ class TextEditMonitor extends EventEmitter {
    * Resolve the platform-specific binary.
    * Returns { command, args } or null if unavailable.
    */
-  resolveBinary() {
+  resolveBinary(options = {}) {
     const platform = process.platform;
+    const forceFallback = Boolean(options.forceFallback);
 
     if (platform === "linux") {
       const nativePath = this._findFile("linux-text-monitor");
@@ -638,8 +684,10 @@ class TextEditMonitor extends EventEmitter {
     }
 
     if (platform === "win32") {
-      const binaryPath = this._findFile("windows-text-monitor.exe");
-      if (binaryPath) return { command: binaryPath, args: [] };
+      if (!forceFallback) {
+        const binaryPath = this._findFile("windows-text-monitor.exe");
+        if (binaryPath) return { command: binaryPath, args: [] };
+      }
 
       // Fallback for dev machines without compiled monitor binary.
       const encodedScript = Buffer.from(
