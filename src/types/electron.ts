@@ -672,6 +672,15 @@ declare global {
       saveCustomTranscriptionKey?: (key: string) => Promise<void>;
       getCustomReasoningKey?: () => Promise<string | null>;
       saveCustomReasoningKey?: (key: string) => Promise<void>;
+      proxyCustomTranscription?: (data: {
+        audioBuffer: ArrayBuffer;
+        endpoint: string;
+        model: string;
+        language?: string;
+        prompt?: string;
+        mimeType?: string;
+        isQwenAsr?: boolean;
+      }) => Promise<Record<string, unknown>>;
 
       // Dictation key persistence (file-based for reliable startup)
       getDictationKey?: () => Promise<string | null>;
