@@ -299,6 +299,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   saveCustomTranscriptionKey: (key) => ipcRenderer.invoke("save-custom-transcription-key", key),
   getCustomReasoningKey: () => ipcRenderer.invoke("get-custom-reasoning-key"),
   saveCustomReasoningKey: (key) => ipcRenderer.invoke("save-custom-reasoning-key", key),
+  proxyCustomTranscription: (data) => ipcRenderer.invoke("proxy-custom-transcription", data),
 
   // Dictation key persistence (file-based for reliable startup)
   getDictationKey: () => ipcRenderer.invoke("get-dictation-key"),

@@ -2193,6 +2193,47 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         throw new Error("No text transcribed - Mistral response was empty");
       }
 
+      // Custom endpoints may not support CORS — proxy through main process (same pattern as Mistral)
+      if (isCustomProvider && window.electronAPI?.proxyCustomTranscription) {
+        if (!endpoint.trim()) {
+          throw new Error("Custom transcription endpoint is empty. Please configure it in Settings.");
+        }
+
+        const audioBuffer = await optimizedAudio.arrayBuffer();
+        const proxyData = {
+          audioBuffer,
+          endpoint,
+          model,
+          language,
+          mimeType,
+          isQwenAsr,
+        };
+        if (!isQwenAsr && dictionaryPrompt) {
+          proxyData.prompt = dictionaryPrompt;
+        }
+
+        logger.debug(
+          "Proxying custom transcription through main process",
+          { endpoint, model, isQwenAsr, hasPrompt: !!proxyData.prompt },
+          "transcription"
+        );
+
+        const result = await window.electronAPI.proxyCustomTranscription(proxyData);
+        const proxyText = isQwenAsr ? extractChatCompletionText(result) : result?.text;
+
+        if (proxyText && proxyText.trim().length > 0) {
+          timings.transcriptionProcessingDurationMs = Math.round(performance.now() - apiCallStart);
+          const reasoningStart = performance.now();
+          const text = await this.processTranscription(proxyText, "custom");
+          timings.reasoningProcessingDurationMs = Math.round(performance.now() - reasoningStart);
+
+          const source = (await this.isReasoningAvailable()) ? "custom-reasoned" : "custom";
+          return { success: true, text, source, timings };
+        }
+
+        throw new Error("No text transcribed - custom endpoint response was empty");
+      }
+
       if (isCustomProvider && !endpoint.trim()) {
         throw new Error("Custom transcription endpoint is empty. Please configure it in Settings.");
       }
