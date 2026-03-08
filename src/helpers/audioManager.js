@@ -6,7 +6,7 @@ import { isBuiltInMicrophone } from "../utils/audioDeviceUtils";
 import { isSecureEndpoint } from "../utils/urlUtils";
 import { withSessionRefresh } from "../lib/neonAuth";
 import { getBaseLanguageCode, validateLanguageForModel } from "../utils/languageSupport";
-import { classifyContext, getTargetAppInfo } from "../utils/contextClassifier";
+import { classifyContext, getTargetAppInfo, DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 import {
   getSettings,
   getEffectiveReasoningModel,
@@ -1414,10 +1414,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   }
 
   buildReasoningConfig(contextClassification) {
-    const strictOverlapThreshold = Math.max(
-      Number(contextClassification?.strictOverlapThreshold) || 0.72,
-      0.86
-    );
+    const strictOverlapThreshold =
+      Number(contextClassification?.strictOverlapThreshold) || DEFAULT_STRICT_OVERLAP_THRESHOLD;
 
     return {
       contextClassification: contextClassification || undefined,
@@ -1429,10 +1427,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   enforceCleanupOnlyReasoningContext(contextClassification) {
     if (!contextClassification) return null;
 
-    const strictThreshold = Math.max(
-      Number(contextClassification?.strictOverlapThreshold) || 0.72,
-      0.86
-    );
+    const strictThreshold =
+      Number(contextClassification?.strictOverlapThreshold) || DEFAULT_STRICT_OVERLAP_THRESHOLD;
     const signals = Array.isArray(contextClassification.signals)
       ? [...contextClassification.signals]
       : [];

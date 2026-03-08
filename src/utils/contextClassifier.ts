@@ -1,5 +1,5 @@
 import type { TargetAppInfo } from "../types/electron";
-export const DEFAULT_STRICT_OVERLAP_THRESHOLD = 0.72;
+export const DEFAULT_STRICT_OVERLAP_THRESHOLD = 0.45;
 
 export type ReasoningContext = "general" | "code" | "email" | "chat" | "document";
 export type ReasoningIntent = "cleanup" | "instruction";
