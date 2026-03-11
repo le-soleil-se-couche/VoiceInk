@@ -15,8 +15,13 @@ import "./index.css";
 
 const controlPanelImport = () => import("./components/ControlPanel.tsx");
 const onboardingFlowImport = () => import("./components/OnboardingFlow.tsx");
+const agentOverlayImport = () => import("./components/AgentOverlay.tsx");
 const ControlPanel = React.lazy(controlPanelImport);
 const OnboardingFlow = React.lazy(onboardingFlowImport);
+const AgentOverlay = React.lazy(agentOverlayImport);
+const MeetingNotificationOverlay = React.lazy(
+  () => import("./components/MeetingNotificationOverlay.tsx")
+);
 
 let root = null;
 
@@ -270,25 +275,43 @@ if (!isOAuthBrowserRedirect()) {
 
 function AppRouter() {
   useTheme();
+  const isMeetingNotification = window.location.search.includes("meeting-notification=true");
+
+  if (isMeetingNotification) {
+    return (
+      <Suspense fallback={<div />}>
+        <MeetingNotificationOverlay />
+      </Suspense>
+    );
+  }
+
+  return <MainApp />;
+}
+
+function MainApp() {
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [needsReauth, setNeedsReauth] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const isAgentPanel = window.location.search.includes("agent=true");
   const isControlPanel =
-    window.location.pathname.includes("control") || window.location.search.includes("panel=true");
-  const isDictationPanel = !isControlPanel;
+    !isAgentPanel &&
+    (window.location.pathname.includes("control") || window.location.search.includes("panel=true"));
+  const isDictationPanel = !isControlPanel && !isAgentPanel;
 
   // Preload lazy chunks while waiting for auth so Suspense resolves instantly
   useEffect(() => {
-    if (isControlPanel) {
+    if (isAgentPanel) {
+      agentOverlayImport().catch(() => {});
+    } else if (isControlPanel) {
       controlPanelImport().catch(() => {});
       if (!localStorage.getItem("onboardingCompleted")) {
         onboardingFlowImport().catch(() => {});
       }
     }
-  }, [isControlPanel]);
+  }, [isControlPanel, isAgentPanel]);
 
   useEffect(() => {
     if (!authLoaded) return;
@@ -299,7 +322,8 @@ function AppRouter() {
       localStorage.getItem("skipAuth") === "true";
 
     // Valid session proves prior onboarding — restore flag if localStorage was wiped
-    if (!onboardingCompleted && isSignedIn) {
+    const isReturningUser = !onboardingCompleted && isSignedIn;
+    if (isReturningUser) {
       localStorage.setItem("onboardingCompleted", "true");
     }
 
@@ -310,6 +334,12 @@ function AppRouter() {
         setShowOnboarding(true);
       } else if (!isSignedIn && !authSkipped) {
         setNeedsReauth(true);
+      }
+
+      // Returning users who skipped onboarding may lack accessibility permissions.
+      // Trigger an immediate check so the main process sends accessibility-missing.
+      if (isReturningUser) {
+        window.electronAPI?.checkAccessibilityTrusted?.();
       }
     }
 
@@ -328,6 +358,14 @@ function AppRouter() {
     setShowOnboarding(false);
     localStorage.setItem("onboardingCompleted", "true");
   };
+
+  if (isAgentPanel) {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <AgentOverlay />
+      </Suspense>
+    );
+  }
 
   if (isLoading) {
     return <LoadingFallback />;

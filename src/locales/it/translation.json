@@ -93,7 +93,7 @@
     "updatePayment": "Aggiorna metodo di pagamento",
     "updatePaymentDescription": "Torna alle trascrizioni Pro illimitate.",
     "upgradeToPro": "Passa a Pro",
-    "upgradeDescription": "Trascrizioni illimitate. $9/mese.",
+    "upgradeDescription": "Trascrizioni illimitate a partire da soli $8/mese.",
     "useApiKey": "Usa la tua chiave API",
     "useApiKeyDescription": "Porta la tua chiave per un uso illimitato.",
     "switchToLocal": "Passa a locale",
@@ -155,10 +155,11 @@
       "microphoneDescription": "Per acquisire la tua voce",
       "grant": "Concedi",
       "accessibilityTitle": "Accessibilità",
-      "accessibilityDescription": "Per incollare testo nelle app",
+      "accessibilityDescription": "Attiva nelle Impostazioni di Sistema",
       "testAndGrant": "Testa e concedi",
       "requiredForApp": "Necessario per usare OpenWhispr",
-      "microphoneRequired": "Accesso al microfono richiesto"
+      "microphoneRequired": "Accesso al microfono richiesto",
+      "openSystemSettings": "Apri Impostazioni di Sistema"
     },
     "transcription": {
       "title": "Configurazione trascrizione",
@@ -198,6 +199,10 @@
       "weeklyTitle": "Limite settimanale raggiunto",
       "weeklyDescription": "Il limite si rinnova in modo progressivo. Passa a Pro o usa la tua chiave API per un uso illimitato."
     },
+    "accessibilityMissing": {
+      "title": "Autorizzazioni di accessibilità necessarie",
+      "description": "Abbiamo rilevato che OpenWhispr ha bisogno delle autorizzazioni di accessibilità per funzionare correttamente. Abilitale qui sotto."
+    },
     "billing": {
       "pastDueTitle": "Non siamo riusciti a elaborare il pagamento",
       "pastDueDescription": "Nessun problema: sei nel piano gratuito per ora. Aggiorna il pagamento nelle Impostazioni per tornare a Pro.",
@@ -222,7 +227,17 @@
       "dateGroups": {
         "today": "Oggi",
         "yesterday": "Ieri"
-      }
+      },
+      "transcriptionFailed": "La trascrizione è fallita",
+      "failedCtaSettings": "Configura il tuo provider di trascrizione",
+      "failedCtaAndRetry": "poi clicca su riprova",
+      "failedCtaSettingsOnly": "Configura il tuo provider di trascrizione nelle Impostazioni",
+      "clearAll": "Cancella tutto",
+      "clearAllTitle": "Cancella tutte le trascrizioni",
+      "clearAllDescription": "Tutte le trascrizioni e i file audio verranno rimossi definitivamente.",
+      "clearAllSuccess": "Cronologia cancellata",
+      "clearAllErrorTitle": "Impossibile cancellare la cronologia",
+      "clearAllErrorDescription": "Qualcosa è andato storto. Riprova."
     },
     "cloudMigration": {
       "title": "Benvenuto in OpenWhispr Pro",
@@ -596,7 +611,7 @@
     },
     "title": "Reimposta la password"
   },
-  "fullPrompt": "Prompt completo",
+  "actionPrompt": "Prompt di azione",
   "hotkeyGuidance": {
     "blockedDescription": "Queste scorciatoie sono bloccate perché comunemente usate dal sistema.",
     "blockedTitle": "Scorciatoie bloccate",
@@ -677,7 +692,7 @@
     "selectPlaceholder": "Seleziona un microfono",
     "systemDefault": "Predefinito di sistema",
     "unknownDevice": "Dispositivo sconosciuto",
-    "using": "In uso:"
+    "using": "In uso: {{device}}"
   },
   "pasteToolsInfo": {
     "checking": "Verifica delle funzionalità di sistema...",
@@ -831,6 +846,10 @@
       "system": {
         "description": "Aggiornamenti, archiviazione e strumenti di sviluppo",
         "label": "Sistema"
+      },
+      "agentMode": {
+        "label": "Modalità Agente",
+        "description": "Assistente vocale chat"
       }
     },
     "title": "Impostazioni"
@@ -1078,12 +1097,79 @@
       "soundEffects": {
         "dictationSounds": "Suoni di dettatura",
         "dictationSoundsDescription": "Riproduci un tono quando la registrazione inizia e finisce",
+        "pauseMedia": "Pausa multimedia",
+        "pauseMediaDescription": "Metti automaticamente in pausa la musica quando inizia la dettatura",
         "title": "Effetti sonori"
+      },
+      "clipboard": {
+        "title": "Appunti",
+        "keepInClipboard": "Mantieni la trascrizione negli appunti",
+        "keepInClipboardDescription": "Mantieni il testo dettato negli appunti per poterlo incollare manualmente se necessario"
       },
       "startup": {
         "launchAtLogin": "Avvia all'accesso",
         "launchAtLoginDescription": "Avvia OpenWhispr automaticamente all'accesso",
-        "title": "Avvio"
+        "title": "Avvio",
+        "description": "Controlla il comportamento di OpenWhispr all'avvio",
+        "startMinimized": "Avvia ridotto a icona",
+        "startMinimizedDescription": "Avvia senza mostrare la finestra del pannello di controllo"
+      },
+      "waylandPaste": {
+        "title": "Configurazione incolla su Wayland",
+        "description": "L'incolla automatico su Wayland richiede ydotool. Controlla lo stato di ogni componente qui sotto.",
+        "allGoodDesc": "L'incolla automatico è pronto.",
+        "recheck": "Ricontrolla",
+        "copy": "Copia",
+        "ydotoolDesc": "Strumento di automazione input per Wayland",
+        "ydotooldDesc": "Daemon per ydotool (pacchetto separato su Ubuntu/Pop!_OS)",
+        "uinputDesc": "Accesso al dispositivo di input del kernel",
+        "uinputRuleFound": "Regola presente ma non attiva. Un riavvio dovrebbe risolvere.",
+        "uinputRuleMissing": "nessuna regola udev trovata",
+        "inputGroup": "gruppo input",
+        "inputGroupDesc": "L'utente deve far parte del gruppo input (richiede un nuovo accesso)",
+        "service": "servizio systemd",
+        "serviceDesc": "File di servizio utente per l'avvio automatico di ydotoold",
+        "daemon": "daemon ydotoold",
+        "daemonDesc": "Il servizio in background deve essere in esecuzione",
+        "guide": {
+          "open": "Guida",
+          "ydotool": {
+            "step1Title": "Installa ydotool",
+            "step1Desc": "Usa il gestore pacchetti della tua distribuzione per installare ydotool.",
+            "step2Title": "Verifica l'installazione",
+            "step2Desc": "Controlla che ydotool sia disponibile nel tuo PATH."
+          },
+          "ydotoold": {
+            "step1Title": "Installa ydotoold",
+            "step1Desc": "Su Ubuntu e Pop!_OS, ydotoold è un pacchetto separato. Su Fedora è incluso in ydotool."
+          },
+          "uinput": {
+            "ruleFoundTitle": "Regola udev già configurata",
+            "ruleFoundDesc": "La regola udev per /dev/uinput è già presente nel sistema ma non è ancora attiva. Prova a ricaricarla:",
+            "rebootTitle": "Se il ricaricamento non ha funzionato, riavvia",
+            "rebootDesc": "Su alcune distribuzioni, le modifiche udev si applicano solo dopo un riavvio completo. Riavvia il computer e torna qui per ricontrollare.",
+            "step1Title": "Crea una regola udev",
+            "step1Desc": "Questa regola concede l'accesso a /dev/uinput agli utenti del gruppo input.",
+            "step2Title": "Ricarica le regole udev",
+            "step2Desc": "Applica la nuova regola senza riavviare."
+          },
+          "group": {
+            "step1Title": "Aggiungi il tuo utente al gruppo input",
+            "step2Title": "Esci e rientra",
+            "step2Desc": "Le modifiche ai gruppi hanno effetto solo dopo un nuovo accesso. Esci dal desktop, accedi di nuovo e riapri OpenWhispr."
+          },
+          "service": {
+            "step1Title": "Crea la cartella del servizio",
+            "step2Title": "Crea il file del servizio",
+            "step2Desc": "Crea un servizio systemd a livello utente che avvia ydotoold automaticamente all'accesso.",
+            "step3Title": "Ricarica e abilita"
+          },
+          "daemon": {
+            "step1Title": "Avvia il daemon",
+            "step1Desc": "Avvia ydotoold e abilitalo per l'esecuzione a ogni accesso.",
+            "step2Title": "Verifica che sia in esecuzione"
+          }
+        }
       },
       "updates": {
         "badges": {
@@ -1162,7 +1248,9 @@
     },
     "privacy": {
       "cloudBackup": "Backup cloud",
-      "cloudBackupDescription": "Salva le trascrizioni nel cloud per non perderle mai.",
+      "cloudBackupDescription": "Salva trascrizioni e note nel cloud per un accesso senza interruzioni da tutti i dispositivi.",
+      "cloudNotesMigration": "Backup delle note in corso… {{done}} / {{total}}",
+      "cloudNotesMigrationDone": "Tutte le note salvate nel cloud",
       "description": "Controlla quali dati escono dal tuo dispositivo. Tutto è disattivato per impostazione predefinita.",
       "title": "Privacy",
       "usageAnalytics": "Analisi dell'utilizzo",
@@ -1364,7 +1452,10 @@
       "wordsCount": "{{count}} parole",
       "startWriting": "Inizia a scrivere...",
       "staleIndicator": "Il contenuto è cambiato dall'ultimo miglioramento",
-      "live": "Dal vivo"
+      "live": "Dal vivo",
+      "transcript": "Trascrizione",
+      "notes": "Note",
+      "generateNotes": "Genera note"
     },
     "upload": {
       "title": "Carica audio",
@@ -1412,8 +1503,9 @@
     },
     "meeting": {
       "title": "Note delle riunioni",
-      "description": "Identificazione degli interlocutori e riassunti strutturati",
-      "comingSoon": "Prossimamente"
+      "description": "Trascrizioni e riassunti strutturati",
+      "comingSoon": "Prossimamente",
+      "back": "Indietro"
     },
     "context": {
       "moveToFolder": "Sposta nella cartella",
@@ -1480,7 +1572,13 @@
         "createDescription": "Definisci un'azione personalizzata con il tuo prompt IA. Puoi sempre modificarle o aggiungerne altre nelle impostazioni.",
         "created": "Creata!"
       },
-      "getStarted": "Inizia"
+      "getStarted": "Inizia",
+      "systemAudio": {
+        "title": "Audio di sistema",
+        "description": "Cattura l'audio delle riunioni e di altre app insieme al microfono.",
+        "grant": "Concedi permesso",
+        "enabled": "Attivato"
+      }
     },
     "realtimeBanner": {
       "message": "Trascrizione in tempo reale disponibile con Pro",
@@ -1518,6 +1616,7 @@
     "upgradeTitle": "Passa a Pro",
     "upgradeDescription": "Trascrizioni illimitate e funzionalità avanzate.",
     "learnMore": "Scopri di più",
+    "integrations": "Integrazioni",
     "defaultUser": "Utente",
     "notSignedIn": "Non hai effettuato l'accesso"
   },
@@ -1578,7 +1677,11 @@
         "description": "Non è stato possibile registrare la scorciatoia selezionata. Scegline un’altra nelle impostazioni."
       },
       "addedToDict": "{{words}} aggiunto al tuo dizionario",
-      "undo": "Annulla"
+      "undo": "Annulla",
+      "accessibilityMissing": {
+        "title": "Autorizzazioni di accessibilità richieste",
+        "description": "OpenWhispr necessita delle autorizzazioni di accessibilità per rilevare il tasto di scelta rapida e incollare il testo. Abilitale nel Pannello di controllo."
+      }
     },
     "mic": {
       "hotkeyToSpeak": "Premi {{hotkey}} per parlare",
@@ -1598,6 +1701,141 @@
     "oauth": {
       "redirectTitle": "Reindirizzamento all'app...",
       "closeTab": "Puoi chiudere questa scheda."
+    }
+  },
+  "agentMode": {
+    "settings": {
+      "title": "Modalità Agente",
+      "description": "Assistente vocale chat con un modello IA separato",
+      "enabled": "Abilita Modalità Agente",
+      "enabledDescription": "Usa un tasto di scelta rapida separato per aprire un overlay di chat vocale",
+      "hotkey": "Tasto Agente",
+      "hotkeyDescription": "Tasto di scelta rapida per alternare l'overlay agente",
+      "model": "Modello Agente",
+      "modelDescription": "Modello IA utilizzato per le conversazioni agente",
+      "systemPrompt": "Prompt di Sistema",
+      "systemPromptDescription": "Istruzioni personalizzate per l'agente",
+      "systemPromptPlaceholder": "Inserisci un prompt di sistema personalizzato...",
+      "openwhisprCloud": "OpenWhispr Cloud",
+      "openwhisprCloudDescription": "Usa l'IA cloud di OpenWhispr per le conversazioni agente",
+      "customSetup": "Configurazione personalizzata (BYOK)",
+      "customSetupDescription": "Usa le tue chiavi API e scegli il modello che preferisci"
+    },
+    "chat": {
+      "placeholder": "Premi {{hotkey}} per parlare",
+      "thinking": "Pensando...",
+      "transcribing": "Trascrivendo...",
+      "listening": "Ascoltando...",
+      "newConversation": "Nuovo",
+      "copyToClipboard": "Copia negli appunti",
+      "copied": "Copiato!",
+      "emptyState": "Tieni premuto {{hotkey}} per iniziare una conversazione",
+      "errorPrefix": "Errore"
+    },
+    "titleBar": {
+      "label": "Agente",
+      "newChat": "Nuova conversazione",
+      "close": "Chiudi"
+    },
+    "input": {
+      "holdToSpeak": "Tieni premuto per parlare",
+      "toClose": "chiudi",
+      "listening": "Ascolto...",
+      "transcribing": "Trascrizione...",
+      "thinking": "Pensiero..."
+    }
+  },
+  "integrations": {
+    "title": "Integrazioni",
+    "description": "Collega servizi per potenziare il tuo flusso di lavoro",
+    "googleCalendar": {
+      "title": "Google Calendar",
+      "description": "Collega il tuo calendario per rilevare automaticamente le riunioni e registrare le trascrizioni.",
+      "connect": "Collega Google Calendar",
+      "connecting": "Connessione...",
+      "connected": "Connesso",
+      "addAnother": "Aggiungi un altro calendario",
+      "disconnect": "Disconnetti",
+      "disconnectConfirm": "Disconnettere {{email}}?",
+      "disconnectDescription": "Le note delle riunioni non saranno più registrate da questo calendario."
+    },
+    "plan": {
+      "title": "Il tuo Piano",
+      "current": "Attuale",
+      "free": "Gratis",
+      "freeLimit": "5 riunioni / mese",
+      "essential": "Essential",
+      "essentialLimit": "20 riunioni / mese",
+      "pro": "Pro",
+      "proLimit": "Illimitato",
+      "upgrade": "Aggiorna"
+    },
+    "beta": {
+      "title": "La registrazione delle riunioni è in beta",
+      "description": "Stiamo ancora lavorando su come integrare al meglio questa funzionalità. Il tuo feedback è molto apprezzato!",
+      "freeTier": "Piano gratuito: 5 ore / mese",
+      "proTier": "Piano Pro: 20 ore / mese",
+      "feedback": "Hai bisogno di più di 20 ore? Contatta gabe@openwhispr.com"
+    },
+    "notABot": {
+      "title": "OpenWhispr è un registratore di riunioni, non un bot",
+      "description": "OpenWhispr cattura l'audio direttamente dal tuo sistema — non entra mai nelle tue riunioni come partecipante. Basta collegare il calendario e prendere appunti normalmente."
+    }
+  },
+  "upcoming": {
+    "title": "Riunioni in programma",
+    "transcriptions": "Trascrizioni",
+    "tomorrow": "Domani",
+    "noMoreMeetings": "Nessun'altra riunione oggi",
+    "now": "In corso",
+    "join": "Partecipa",
+    "untitledEvent": "Evento senza titolo",
+    "signInRequired": "Accedi per utilizzare la registrazione delle riunioni",
+    "signInDescription": "Crea un account o accedi per registrare e trascrivere le riunioni.",
+    "connectCalendar": "Collega il tuo calendario",
+    "connectCalendarDescription": "Collega il tuo Google Calendar per vedere le prossime riunioni e registrare note automaticamente.",
+    "notABot": "OpenWhispr registra usando l'audio del tuo sistema — non entra mai nelle riunioni come bot.",
+    "connectCalendarButton": "Collega calendario"
+  },
+  "notesView": {
+    "searchPlaceholder": "Cerca note…",
+    "newNote": "Nuova nota",
+    "empty": {
+      "title": "Nessuna nota ancora",
+      "description": "Crea la tua prima nota per iniziare."
+    },
+    "searchEmpty": {
+      "title": "Nessun risultato",
+      "description": "Nessuna nota trovata per «{{query}}»."
+    },
+    "noteType": {
+      "personal": "personale",
+      "meeting": "riunione",
+      "upload": "caricamento"
+    }
+  },
+  "noteEditor": {
+    "saved": "Salvato",
+    "deleteNote": "Elimina nota",
+    "deleteConfirmTitle": "Eliminare la nota?",
+    "deleteConfirmDescription": "Questa nota verrà eliminata definitivamente e non potrà essere recuperata.",
+    "deleteConfirm": "Elimina"
+  },
+  "commandSearch": {
+    "title": "Cerca",
+    "description": "Cerca tra note e trascrizioni",
+    "shortPlaceholder": "Cerca",
+    "placeholder": "Cerca note e trascrizioni…",
+    "sections": {
+      "notes": "Note",
+      "transcripts": "Trascrizioni"
+    },
+    "noResults": "Nessun risultato",
+    "emptyState": "Inizia a digitare per cercare",
+    "footer": {
+      "navigate": "Naviga",
+      "open": "Apri",
+      "dismiss": "Chiudi"
     }
   }
 }

@@ -7,6 +7,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-03-11
+
+### Added
+
+- **System Audio for Notes**: Mix system audio (via getDisplayMedia loopback) with microphone input for note recordings, enabling capture of meeting audio, YouTube lectures, and other system sounds
+- **Event-Driven Meeting Detection**: Replaced polling-based meeting detection with native OS event APIs (CoreAudio on macOS, WASAPI on Windows, pactl on Linux) — reduces background CPU from 5–9% to near-zero (#404)
+- **Notes Onboarding**: Added screen recording permission step to the notes onboarding wizard (macOS) so users can grant permission before their first recording
+
+### Changed
+
+- **Auto-Enable System Audio**: System audio is now automatically enabled when screen recording permission is granted — removed the separate toggle button for a simpler recording experience
+- **Deferred Transcript Display**: Recording transcript is no longer shown live during notes dictation; it appears after recording stops, matching the meeting notes flow for a cleaner experience
+
+### Fixed
+
+- **Windows Hotkey Stability**: Track modifier state in native keyboard hook so modifier-only shortcuts (e.g. Control+Super) are detected reliably on Windows 11; keep floating recorder interactive; prefer compiling current key-listener source over downloaded binaries
+- **macOS Accessibility Permission Prompt**: Detect missing accessibility trust after startup and notify users with auto-opened Privacy settings and toast guidance — fixes silent Globe key failures on fresh installs
+- **Realtime Streaming Warmup**: Fix warmup gating so initial audio is no longer silently dropped; skip redundant session config in cloud mode; handle empty-buffer commit on disconnect gracefully
+- **Custom Dictionary Prompt Truncation**: Truncate custom dictionary to respect Groq's 896-char limit, preventing 400 errors on large dictionaries (#405)
+- **Parakeet bzip2 on Windows 10**: Add JS fallback for bzip2 extraction when native tar fails (#406)
+- **Business Plan Past-Due Check**: Include business plan in past-due subscription check
+
+### Removed
+
+- Removed the Monitor toggle button from the dictation widget (system audio mode is now automatic)
+
+## [1.6.1] - 2026-03-08
+
+### Added
+
+- **WebSocket Streaming for BYOK Dictation**: OpenAI Realtime API streaming now works for standard dictation mode (not just meetings), enabling real-time transcription for Bring Your Own Key users
+- **Unified Streaming Path**: Extended OpenAI Realtime WebSocket streaming to normal dictation, sharing the same streaming infrastructure as meeting transcription
+
+### Fixed
+
+- **Transcript Loss on Disconnect**: Commit audio buffer before closing WebSocket and wait for final transcript before closing, preventing lost transcriptions during disconnects
+- **Dictation IPC Callbacks**: Send plain strings from streaming IPC callbacks instead of objects, fixing downstream consumers
+- **Accessibility Permission Detection (macOS)**: Fix onboarding flow not detecting macOS accessibility permission correctly (#394)
+- **Custom Cloud Provider Classification**: Treat Custom Cloud endpoints as self-hosted rather than third-party (#384)
+- **Blocking `execSync` in Meeting Detection**: Replaced synchronous process detection with async alternative to prevent UI freezes on Windows
+- **BYOK Onboarding Override**: Guard BYOK override for signed-in users and fix missing deps during onboarding (#397)
+- **Windows Media Pause Toggle**: Check audio state before sending media key on Windows (#402)
+- **Linux Wayland Portal Permissions**: Set desktop name on Linux for Wayland portal permissions (#389)
+- **Chrome Sandbox Permissions (Linux)**: Set SUID bit on chrome-sandbox during deb/rpm install
+
+### Changed
+
+- Eliminated duplication and fixed style inconsistencies in dictation streaming helpers
+- Cleaned up meeting detection code after the Windows input fix
+
+## [1.6.0] - 2026-03-06
+
+### Added
+
+- **Agent Mode**: Glassmorphism chat overlay with real-time AI streaming — resizable window (8 edge/corner handles), dedicated hotkey, conversation history stored in SQLite, customizable system prompt, and support for all cloud/local AI providers
+- **Google Calendar Integration**: Connect multiple Google accounts via OAuth 2.0 (PKCE), view upcoming meetings in the sidebar, and receive notifications when meetings are detected
+- **Meeting Recording & Live Transcription**: Automatic meeting detection via process monitoring (Zoom, Teams, FaceTime) and sustained audio activity, with live transcription powered by OpenAI Realtime API over WebSocket
+- **Cloud Notes with Sync**: Local-first note storage with FTS5 full-text search, folder organization, cloud sync, and semantic search — all notes are instantly searchable across title, content, and enhanced content
+- **Audio Retention & Retry**: Transcription audio is now saved locally with configurable retention (default 30 days), enabling playback from history and one-click retry of failed transcriptions through the full pipeline
+- **Cmd+K Command Search**: Global command palette to search across notes, transcripts, and folders with real-time results, keyboard navigation, and type-grouped display
+- **Auto-Pause Media Playback**: Automatically pauses media (Spotify, Apple Music, etc.) during dictation and resumes afterward — uses MediaRemote framework on macOS, GSMTC on Windows, and MPRIS2 on Linux
+- **Screen Recording Permission Flow (macOS)**: Optional onboarding step and in-app prompts for screen recording permission, required for meeting audio capture on macOS
+- **Configurable Recorder Position**: Choose where the voice recorder panel appears on screen (top, bottom, center)
+- **Auto-Paste Toggle**: New toggle in clipboard settings to enable/disable automatic pasting after transcription
+- **Prompt Architecture Overhaul**: Centralized prompt definitions in `src/config/prompts.ts` with customizable agent system prompts
+- **Dynamic Agent Window**: Agent overlay starts at full screen height with drag-to-resize support, persisted window bounds across sessions
+- **Save Failed Transcriptions**: Failed transcriptions are now saved with their audio for later retry instead of being lost
+- **Cloud Backup Toggle**: Unified cloud backup into a single toggle for simpler settings
+
+### Changed
+
+- **Removed Input Monitoring Requirement (macOS)**: Replaced CGEvent tap with NSEvent monitor for Globe/Fn key detection, eliminating the need for Input Monitoring privacy permission
+- **Unified Screen Recording Permission UX**: Consolidated screen recording permission prompts across onboarding, meetings, and integrations into a consistent experience
+
+### Fixed
+
+- **Agent Panel Readability**: Made agent panel fully opaque for better text readability
+- **Local Model Streaming**: Fixed local model support in agent streaming and resolved Metal OOM crash on macOS
+- **Mic Auto-Gain**: Enabled microphone auto-gain and skip silent system audio chunks during meeting recording
+- **Meeting Audio**: Fixed simultaneous system and mic audio capture for meetings
+- **KDE Wayland Paste**: Fixed portal exit code 0 with no token being treated as success on KDE Wayland
+- **Meeting Detection**: Suppressed false meeting detection when no active calendar meeting exists
+- **OpenAI Realtime Session**: Fixed session configuration timing — now sends config after session created event with pcm16 format and VAD
+- **Agent Hotkey Persistence**: Agent hotkey now properly persists to `.env` file across restarts
+- **Sidebar Height**: Fixed sidebar not extending full window height
+- **Empty Transcription Handling**: Silent return on empty transcription instead of pasting fallback string
+- **Command Search Styling**: Fixed input styling, note type icons, sidebar spacing, and added deleted_at column support
+- **Onboarding Accessibility UX**: Show device name in mic settings and improve accessibility permission guidance
+- **Orphaned Trial Note**: Removed orphaned trialNote reference from free plan pricing
+- **Portal-Based Tooltips**: Fixed tooltip positioning and replaced download action with reveal-in-folder
+- **State-Aware Media Pause**: Don't unpause media that was already paused before dictation started
+- **WebSocket Audio Buffering**: Parallelized WebSocket connection and audio capture, buffer early audio to prevent data loss at meeting start
+- **Video Track Loopback**: Keep video tracks alive for loopback audio capture, remove invalid dispose call
+
 ## [1.5.5] - 2026-03-01
 
 ### Added

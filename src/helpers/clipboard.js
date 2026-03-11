@@ -79,6 +79,7 @@ class ClipboardManager {
     this.winFastPasteChecked = false;
     this.linuxFastPastePath = null;
     this.linuxFastPasteChecked = false;
+    this.portalDenied = false;
   }
 
   _isWayland() {
@@ -345,7 +346,16 @@ class ClipboardManager {
           if (newToken) {
             this._savePortalToken(newToken);
           }
+          // Exit 0 without token: dialog was dismissed without approving (e.g. clicked outside).
+          // Reject with a recognizable message so the caller can retry.
+          if (!restoreToken && !newToken) {
+            reject(new Error("portal-dismissed"));
+            return;
+          }
           resolve(newToken || null);
+        } else if (code === 3) {
+          // User explicitly clicked "Deny" in the portal dialog.
+          reject(new Error("portal-denied"));
         } else if (code === 5) {
           reject(new Error("portal support not compiled in"));
         } else {
@@ -451,11 +461,14 @@ class ClipboardManager {
     const webContents = options.webContents;
 
     try {
-      const originalClipboard = clipboard.readText();
-      this.safeLog(
-        "💾 Saved original clipboard content:",
-        originalClipboard.substring(0, 50) + "..."
-      );
+      const shouldRestore = options.restoreClipboard !== false;
+      const originalClipboard = shouldRestore ? clipboard.readText() : null;
+      if (shouldRestore) {
+        this.safeLog(
+          "💾 Saved original clipboard content:",
+          originalClipboard.substring(0, 50) + "..."
+        );
+      }
 
       if (platform === "linux" && this._isWayland()) {
         this._writeClipboardWayland(text, webContents);
@@ -543,9 +556,11 @@ class ClipboardManager {
 
           if (code === 0) {
             this.safeLog(`Text pasted successfully via ${useFastPaste ? "CGEvent" : "osascript"}`);
-            setTimeout(() => {
-              clipboard.writeText(originalClipboard);
-            }, RESTORE_DELAYS.darwin);
+            if (originalClipboard != null) {
+              setTimeout(() => {
+                clipboard.writeText(originalClipboard);
+              }, RESTORE_DELAYS.darwin);
+            }
             resolve();
           } else if (useFastPaste) {
             this.safeLog(
@@ -607,9 +622,11 @@ class ClipboardManager {
 
         if (code === 0) {
           this.safeLog("Text pasted successfully via osascript fallback");
-          setTimeout(() => {
-            clipboard.writeText(originalClipboard);
-          }, RESTORE_DELAYS.darwin);
+          if (originalClipboard != null) {
+            setTimeout(() => {
+              clipboard.writeText(originalClipboard);
+            }, RESTORE_DELAYS.darwin);
+          }
           resolve();
         } else {
           this.accessibilityCache = { value: null, expiresAt: 0 };
@@ -685,10 +702,12 @@ class ClipboardManager {
               elapsedMs: elapsed,
               output,
             });
-            setTimeout(() => {
-              clipboard.writeText(originalClipboard);
-              this.safeLog("🔄 Clipboard restored");
-            }, RESTORE_DELAYS.win32_nircmd);
+            if (originalClipboard != null) {
+              setTimeout(() => {
+                clipboard.writeText(originalClipboard);
+                this.safeLog("🔄 Clipboard restored");
+              }, RESTORE_DELAYS.win32_nircmd);
+            }
             resolve();
           } else {
             this.safeLog(
@@ -758,10 +777,12 @@ class ClipboardManager {
               elapsedMs: elapsed,
               restoreDelayMs: restoreDelay,
             });
-            setTimeout(() => {
-              clipboard.writeText(originalClipboard);
-              this.safeLog("🔄 Clipboard restored");
-            }, restoreDelay);
+            if (originalClipboard != null) {
+              setTimeout(() => {
+                clipboard.writeText(originalClipboard);
+                this.safeLog("🔄 Clipboard restored");
+              }, restoreDelay);
+            }
             resolve();
           } else {
             this.safeLog(`❌ nircmd failed (code ${code}), falling back to PowerShell`, {
@@ -834,10 +855,12 @@ class ClipboardManager {
               elapsedMs: elapsed,
               restoreDelayMs: restoreDelay,
             });
-            setTimeout(() => {
-              clipboard.writeText(originalClipboard);
-              this.safeLog("🔄 Clipboard restored");
-            }, restoreDelay);
+            if (originalClipboard != null) {
+              setTimeout(() => {
+                clipboard.writeText(originalClipboard);
+                this.safeLog("🔄 Clipboard restored");
+              }, restoreDelay);
+            }
             resolve();
           } else {
             this.safeLog(`❌ PowerShell paste failed`, {
@@ -916,6 +939,7 @@ class ClipboardManager {
     );
 
     const restoreClipboard = () => {
+      if (originalClipboard == null) return;
       setTimeout(() => {
         if (isWayland) {
           this._writeClipboardWayland(originalClipboard, webContents);
@@ -1036,23 +1060,44 @@ class ClipboardManager {
         // On GNOME/KDE Wayland, try portal mode first (RemoteDesktop D-Bus portal).
         // uinput events are accepted by the kernel but Mutter doesn't reliably
         // route them to focused native Wayland windows (issue #292).
-        if ((isGnome || isKde) && linuxFastPaste) {
-          try {
-            const portalResult = await this._runPortalPaste(linuxFastPaste, earlyIsTerminal);
-            this.safeLog("✅ Paste successful using linux-fast-paste --portal (RemoteDesktop)");
-            debugLogger.info(
-              "Paste successful",
-              { tool: "linux-fast-paste", method: "portal", token: !!portalResult },
-              "clipboard"
-            );
-            restoreClipboard();
-            return "portal";
-          } catch (portalError) {
-            debugLogger.warn(
-              "linux-fast-paste --portal failed, falling back to uinput",
-              { error: portalError?.message },
-              "clipboard"
-            );
+        if ((isGnome || isKde) && linuxFastPaste && !this.portalDenied) {
+          const MAX_PORTAL_RETRIES = 3;
+          for (let attempt = 0; attempt < MAX_PORTAL_RETRIES; attempt++) {
+            try {
+              const portalResult = await this._runPortalPaste(linuxFastPaste, earlyIsTerminal);
+              this.safeLog("✅ Paste successful using linux-fast-paste --portal (RemoteDesktop)");
+              debugLogger.info(
+                "Paste successful",
+                { tool: "linux-fast-paste", method: "portal", token: !!portalResult },
+                "clipboard"
+              );
+              restoreClipboard();
+              return "portal";
+            } catch (portalError) {
+              if (portalError?.message === "portal-dismissed") {
+                debugLogger.warn(
+                  "Portal dialog dismissed without response, retrying",
+                  { attempt: attempt + 1, maxRetries: MAX_PORTAL_RETRIES },
+                  "clipboard"
+                );
+                continue;
+              }
+              if (portalError?.message === "portal-denied") {
+                this.portalDenied = true;
+                debugLogger.warn(
+                  "User denied portal access, skipping portal for this session",
+                  {},
+                  "clipboard"
+                );
+              } else {
+                debugLogger.warn(
+                  "linux-fast-paste --portal failed, falling back to uinput",
+                  { error: portalError?.message },
+                  "clipboard"
+                );
+              }
+              break;
+            }
           }
         }
 
@@ -1415,22 +1460,27 @@ class ClipboardManager {
     throw err;
   }
 
-  async checkAccessibilityPermissions() {
+  async checkAccessibilityPermissions(silent = false) {
     if (process.platform !== "darwin") return true;
 
-    const now = Date.now();
-    if (now < this.accessibilityCache.expiresAt && this.accessibilityCache.value !== null) {
-      return this.accessibilityCache.value;
+    if (!silent) {
+      const now = Date.now();
+      if (now < this.accessibilityCache.expiresAt && this.accessibilityCache.value !== null) {
+        return this.accessibilityCache.value;
+      }
     }
 
     const allowed = systemPreferences.isTrustedAccessibilityClient(false);
-    this.accessibilityCache = {
-      value: allowed,
-      expiresAt: Date.now() + ACCESSIBILITY_CHECK_TTL_MS,
-    };
 
-    if (!allowed) {
-      this.showAccessibilityDialog("not allowed assistive access");
+    if (!silent) {
+      this.accessibilityCache = {
+        value: allowed,
+        expiresAt: Date.now() + ACCESSIBILITY_CHECK_TTL_MS,
+      };
+
+      if (!allowed) {
+        this.showAccessibilityDialog("not allowed assistive access");
+      }
     }
 
     return allowed;

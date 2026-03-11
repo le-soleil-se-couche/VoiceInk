@@ -93,7 +93,7 @@
     "updatePayment": "Update payment method",
     "updatePaymentDescription": "Get back to unlimited Pro transcriptions.",
     "upgradeToPro": "Upgrade to Pro",
-    "upgradeDescription": "Unlimited transcriptions. $9/month.",
+    "upgradeDescription": "Get unlimited transcriptions from as little as $8/month.",
     "useApiKey": "Use your own API key",
     "useApiKeyDescription": "Bring your own key for unlimited use.",
     "switchToLocal": "Switch to local",
@@ -155,10 +155,14 @@
       "microphoneDescription": "To capture your voice",
       "grant": "Grant",
       "accessibilityTitle": "Accessibility",
-      "accessibilityDescription": "To paste text into apps",
+      "accessibilityDescription": "Enable in System Settings by toggling it on",
       "testAndGrant": "Test & Grant",
       "requiredForApp": "Required for OpenWhispr to work",
-      "microphoneRequired": "Microphone access required"
+      "microphoneRequired": "Microphone access required",
+      "openSystemSettings": "Open System Settings",
+      "screenRecordingTitle": "Screen Recording",
+      "screenRecordingDescription": "Needed to capture meeting audio. You can enable this later in System Settings.",
+      "optional": "Optional"
     },
     "transcription": {
       "title": "Transcription Setup",
@@ -198,6 +202,10 @@
       "weeklyTitle": "Weekly limit reached",
       "weeklyDescription": "Your limit resets on a rolling basis. Upgrade to Pro or use your own API key for unlimited use."
     },
+    "accessibilityMissing": {
+      "title": "Accessibility permissions needed",
+      "description": "We've detected that OpenWhispr needs accessibility permissions to work properly. Please enable them below."
+    },
     "billing": {
       "pastDueTitle": "We couldn't process your payment",
       "pastDueDescription": "Don't worry - you're on the free plan for now. Update your payment in Settings to get back to Pro.",
@@ -222,7 +230,30 @@
       "dateGroups": {
         "today": "Today",
         "yesterday": "Yesterday"
-      }
+      },
+      "copyText": "Copy text",
+      "deleteItem": "Delete",
+      "viewRawTranscript": "View raw transcript",
+      "showInFolder": "Reveal in Finder",
+      "showInFolderWindows": "Show in Explorer",
+      "showInFolderLinux": "Show in File Manager",
+      "retryTranscription": "Re-transcribe",
+      "retrying": "Re-transcribing...",
+      "retrySuccess": "Transcription updated",
+      "retryError": "Failed to re-transcribe",
+      "audioNotFound": "Audio file not found or expired",
+      "noAiProcessing": "No AI processing was applied to this transcription",
+      "transcriptionFailed": "Transcription failed",
+      "failedCtaSettings": "Set up your transcription provider",
+      "failedCtaAndRetry": "then click retry",
+      "failedCtaSettingsOnly": "Set up your transcription provider in Settings",
+      "rawTranscript": "Raw Transcript",
+      "clearAll": "Clear all",
+      "clearAllTitle": "Clear All Transcriptions",
+      "clearAllDescription": "All transcriptions and audio files will be permanently removed.",
+      "clearAllSuccess": "History cleared",
+      "clearAllErrorTitle": "Couldn't clear history",
+      "clearAllErrorDescription": "Something went wrong. Please try again."
     },
     "cloudMigration": {
       "title": "Welcome to OpenWhispr Pro",
@@ -494,6 +525,48 @@
     "welcomeTitle": "Welcome to OpenWhispr",
     "sessionExpired": "Session expired. Please restart the sign-up process."
   },
+  "calendar": {
+    "title": "Google Calendar",
+    "status": "Status",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "notConnectedDescription": "Connect to detect and record meetings",
+    "connectCta": {
+      "title": "Calendar Integration",
+      "description": "Auto-detect meetings and record transcriptions"
+    },
+    "connect": "Connect Google Calendar",
+    "connecting": "Connecting...",
+    "disconnect": "Disconnect",
+    "disconnecting": "Disconnecting...",
+    "sync": "Sync",
+    "syncing": "Syncing...",
+    "calendarsTitle": "Calendars",
+    "upcomingTitle": "Upcoming",
+    "noUpcoming": "No upcoming events",
+    "meetingStarting": "Meeting starting now",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "detection": {
+      "title": "Meeting Detection",
+      "description": "Automatically detect unscheduled meetings",
+      "processDetection": "App Detection",
+      "processDescription": "Detect meetings in Zoom, Teams, and FaceTime",
+      "audioDetection": "Audio Detection",
+      "audioDescription": "Prompt when sustained conversation is detected"
+    }
+  },
+  "upcoming": {
+    "title": "Upcoming Meetings",
+    "transcriptions": "Transcriptions",
+    "tomorrow": "Tomorrow",
+    "noMoreMeetings": "No more meetings today",
+    "now": "Now",
+    "join": "Join",
+    "untitledEvent": "Untitled event",
+    "screenRecordingRequired": "Screen Recording permission is needed to capture meeting audio.",
+    "openSettings": "Open System Settings"
+  },
   "cleanupPrompt": "Cleanup",
   "developerSection": {
     "currentLogFile": "Current log file",
@@ -596,7 +669,7 @@
     },
     "title": "Reset your password"
   },
-  "fullPrompt": "Full Prompt",
+  "actionPrompt": "Action Prompt",
   "hotkeyGuidance": {
     "blockedDescription": "These shortcuts are blocked because they are commonly used by the system.",
     "blockedTitle": "Blocked shortcuts",
@@ -677,7 +750,7 @@
     "selectPlaceholder": "Select a microphone",
     "systemDefault": "System Default",
     "unknownDevice": "Unknown Device",
-    "using": "Using:"
+    "using": "Using: {{device}}"
   },
   "pasteToolsInfo": {
     "checking": "Checking system capabilities...",
@@ -831,6 +904,10 @@
       "system": {
         "description": "Updates, storage & developer tools",
         "label": "System"
+      },
+      "agentMode": {
+        "label": "Agent Mode",
+        "description": "Voice chat assistant"
       }
     },
     "title": "Settings"
@@ -1058,6 +1135,11 @@
       "floatingIcon": {
         "autoHide": "Auto-hide when idle",
         "autoHideDescription": "Keep the icon hidden until you start dictating",
+        "startPosition": "Start position",
+        "startPositionDescription": "Where the voice recorder panel appears on screen",
+        "bottomRight": "Bottom Right",
+        "center": "Bottom Center",
+        "bottomLeft": "Bottom Left",
         "description": "Control when the dictation icon is visible on your screen",
         "title": "Floating Icon"
       },
@@ -1074,12 +1156,79 @@
       "soundEffects": {
         "dictationSounds": "Dictation sounds",
         "dictationSoundsDescription": "Play a tone when recording starts and stops",
+        "pauseMedia": "Pause media",
+        "pauseMediaDescription": "Automatically pause music when dictation starts",
         "title": "Sound Effects"
+      },
+      "clipboard": {
+        "title": "Clipboard",
+        "keepInClipboard": "Keep transcription in clipboard",
+        "keepInClipboardDescription": "Keep dictated text in your clipboard so you can paste it manually if needed"
       },
       "startup": {
         "launchAtLogin": "Launch at login",
         "launchAtLoginDescription": "Start OpenWhispr automatically when you log in",
-        "title": "Startup"
+        "title": "Startup",
+        "description": "Control how OpenWhispr behaves when it launches",
+        "startMinimized": "Start minimized",
+        "startMinimizedDescription": "Launch without showing the control panel window"
+      },
+      "waylandPaste": {
+        "title": "Wayland Paste Setup",
+        "description": "Auto-paste on Wayland requires ydotool. Check the status of each component below.",
+        "allGoodDesc": "Auto-paste is ready to go.",
+        "recheck": "Re-check",
+        "copy": "Copy",
+        "ydotoolDesc": "Input automation tool for Wayland",
+        "ydotooldDesc": "Daemon for ydotool (separate package on Ubuntu/Pop!_OS)",
+        "uinputDesc": "Kernel input device access",
+        "uinputRuleFound": "Rule present but not active. A reboot should fix it.",
+        "uinputRuleMissing": "no udev rule found",
+        "inputGroup": "input group",
+        "inputGroupDesc": "User must be in the input group (requires re-login)",
+        "service": "systemd service",
+        "serviceDesc": "User service file for auto-starting ydotoold",
+        "daemon": "ydotoold daemon",
+        "daemonDesc": "Background service must be running",
+        "guide": {
+          "open": "Guide",
+          "ydotool": {
+            "step1Title": "Install ydotool",
+            "step1Desc": "Use your distribution's package manager to install ydotool.",
+            "step2Title": "Verify installation",
+            "step2Desc": "Check that ydotool is available in your PATH."
+          },
+          "ydotoold": {
+            "step1Title": "Install ydotoold",
+            "step1Desc": "On Ubuntu and Pop!_OS, ydotoold is a separate package. On Fedora, it's included with ydotool."
+          },
+          "uinput": {
+            "ruleFoundTitle": "udev rule already configured",
+            "ruleFoundDesc": "The udev rule for /dev/uinput is already on your system but hasn't taken effect. Try reloading:",
+            "rebootTitle": "If reloading didn't help, reboot",
+            "rebootDesc": "On some distros, udev changes only apply after a full reboot. Restart your computer and come back to re-check.",
+            "step1Title": "Create a udev rule",
+            "step1Desc": "This rule grants access to /dev/uinput for users in the input group.",
+            "step2Title": "Reload udev rules",
+            "step2Desc": "Apply the new rule without rebooting."
+          },
+          "group": {
+            "step1Title": "Add your user to the input group",
+            "step2Title": "Log out and back in",
+            "step2Desc": "Group changes only take effect after a new login session. Log out of your desktop and log back in, then reopen OpenWhispr."
+          },
+          "service": {
+            "step1Title": "Create the service directory",
+            "step2Title": "Create the service file",
+            "step2Desc": "This creates a user-level systemd service that starts ydotoold automatically when you log in.",
+            "step3Title": "Reload and enable"
+          },
+          "daemon": {
+            "step1Title": "Start the daemon",
+            "step1Desc": "Start ydotoold and enable it so it runs on every login.",
+            "step2Title": "Verify it's running"
+          }
+        }
       },
       "updates": {
         "badges": {
@@ -1150,6 +1299,9 @@
         "rowDescription": "Fix issues after reinstalling or rebuilding the app by removing and re-adding OpenWhispr in System Settings",
         "title": "Reset Accessibility Permissions"
       },
+      "optional": "Optional",
+      "screenRecordingTitle": "Screen Recording",
+      "screenRecordingDescription": "Required to capture meeting audio from other apps",
       "test": "Test",
       "testAndGrant": "Test & Grant",
       "title": "Permissions",
@@ -1158,11 +1310,23 @@
     },
     "privacy": {
       "cloudBackup": "Cloud backup",
-      "cloudBackupDescription": "Save your transcriptions to the cloud so you never lose them.",
+      "cloudBackupDescription": "Back up your transcriptions and notes to the cloud for seamless access across devices.",
+      "cloudNotesMigration": "Backing up notes… {{done}} / {{total}}",
+      "cloudNotesMigrationDone": "All notes backed up",
       "description": "Control what data leaves your device. Everything is off by default.",
       "title": "Privacy",
       "usageAnalytics": "Usage analytics",
-      "usageAnalyticsDescription": "Help us improve OpenWhispr by sharing anonymous performance metrics. We never send transcription content — only timing and error data."
+      "usageAnalyticsDescription": "Help us improve OpenWhispr by sharing anonymous performance metrics. We never send transcription content — only timing and error data.",
+      "audioRetention": "Audio Retention",
+      "audioRetentionDescription": "Store audio recordings locally for re-transcription and download. Files are automatically deleted after the retention period.",
+      "audioRetentionDisabled": "Disabled",
+      "audioRetentionDays": "{{count}} days",
+      "audioStorageUsage": "Storage Usage",
+      "audioStorageUsageDescription": "Audio files stored on this device",
+      "audioStorageFiles": "{{count}} files, {{size}}",
+      "audioStorageEmpty": "No audio files stored",
+      "clearAllAudio": "Clear All Audio",
+      "clearAllAudioConfirm": "Delete all stored audio files? This cannot be undone."
     },
     "prompts": {
       "description": "View, customize, and test the unified system prompt that powers text cleanup and instruction detection",
@@ -1268,6 +1432,7 @@
     "upgradeTitle": "Upgrade to Pro",
     "upgradeDescription": "Unlimited transcriptions and premium features.",
     "learnMore": "Learn more",
+    "integrations": "Integrations",
     "defaultUser": "User",
     "notSignedIn": "Not signed in"
   },
@@ -1396,7 +1561,10 @@
       "wordsCount": "{{count}} words",
       "startWriting": "Start writing...",
       "staleIndicator": "Content has changed since enhancement",
-      "live": "Live"
+      "live": "Live",
+      "transcript": "Transcript",
+      "notes": "Notes",
+      "generateNotes": "Generate notes"
     },
     "upload": {
       "title": "Upload Audio",
@@ -1444,8 +1612,9 @@
     },
     "meeting": {
       "title": "Meeting Notes",
-      "description": "Speaker identification & structured summaries",
-      "comingSoon": "Coming Soon"
+      "description": "Transcriptions & structured summaries",
+      "comingSoon": "Coming Soon",
+      "back": "Back"
     },
     "empty": {
       "title": "No notes here yet",
@@ -1512,7 +1681,13 @@
         "createDescription": "Define a custom action with your own AI prompt. You can always edit or add more later in settings.",
         "created": "Created!"
       },
-      "getStarted": "Get Started"
+      "getStarted": "Get Started",
+      "systemAudio": {
+        "title": "System Audio",
+        "description": "Capture audio from meetings and other apps alongside your microphone.",
+        "grant": "Grant Permission",
+        "enabled": "Enabled"
+      }
     },
     "realtimeBanner": {
       "message": "Real-time transcription available on Pro",
@@ -1574,7 +1749,11 @@
         "description": "The selected hotkey could not be registered. Please choose a different one in settings."
       },
       "addedToDict": "Added {{words}} to your dictionary",
-      "undo": "Undo"
+      "undo": "Undo",
+      "accessibilityMissing": {
+        "title": "Accessibility permissions required",
+        "description": "OpenWhispr needs accessibility permissions to detect your hotkey and paste text. Please enable them in the Control Panel."
+      }
     },
     "mic": {
       "hotkeyToSpeak": "Press {{hotkey}} to speak",
@@ -1594,6 +1773,146 @@
     "oauth": {
       "redirectTitle": "Redirecting to app...",
       "closeTab": "You can close this tab."
+    }
+  },
+  "agentMode": {
+    "settings": {
+      "title": "Agent Mode",
+      "description": "Voice chat assistant with a separate AI model",
+      "enabled": "Enable Agent Mode",
+      "enabledDescription": "Use a separate hotkey to open a voice chat overlay",
+      "hotkey": "Agent Hotkey",
+      "hotkeyDescription": "Hotkey to toggle the agent overlay",
+      "model": "Agent Model",
+      "modelDescription": "AI model used for agent conversations",
+      "systemPrompt": "System Prompt",
+      "systemPromptDescription": "Custom instructions for the agent",
+      "systemPromptPlaceholder": "Enter custom system prompt...",
+      "openwhisprCloud": "OpenWhispr Cloud",
+      "openwhisprCloudDescription": "Use OpenWhispr's cloud AI for agent conversations",
+      "customSetup": "Custom Setup (BYOK)",
+      "customSetupDescription": "Use your own API keys and choose your preferred model"
+    },
+    "chat": {
+      "placeholder": "Press {{hotkey}} to speak",
+      "thinking": "Thinking...",
+      "transcribing": "Transcribing...",
+      "listening": "Listening...",
+      "newConversation": "New",
+      "copyToClipboard": "Copy to clipboard",
+      "copied": "Copied!",
+      "emptyState": "Hold {{hotkey}} to start a conversation",
+      "errorPrefix": "Error"
+    },
+    "titleBar": {
+      "label": "Agent",
+      "newChat": "New conversation",
+      "close": "Close"
+    },
+    "input": {
+      "holdToSpeak": "Hold to speak",
+      "toClose": "close",
+      "listening": "Listening...",
+      "transcribing": "Transcribing...",
+      "thinking": "Thinking..."
+    }
+  },
+  "integrations": {
+    "title": "Integrations",
+    "description": "Connect services to supercharge your workflow",
+    "googleCalendar": {
+      "title": "Google Calendar",
+      "description": "Connect your calendar to auto-detect meetings and record transcriptions.",
+      "connect": "Connect Google Calendar",
+      "connecting": "Connecting...",
+      "connected": "Connected",
+      "addAnother": "Add another calendar",
+      "disconnect": "Disconnect",
+      "disconnectConfirm": "Disconnect {{email}}?",
+      "disconnectDescription": "Meeting notes will no longer be recorded from this calendar.",
+      "screenRecordingRequired": "Screen Recording Permission Required",
+      "screenRecordingDescription": "To transcribe meetings, OpenWhispr needs the Screen Recording permission to capture audio from other apps. You'll be taken to System Settings to enable it.",
+      "openSettings": "Open System Settings"
+    },
+    "plan": {
+      "title": "Your Plan",
+      "current": "Current",
+      "free": "Free",
+      "freeLimit": "5 meetings / month",
+      "essential": "Essential",
+      "essentialLimit": "20 meetings / month",
+      "pro": "Pro",
+      "proLimit": "Unlimited",
+      "upgrade": "Upgrade"
+    },
+    "beta": {
+      "title": "Meeting recording is in beta",
+      "description": "We're still working on how best to build this into the product. Feedback is very welcome!",
+      "freeTier": "Free plan: 5 hours / month",
+      "proTier": "Pro plan: 20 hours / month",
+      "feedback": "Need more than 20 hours? Contact gabe@openwhispr.com"
+    },
+    "notABot": {
+      "title": "OpenWhispr is a meeting recorder, not a bot",
+      "description": "OpenWhispr captures audio directly from your system — it never joins your meetings as a participant. Just connect your calendar and take notes as normal."
+    }
+  },
+  "upcoming": {
+    "title": "Upcoming Meetings",
+    "transcriptions": "Transcriptions",
+    "tomorrow": "Tomorrow",
+    "noMoreMeetings": "No more meetings today",
+    "now": "Now",
+    "join": "Join",
+    "untitledEvent": "Untitled Event",
+    "screenRecordingRequired": "Screen Recording permission is needed to capture meeting audio.",
+    "openSettings": "Open System Settings",
+    "signInRequired": "Sign in to use meeting recording",
+    "signInDescription": "Create an account or sign in to record and transcribe meetings.",
+    "connectCalendar": "Connect your calendar",
+    "connectCalendarDescription": "Link your Google Calendar to see upcoming meetings and automatically record notes.",
+    "notABot": "OpenWhispr records using your system audio — it never joins meetings as a bot.",
+    "connectCalendarButton": "Connect Calendar"
+  },
+  "notesView": {
+    "searchPlaceholder": "Search notes…",
+    "newNote": "New Note",
+    "empty": {
+      "title": "No notes yet",
+      "description": "Create your first note to get started."
+    },
+    "searchEmpty": {
+      "title": "No results",
+      "description": "No notes found for \"{{query}}\"."
+    },
+    "noteType": {
+      "personal": "personal",
+      "meeting": "meeting",
+      "upload": "upload"
+    }
+  },
+  "noteEditor": {
+    "saved": "Saved",
+    "deleteNote": "Delete note",
+    "deleteConfirmTitle": "Delete note?",
+    "deleteConfirmDescription": "This note will be permanently deleted and cannot be recovered.",
+    "deleteConfirm": "Delete"
+  },
+  "commandSearch": {
+    "title": "Search",
+    "description": "Search across notes and transcripts",
+    "shortPlaceholder": "Search",
+    "placeholder": "Search notes and transcripts…",
+    "sections": {
+      "notes": "Notes",
+      "transcripts": "Transcripts"
+    },
+    "noResults": "No results",
+    "emptyState": "Start typing to search",
+    "footer": {
+      "navigate": "Navigate",
+      "open": "Open",
+      "dismiss": "Dismiss"
     }
   }
 }

@@ -1,4 +1,12 @@
-const { app, globalShortcut, BrowserWindow, dialog, ipcMain, session } = require("electron");
+const {
+  app,
+  globalShortcut,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  session,
+  systemPreferences,
+} = require("electron");
 const path = require("path");
 const http = require("http");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
@@ -75,6 +83,12 @@ if (process.platform === "linux" && process.env.XDG_SESSION_TYPE === "wayland") 
     "enable-features",
     "UseOzonePlatform,WaylandWindowDecorations,GlobalShortcutsPortal"
   );
+}
+
+// Set desktop filename so Wayland compositors can match windows to the .desktop entry.
+// This allows XDG portals (e.g. PipeWire) to persist permissions across sessions.
+if (process.platform === "linux") {
+  app.setDesktopName("open-whispr.desktop");
 }
 
 // Group all windows under single taskbar entry on Windows
@@ -166,6 +180,10 @@ const DevServerManager = require("./src/helpers/devServerManager");
 const WindowsKeyManager = require("./src/helpers/windowsKeyManager");
 const TextEditMonitor = require("./src/helpers/textEditMonitor");
 const WhisperCudaManager = require("./src/helpers/whisperCudaManager");
+const GoogleCalendarManager = require("./src/helpers/googleCalendarManager");
+const MeetingProcessDetector = require("./src/helpers/meetingProcessDetector");
+const AudioActivityDetector = require("./src/helpers/audioActivityDetector");
+const MeetingDetectionEngine = require("./src/helpers/meetingDetectionEngine");
 const { i18nMain, changeLanguage } = require("./src/helpers/i18nMain");
 const { ensureYdotool } = require("./src/helpers/ensureYdotool");
 
@@ -184,6 +202,8 @@ let globeKeyManager = null;
 let windowsKeyManager = null;
 let textEditMonitor = null;
 let whisperCudaManager = null;
+let googleCalendarManager = null;
+let meetingDetectionEngine = null;
 let ipcHandlers = null;
 let globeKeyAlertShown = false;
 let authBridgeServer = null;
@@ -247,6 +267,15 @@ function initializeCoreManagers() {
     whisperCudaManager = new WhisperCudaManager();
   }
   parakeetManager = new ParakeetManager();
+  googleCalendarManager = new GoogleCalendarManager(databaseManager, windowManager);
+  meetingDetectionEngine = new MeetingDetectionEngine(
+    googleCalendarManager,
+    new MeetingProcessDetector(),
+    new AudioActivityDetector(),
+    windowManager,
+    databaseManager
+  );
+  windowManager.meetingDetectionEngine = meetingDetectionEngine;
   updateManager = new UpdateManager();
   windowsKeyManager = new WindowsKeyManager();
   textEditMonitor = new TextEditMonitor();
@@ -264,6 +293,8 @@ function initializeCoreManagers() {
     windowsKeyManager,
     textEditMonitor,
     whisperCudaManager,
+    googleCalendarManager,
+    meetingDetectionEngine,
     getTrayManager: () => trayManager,
   });
 }
@@ -271,7 +302,11 @@ function initializeCoreManagers() {
 // Phase 2: Non-critical setup after windows are visible
 function initializeDeferredManagers() {
   ensureYdotool().catch((err) => {
-    require("./src/helpers/debugLogger").warn("ydotool setup error", { error: err?.message }, "clipboard");
+    require("./src/helpers/debugLogger").warn(
+      "ydotool setup error",
+      { error: err?.message },
+      "clipboard"
+    );
   });
   clipboardManager.preWarmAccessibility();
   trayManager = new TrayManager();
@@ -303,6 +338,9 @@ function initializeDeferredManagers() {
       });
     });
   }
+
+  googleCalendarManager.start();
+  meetingDetectionEngine.start();
 }
 
 app.on("open-url", (event, url) => {
@@ -466,6 +504,30 @@ async function startApp() {
     }
   );
 
+  // Handle getDisplayMedia() calls from the renderer — auto-select the first
+  // screen source with loopback audio so no system picker dialog is shown.
+  const { desktopCapturer } = require("electron");
+  session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
+    try {
+      const sources = await desktopCapturer.getSources({ types: ["screen"] });
+      debugLogger.debug("Display media sources", {
+        count: sources.length,
+        names: sources.map((s) => s.name),
+      });
+      if (!sources.length) {
+        debugLogger.error(
+          "No screen sources available — Screen Recording permission may be denied"
+        );
+        callback({});
+        return;
+      }
+      callback({ video: sources[0], audio: "loopback" });
+    } catch (err) {
+      debugLogger.error("Display media handler error", { error: err.message });
+      callback({});
+    }
+  });
+
   windowManager.setActivationModeCache(environmentManager.getActivationMode());
   windowManager.setFloatingIconAutoHide(environmentManager.getFloatingIconAutoHide());
 
@@ -483,6 +545,15 @@ async function startApp() {
     }
   });
 
+  ipcMain.on("start-minimized-changed", (_event, enabled) => {
+    if (debugLogger) debugLogger.info("Start minimized changed", { enabled });
+    environmentManager.saveStartMinimized(enabled);
+  });
+
+  ipcMain.on("panel-start-position-changed", (_event, position) => {
+    windowManager.setPanelStartPosition(position);
+  });
+
   if (process.platform === "darwin") {
     app.setActivationPolicy("regular");
   }
@@ -493,11 +564,50 @@ async function startApp() {
   }
 
   // Create windows FIRST so the user sees UI as soon as possible
+  const startMinimized = environmentManager.getStartMinimized();
+  if (debugLogger) debugLogger.info("Start minimized", { enabled: startMinimized });
   await windowManager.createMainWindow();
-  await windowManager.createControlPanelWindow();
+  if (!startMinimized) {
+    await windowManager.createControlPanelWindow();
+  }
+
+  // Create agent window (hidden) and set up agent hotkey
+  await windowManager.createAgentWindow();
+
+  const agentHotkeyCallback = () => {
+    if (hotkeyManager.isInListeningMode()) return;
+    windowManager.toggleAgentOverlay();
+  };
+  windowManager._agentHotkeyCallback = agentHotkeyCallback;
+
+  const savedAgentKey = environmentManager.getAgentKey?.() || "";
+  if (savedAgentKey) {
+    hotkeyManager.registerSlot("agent", savedAgentKey, agentHotkeyCallback);
+  }
+
+  ipcMain.on("agent-hotkey-changed", (_event, hotkey) => {
+    if (hotkey) {
+      hotkeyManager.registerSlot("agent", hotkey, agentHotkeyCallback);
+      environmentManager.saveAgentKey(hotkey);
+    } else {
+      hotkeyManager.unregisterSlot("agent");
+      environmentManager.saveAgentKey("");
+    }
+  });
 
   // Phase 2: Initialize remaining managers after windows are visible
   initializeDeferredManagers();
+
+  app.on("browser-window-focus", () => {
+    if (googleCalendarManager) googleCalendarManager.syncOnFocus();
+  });
+
+  const { powerMonitor } = require("electron");
+  powerMonitor.on("resume", () => {
+    if (googleCalendarManager) {
+      googleCalendarManager.onWakeFromSleep();
+    }
+  });
 
   // Non-blocking server pre-warming
   const whisperSettings = {
@@ -583,13 +693,18 @@ async function startApp() {
               }
             }, MIN_HOLD_DURATION_MS);
           } else {
-            windowManager.showDictationPanel();
-            windowManager.mainWindow.webContents.send("toggle-dictation");
+            windowManager.sendToggleDictation();
           }
         } else {
           debugLogger?.debug("[Globe] Ignored — mainWindow not live");
         }
-      } else {
+      }
+
+      // Check agent slot for Globe/Fn key
+      const agentHotkey = hotkeyManager.getSlotHotkey("agent");
+      if (agentHotkey && isGlobeLikeHotkey(agentHotkey)) {
+        windowManager.toggleAgentOverlay();
+      } else if (!isGlobeLikeHotkey(currentHotkey)) {
         debugLogger?.debug("[Globe] Ignored — hotkey is not GLOBE", { currentHotkey });
       }
     });
@@ -632,6 +747,13 @@ async function startApp() {
 
     globeKeyManager.on("right-modifier-down", async (modifier) => {
       const currentHotkey = hotkeyManager.getCurrentHotkey && hotkeyManager.getCurrentHotkey();
+
+      // Check agent slot for right-modifier
+      const agentHotkey = hotkeyManager.getSlotHotkey("agent");
+      if (agentHotkey === modifier) {
+        windowManager.toggleAgentOverlay();
+      }
+
       if (currentHotkey !== modifier) return;
       if (!isLiveWindow(windowManager.mainWindow)) return;
 
@@ -651,8 +773,7 @@ async function startApp() {
           }
         }, MIN_HOLD_DURATION_MS);
       } else {
-        windowManager.showDictationPanel();
-        windowManager.mainWindow.webContents.send("toggle-dictation");
+        windowManager.sendToggleDictation();
       }
     });
 
@@ -688,6 +809,33 @@ async function startApp() {
     });
 
     globeKeyManager.start();
+
+    // After starting globe-listener, check if accessibility is granted.
+    // If not, notify both windows so they can prompt the user.
+    const checkAndNotifyAccessibility = () => {
+      if (!systemPreferences.isTrustedAccessibilityClient(false)) {
+        debugLogger.info("[Accessibility] macOS accessibility not trusted — notifying renderers");
+        if (isLiveWindow(windowManager.controlPanelWindow)) {
+          windowManager.controlPanelWindow.webContents.send("accessibility-missing");
+        }
+        if (isLiveWindow(windowManager.mainWindow)) {
+          windowManager.mainWindow.webContents.send("accessibility-missing");
+        }
+      }
+    };
+
+    // Check shortly after startup (give windows time to load)
+    setTimeout(checkAndNotifyAccessibility, 3000);
+
+    // Allow renderer to request an accessibility check (e.g. on sign-in).
+    // Also sends accessibility-missing events if untrusted.
+    ipcMain.handle("check-accessibility-trusted", () => {
+      const trusted = systemPreferences.isTrustedAccessibilityClient(false);
+      if (!trusted) {
+        checkAndNotifyAccessibility();
+      }
+      return trusted;
+    });
 
     // Reset native key state when hotkey changes
     ipcMain.on("hotkey-changed", (_event, _newHotkey) => {
@@ -726,8 +874,7 @@ async function startApp() {
       if (activationMode === "push") {
         windowManager.startWindowsPushToTalk();
       } else if (activationMode === "tap") {
-        windowManager.showDictationPanel();
-        windowManager.mainWindow.webContents.send("toggle-dictation");
+        windowManager.sendToggleDictation();
       }
     });
 
@@ -920,6 +1067,9 @@ if (gotSingleInstanceLock) {
       authBridgeServer.close();
       authBridgeServer = null;
     }
+    if (windowManager && isLiveWindow(windowManager.agentWindow)) {
+      windowManager.agentWindow.destroy();
+    }
     if (hotkeyManager) {
       hotkeyManager.unregisterAll();
     } else {
@@ -930,6 +1080,12 @@ if (gotSingleInstanceLock) {
     }
     if (windowsKeyManager) {
       windowsKeyManager.stop();
+    }
+    if (meetingDetectionEngine) {
+      meetingDetectionEngine.stop();
+    }
+    if (googleCalendarManager) {
+      googleCalendarManager.stop();
     }
     if (ipcHandlers) {
       ipcHandlers._cleanupTextEditMonitor();

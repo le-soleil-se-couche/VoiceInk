@@ -33,6 +33,9 @@ export const useAudioRecording = (toast, options = {}) => {
 
       if (didStart) {
         void playStartCue();
+        if (getSettings().pauseMediaOnDictation) {
+          window.electronAPI?.pauseMediaPlayback?.();
+        }
       }
 
       return didStart;
@@ -87,11 +90,18 @@ export const useAudioRecording = (toast, options = {}) => {
           variant: "destructive",
           duration: error.code === "AUTH_EXPIRED" ? 8000 : undefined,
         });
+        if (getSettings().pauseMediaOnDictation) {
+          window.electronAPI?.resumeMediaPlayback?.();
+        }
       },
       onPartialTranscript: (text) => {
         setPartialTranscript(text);
       },
       onTranscriptionComplete: async (result) => {
+        if (getSettings().pauseMediaOnDictation) {
+          window.electronAPI?.resumeMediaPlayback?.();
+        }
+
         if (result.success) {
           const transcribedText = result.text?.trim();
 
@@ -102,11 +112,12 @@ export const useAudioRecording = (toast, options = {}) => {
           setTranscript(result.text);
 
           const isStreaming = result.source?.includes("streaming");
+          const { keepTranscriptionInClipboard } = getSettings();
           const pasteStart = performance.now();
-          await audioManagerRef.current.safePaste(
-            result.text,
-            isStreaming ? { fromStreaming: true } : {}
-          );
+          await audioManagerRef.current.safePaste(result.text, {
+            ...(isStreaming ? { fromStreaming: true } : {}),
+            restoreClipboard: !keepTranscriptionInClipboard,
+          });
           logger.info(
             "Paste timing",
             {
@@ -117,7 +128,7 @@ export const useAudioRecording = (toast, options = {}) => {
             "streaming"
           );
 
-          audioManagerRef.current.saveTranscription(result.text);
+          audioManagerRef.current.saveTranscription(result.text, result.rawText ?? result.text);
 
           if (result.source === "openai" && getSettings().useLocalWhisper) {
             toast({
@@ -139,7 +150,7 @@ export const useAudioRecording = (toast, options = {}) => {
             });
           }
 
-          if (audioManagerRef.current.sttConfig?.dictation?.mode === "streaming") {
+          if (audioManagerRef.current.shouldUseStreaming()) {
             audioManagerRef.current.warmupStreamingConnection();
           }
         }
@@ -150,7 +161,7 @@ export const useAudioRecording = (toast, options = {}) => {
     window.electronAPI.getSttConfig?.().then((config) => {
       if (config && audioManagerRef.current) {
         audioManagerRef.current.setSttConfig(config);
-        if (config.dictation?.mode === "streaming") {
+        if (audioManagerRef.current.shouldUseStreaming()) {
           audioManagerRef.current.warmupStreamingConnection();
         }
       }
@@ -223,6 +234,9 @@ export const useAudioRecording = (toast, options = {}) => {
   const cancelRecording = async () => {
     if (audioManagerRef.current) {
       const state = audioManagerRef.current.getState();
+      if (getSettings().pauseMediaOnDictation) {
+        window.electronAPI?.resumeMediaPlayback?.();
+      }
       if (state.isStreaming) {
         return await audioManagerRef.current.stopStreamingRecording();
       }

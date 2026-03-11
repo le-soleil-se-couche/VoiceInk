@@ -1,33 +1,51 @@
 const fs = require("fs");
-const path = require("path");
-const { app, dialog } = require("electron");
-
-const { installYdotool, setupUinputAccess, commandExists } = require("./ydotoolInstaller");
-const { isYdotooldRunning, tryStartYdotoold, ensureYdotooldDaemon } = require("./ydotoolService");
+const os = require("os");
+const { spawnSync } = require("child_process");
+const { dialog } = require("electron");
 
 function getLogger() {
   return require("./debugLogger");
 }
 
-function getSetupFlagPath() {
-  return path.join(app.getPath("userData"), "ydotool-setup-done");
-}
-
-function isSetupDone() {
+function commandExists(name) {
   try {
-    return fs.existsSync(getSetupFlagPath());
-  } catch (error) {
-    getLogger().debug("isSetupDone check failed", { error: error.message }, "clipboard");
+    return spawnSync("which", [name], { stdio: "pipe", timeout: 5000 }).status === 0;
+  } catch {
     return false;
   }
 }
 
-function markSetupDone() {
+function isYdotooldRunning() {
   try {
-    fs.writeFileSync(getSetupFlagPath(), new Date().toISOString());
-  } catch (error) {
-    getLogger().debug("Failed to persist setup flag", { error: error.message }, "clipboard");
-  }
+    const result = spawnSync("systemctl", ["--user", "is-active", "ydotoold"], {
+      stdio: "pipe",
+      timeout: 5000,
+    });
+    if (result.stdout?.toString().trim() === "active") return true;
+  } catch {}
+
+  try {
+    const result = spawnSync("systemctl", ["--user", "is-active", "ydotool"], {
+      stdio: "pipe",
+      timeout: 5000,
+    });
+    if (result.stdout?.toString().trim() === "active") return true;
+  } catch {}
+
+  try {
+    return spawnSync("pgrep", ["-x", "ydotoold"], { stdio: "pipe", timeout: 5000 }).status === 0;
+  } catch {}
+
+  return false;
+}
+
+function serviceFileExists() {
+  const paths = [
+    "/usr/lib/systemd/user/ydotoold.service",
+    "/usr/lib/systemd/user/ydotool.service",
+    `${os.homedir()}/.config/systemd/user/ydotoold.service`,
+  ];
+  return paths.some((p) => fs.existsSync(p));
 }
 
 function isUinputAccessible() {
@@ -39,22 +57,30 @@ function isUinputAccessible() {
   }
 }
 
-async function askUserConsent(needsInstall, needsUinput) {
-  const actions = [];
-  if (needsInstall) actions.push("Install ydotool (paste support for Wayland)");
-  if (needsUinput) actions.push("Configure /dev/uinput permissions");
+function udevRuleExists() {
+  const ruleDirs = ["/etc/udev/rules.d", "/usr/lib/udev/rules.d", "/lib/udev/rules.d"];
+  for (const dir of ruleDirs) {
+    try {
+      const files = fs.readdirSync(dir);
+      for (const file of files) {
+        if (!file.endsWith(".rules")) continue;
+        try {
+          const content = fs.readFileSync(`${dir}/${file}`, "utf-8");
+          if (content.includes("uinput")) return true;
+        } catch {}
+      }
+    } catch {}
+  }
+  return false;
+}
 
-  const { response } = await dialog.showMessageBox({
-    type: "question",
-    buttons: ["Allow", "Skip"],
-    defaultId: 0,
-    cancelId: 1,
-    title: "Wayland Paste Setup",
-    message: "OpenWhispr needs to set up ydotool for reliable paste on Wayland.",
-    detail: `This requires administrator privileges to:\n${actions.map((a) => `\u2022 ${a}`).join("\n")}`,
-  });
-
-  return response === 0;
+function userInInputGroup() {
+  try {
+    const result = spawnSync("groups", [], { stdio: "pipe", timeout: 5000 });
+    return result.stdout?.toString().includes("input") ?? false;
+  } catch {
+    return false;
+  }
 }
 
 async function ensureYdotool() {
@@ -65,55 +91,112 @@ async function ensureYdotool() {
 
   const log = getLogger();
 
-  // If setup already completed, just ensure daemon is running
-  if (isSetupDone()) {
-    if (!isYdotooldRunning()) {
-      await tryStartYdotoold(log);
-    }
+  const hasYdotool = commandExists("ydotool");
+  const hasYdotoold = commandExists("ydotoold");
+  const daemonRunning = isYdotooldRunning();
+  const hasService = serviceFileExists();
+  const hasUinput = isUinputAccessible();
+  const hasGroup = userInInputGroup();
+
+  log.debug(
+    "ydotool check",
+    { hasYdotool, hasYdotoold, daemonRunning, hasService, hasUinput, hasGroup },
+    "clipboard"
+  );
+
+  // Everything is fine
+  if (hasYdotool && hasYdotoold && daemonRunning && hasUinput) {
+    log.debug("ydotool fully configured", {}, "clipboard");
     return;
   }
 
-  // If everything already works, persist flag and return
-  if (commandExists("ydotool") && isYdotooldRunning()) {
-    markSetupDone();
-    log.debug("ydotool already configured", {}, "clipboard");
-    return;
+  // If the service exists and daemon is just not running, try to start it
+  if (hasYdotoold && hasService && !daemonRunning) {
+    try {
+      spawnSync("systemctl", ["--user", "start", "ydotoold"], { stdio: "pipe", timeout: 10000 });
+      if (isYdotooldRunning()) {
+        log.info("ydotoold daemon started", {}, "clipboard");
+        return;
+      }
+    } catch {}
+    try {
+      spawnSync("systemctl", ["--user", "start", "ydotool"], { stdio: "pipe", timeout: 10000 });
+      if (isYdotooldRunning()) {
+        log.info("ydotool daemon started", {}, "clipboard");
+        return;
+      }
+    } catch {}
   }
 
-  const needsInstall = !commandExists("ydotool");
-  const needsUinput = !isUinputAccessible();
+  // Something is missing — build an informative message
+  const missing = [];
 
-  // Ask user before any root escalation
-  if (needsInstall || needsUinput) {
-    const consent = await askUserConsent(needsInstall, needsUinput);
-    if (!consent) {
-      log.info("User declined ydotool setup", {}, "clipboard");
-      return;
-    }
+  if (!hasYdotool) {
+    missing.push("- ydotool is not installed. Install it with your package manager.");
+  }
+  if (!hasYdotoold) {
+    missing.push(
+      "- ydotoold (daemon) is not installed. On Ubuntu/Pop!_OS: sudo apt install ydotoold"
+    );
+  }
+  if (!hasUinput) {
+    missing.push(
+      '- /dev/uinput is not accessible. Add a udev rule:\n  echo \'KERNEL=="uinput", GROUP="input", MODE="0660", TAG+="uaccess"\' | sudo tee /etc/udev/rules.d/70-uinput.rules\n  sudo udevadm control --reload-rules && sudo udevadm trigger /dev/uinput'
+    );
+  }
+  if (!hasGroup) {
+    missing.push(
+      "- Your user is not in the 'input' group. Run: sudo usermod -aG input $USER\n  (requires logout/login to take effect)"
+    );
+  }
+  if (hasYdotoold && !hasService) {
+    missing.push(
+      "- No systemd service found for ydotoold. Enable it with:\n  systemctl --user enable ydotoold && systemctl --user start ydotoold"
+    );
+  }
+  if (hasYdotoold && hasService && !daemonRunning) {
+    missing.push(
+      "- ydotoold service exists but is not running. Start it with:\n  systemctl --user start ydotoold"
+    );
   }
 
-  try {
-    if (needsInstall) {
-      await installYdotool(log);
-    }
+  if (missing.length > 0) {
+    const detail = missing.join("\n\n");
+    log.warn("ydotool setup incomplete", { missing: missing.length }, "clipboard");
 
-    if (needsUinput) {
-      await setupUinputAccess(log);
-    }
-
-    const hasUserConsent = needsInstall || needsUinput;
-    await ensureYdotooldDaemon(log, { hasUserConsent });
-    markSetupDone();
-    log.info("ydotool setup completed", {}, "clipboard");
-  } catch (error) {
-    log.warn("ydotool setup failed", { error: error.message }, "clipboard");
     dialog.showMessageBox({
       type: "warning",
-      title: "ydotool Setup Incomplete",
-      message: "ydotool setup could not be completed.",
-      detail: `Paste on Wayland may not work reliably. You can install ydotool manually.\n\n${error.message}`,
+      title: "Wayland Paste Setup",
+      message: "ydotool is not fully configured. Auto-paste on Wayland may not work.",
+      detail: `The following issues were detected:\n\n${detail}\n\nAfter fixing, restart OpenWhispr.`,
     });
   }
 }
 
-module.exports = { ensureYdotool };
+function getYdotoolStatus() {
+  const hasYdotool = commandExists("ydotool");
+  const hasYdotoold = commandExists("ydotoold");
+  const daemonRunning = isYdotooldRunning();
+  const hasService = serviceFileExists();
+  const hasUinput = isUinputAccessible();
+  const hasUdevRule = udevRuleExists();
+  const hasGroup = userInInputGroup();
+  const isWayland =
+    (process.env.XDG_SESSION_TYPE || "").toLowerCase() === "wayland" ||
+    !!process.env.WAYLAND_DISPLAY;
+
+  return {
+    isLinux: process.platform === "linux",
+    isWayland,
+    hasYdotool,
+    hasYdotoold,
+    daemonRunning,
+    hasService,
+    hasUinput,
+    hasUdevRule,
+    hasGroup,
+    allGood: hasYdotool && hasYdotoold && daemonRunning && hasUinput && hasGroup,
+  };
+}
+
+module.exports = { ensureYdotool, getYdotoolStatus };

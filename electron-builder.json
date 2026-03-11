@@ -84,9 +84,11 @@
   ],
   "asarUnpack": ["**/node_modules/ffmpeg-static/**/*", "**/node_modules/better-sqlite3/**/*"],
   "extraResources": [
+    ".env",
     "src/assets/**/*",
     "resources/bin/macos-globe-listener",
     "resources/bin/macos-fast-paste",
+    "resources/bin/macos-mic-listener",
     "resources/bin/macos-text-monitor",
     "resources/bin/linux-fast-paste",
     "resources/bin/linux-text-monitor",
@@ -99,6 +101,7 @@
         "llama-server-*",
         "sherpa-onnx-*",
         "windows-key-listener*",
+        "windows-mic-listener*",
         "windows-text-monitor*",
         "windows-fast-paste*",
         "*.dylib",
@@ -159,9 +162,12 @@
     ]
   },
   "deb": {
+    "afterInstall": "resources/linux/after-install.sh",
     "afterRemove": "resources/linux/after-remove.sh",
     "depends": ["ydotool"],
     "fpm": [
+      "--deb-recommends",
+      "ydotoold",
       "--deb-suggests",
       "xdotool",
       "--deb-suggests",
@@ -172,6 +178,8 @@
   },
   "rpm": {
     "fpm": [
+      "--after-install",
+      "resources/linux/after-install.sh",
       "--rpm-tag",
       "Requires: ydotool",
       "--rpm-tag",

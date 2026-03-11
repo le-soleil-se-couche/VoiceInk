@@ -12,6 +12,7 @@ import {
   Shield,
   Command,
   UserCircle,
+  Monitor,
 } from "lucide-react";
 import TitleBar from "./TitleBar";
 import WindowControls from "./WindowControls";
@@ -25,6 +26,7 @@ import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useDialogs } from "../hooks/useDialogs";
 import { usePermissions } from "../hooks/usePermissions";
 import { useClipboard } from "../hooks/useClipboard";
+import { useScreenRecordingPermission } from "../hooks/useScreenRecordingPermission";
 import { useSettings } from "../hooks/useSettings";
 import LanguageSelector from "./ui/LanguageSelector";
 import AuthenticationStep from "./AuthenticationStep";
@@ -123,6 +125,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   const permissionsHook = usePermissions(showAlertDialog);
   useClipboard(showAlertDialog); // Initialize clipboard hook for permission checks
+
+  const screenRecording = useScreenRecordingPermission();
 
   // For signed-in users, merge setup and permissions into one step
   const steps =
@@ -264,6 +268,12 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     localStorage.setItem("onboardingCompleted", "true");
     localStorage.setItem("skipAuth", skippedAuth.toString());
 
+    // Non-signed-in users in cloud mode default to BYOK to avoid
+    // "OpenWhispr Cloud requires sign-in" errors.
+    if (!isSignedIn && !useLocalWhisper) {
+      updateTranscriptionSettings({ cloudTranscriptionMode: "byok" });
+    }
+
     try {
       await window.electronAPI?.saveAllKeysToEnv?.();
     } catch (error) {
@@ -271,7 +281,15 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     }
 
     return true;
-  }, [hotkey, agentName, setDictationKey, ensureHotkeyRegistered]);
+  }, [
+    hotkey,
+    agentName,
+    setDictationKey,
+    ensureHotkeyRegistered,
+    isSignedIn,
+    useLocalWhisper,
+    updateTranscriptionSettings,
+  ]);
 
   const nextStep = useCallback(async () => {
     if (currentStep >= steps.length - 1) {
@@ -384,15 +402,28 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   />
 
                   {isMacOS && (
-                    <PermissionCard
-                      icon={Shield}
-                      title={t("onboarding.permissions.accessibilityTitle")}
-                      description={t("onboarding.permissions.accessibilityDescription")}
-                      granted={permissionsHook.accessibilityPermissionGranted}
-                      onRequest={permissionsHook.testAccessibilityPermission}
-                      buttonText={t("onboarding.permissions.testAndGrant")}
-                      onOpenSettings={permissionsHook.openAccessibilitySettings}
-                    />
+                    <>
+                      <PermissionCard
+                        icon={Shield}
+                        title={t("onboarding.permissions.accessibilityTitle")}
+                        description={t("onboarding.permissions.accessibilityDescription")}
+                        granted={permissionsHook.accessibilityPermissionGranted}
+                        onRequest={permissionsHook.testAccessibilityPermission}
+                        buttonText={t("onboarding.permissions.testAndGrant")}
+                        onOpenSettings={permissionsHook.openAccessibilitySettings}
+                        openSettingsText={t("onboarding.permissions.openSystemSettings")}
+                      />
+                      <PermissionCard
+                        icon={Monitor}
+                        title={t("onboarding.permissions.screenRecordingTitle")}
+                        description={t("onboarding.permissions.screenRecordingDescription")}
+                        granted={screenRecording.granted}
+                        onRequest={screenRecording.request}
+                        buttonText={t("onboarding.permissions.grant")}
+                        onOpenSettings={screenRecording.openSettings}
+                        badge={t("onboarding.permissions.optional")}
+                      />
+                    </>
                   )}
                 </div>
 
@@ -459,7 +490,12 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 })
               }
               useLocalWhisper={useLocalWhisper}
-              onModeChange={(isLocal) => updateTranscriptionSettings({ useLocalWhisper: isLocal })}
+              onModeChange={(isLocal) => {
+                updateTranscriptionSettings({
+                  useLocalWhisper: isLocal,
+                  ...(!isLocal && !isSignedIn ? { cloudTranscriptionMode: "byok" } : {}),
+                });
+              }}
               openaiApiKey={openaiApiKey}
               setOpenaiApiKey={setOpenaiApiKey}
               groqApiKey={groqApiKey}
@@ -527,15 +563,28 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               />
 
               {isMacOS && (
-                <PermissionCard
-                  icon={Shield}
-                  title={t("onboarding.permissions.accessibilityTitle")}
-                  description={t("onboarding.permissions.accessibilityDescription")}
-                  granted={permissionsHook.accessibilityPermissionGranted}
-                  onRequest={permissionsHook.testAccessibilityPermission}
-                  buttonText={t("onboarding.permissions.testAndGrant")}
-                  onOpenSettings={permissionsHook.openAccessibilitySettings}
-                />
+                <>
+                  <PermissionCard
+                    icon={Shield}
+                    title={t("onboarding.permissions.accessibilityTitle")}
+                    description={t("onboarding.permissions.accessibilityDescription")}
+                    granted={permissionsHook.accessibilityPermissionGranted}
+                    onRequest={permissionsHook.testAccessibilityPermission}
+                    buttonText={t("onboarding.permissions.testAndGrant")}
+                    onOpenSettings={permissionsHook.openAccessibilitySettings}
+                    openSettingsText={t("onboarding.permissions.openSystemSettings")}
+                  />
+                  <PermissionCard
+                    icon={Monitor}
+                    title={t("onboarding.permissions.screenRecordingTitle")}
+                    description={t("onboarding.permissions.screenRecordingDescription")}
+                    granted={screenRecording.granted}
+                    onRequest={screenRecording.request}
+                    buttonText={t("onboarding.permissions.grant")}
+                    onOpenSettings={screenRecording.openSettings}
+                    badge={t("onboarding.permissions.optional")}
+                  />
+                </>
               )}
             </div>
 

@@ -154,6 +154,8 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
   if (file) {
     if (useLocalWhisper) {
       // Local transcription: no file size restrictions
+    } else if (cloudTranscriptionProvider === "custom") {
+      // Custom endpoints (e.g. local whisper.cpp): no file size restrictions
     } else if (isByok) {
       byokTooLarge = file.sizeBytes > BYOK_MAX_FILE_SIZE;
       if (byokTooLarge && !isSignedIn) {
@@ -189,15 +191,20 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
         return;
       }
       if (!useLocalWhisper) {
-        const key =
-          cloudTranscriptionProvider === "openai"
-            ? openaiApiKey
-            : cloudTranscriptionProvider === "groq"
-              ? groqApiKey
-              : cloudTranscriptionProvider === "mistral"
-                ? mistralApiKey
-                : customTranscriptionApiKey;
-        if (!cancelled) setProviderReady(!!key);
+        if (cloudTranscriptionProvider === "custom") {
+          // Custom providers only need a base URL; API key is truly optional
+          if (!cancelled) setProviderReady(!!cloudTranscriptionBaseUrl?.trim());
+        } else {
+          const key =
+            cloudTranscriptionProvider === "openai"
+              ? openaiApiKey
+              : cloudTranscriptionProvider === "groq"
+                ? groqApiKey
+                : cloudTranscriptionProvider === "mistral"
+                  ? mistralApiKey
+                  : customTranscriptionApiKey;
+          if (!cancelled) setProviderReady(!!key);
+        }
         return;
       }
       if (localTranscriptionProvider === "nvidia") {
@@ -223,6 +230,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     useLocalWhisper,
     localTranscriptionProvider,
     cloudTranscriptionProvider,
+    cloudTranscriptionBaseUrl,
     openaiApiKey,
     groqApiKey,
     mistralApiKey,

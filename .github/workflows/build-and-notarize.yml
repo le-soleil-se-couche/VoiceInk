@@ -63,6 +63,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y rpm libx11-dev libxtst-dev libatspi2.0-dev libglib2.0-dev
 
+      - name: Create runtime env
+        run: |
+          echo "GOOGLE_CALENDAR_CLIENT_ID=${{ secrets.GOOGLE_CALENDAR_CLIENT_ID }}" >> .env
+          echo "GOOGLE_CALENDAR_CLIENT_SECRET=${{ secrets.GOOGLE_CALENDAR_CLIENT_SECRET }}" >> .env
+
       - name: Build Application
         run: npm run build:linux -- --publish never
         env:
@@ -134,6 +139,12 @@ jobs:
           path: ~/AppData/Local/electron/Cache
           key: windows-electron-${{ hashFiles('**/package-lock.json') }}
           restore-keys: windows-electron-
+
+      - name: Create runtime env
+        shell: bash
+        run: |
+          echo "GOOGLE_CALENDAR_CLIENT_ID=${{ secrets.GOOGLE_CALENDAR_CLIENT_ID }}" >> .env
+          echo "GOOGLE_CALENDAR_CLIENT_SECRET=${{ secrets.GOOGLE_CALENDAR_CLIENT_SECRET }}" >> .env
 
       - name: Build Application
         run: npm run build:win -- --publish never
@@ -224,6 +235,11 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "runner" $KEYCHAIN_PATH
 
           echo "APPLE_API_KEY=$API_KEY_PATH" >> $GITHUB_ENV
+
+      - name: Create runtime env
+        run: |
+          echo "GOOGLE_CALENDAR_CLIENT_ID=${{ secrets.GOOGLE_CALENDAR_CLIENT_ID }}" >> .env
+          echo "GOOGLE_CALENDAR_CLIENT_SECRET=${{ secrets.GOOGLE_CALENDAR_CLIENT_SECRET }}" >> .env
 
       - name: Build Application (${{ matrix.arch }})
         run: npm run build:mac -- --${{ matrix.arch }} --publish never

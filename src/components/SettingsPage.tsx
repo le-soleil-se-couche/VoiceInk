@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -23,6 +23,11 @@ import {
   Loader2,
   Check,
   Mail,
+  CircleCheck,
+  CircleX,
+  RotateCw,
+  BookOpen,
+  Copy,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { NEON_AUTH_URL, signOut } from "../lib/neonAuth";
@@ -31,13 +36,22 @@ import MicrophoneSettings from "./ui/MicrophoneSettings";
 import PermissionCard from "./ui/PermissionCard";
 import PasteToolsInfo from "./ui/PasteToolsInfo";
 import TranscriptionModelPicker from "./TranscriptionModelPicker";
-import { ConfirmDialog, AlertDialog } from "./ui/dialog";
+import {
+  ConfirmDialog,
+  AlertDialog,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "./ui/dialog";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { useSettings } from "../hooks/useSettings";
 import { useDialogs } from "../hooks/useDialogs";
 import { useAgentName } from "../utils/agentName";
 import { useWhisper } from "../hooks/useWhisper";
 import { usePermissions } from "../hooks/usePermissions";
+import { useScreenRecordingPermission } from "../hooks/useScreenRecordingPermission";
 import { useClipboard } from "../hooks/useClipboard";
 import { useUpdater } from "../hooks/useUpdater";
 
@@ -52,6 +66,7 @@ import { getDefaultHotkey, formatHotkeyLabel } from "../utils/hotkeys";
 import { ActivationModeSelector } from "./ui/ActivationModeSelector";
 import { Toggle } from "./ui/toggle";
 import DeveloperSection from "./DeveloperSection";
+import AgentModeSettings from "./settings/AgentModeSettings";
 import LanguageSelector from "./ui/LanguageSelector";
 import { Skeleton } from "./ui/skeleton";
 import { Progress } from "./ui/progress";
@@ -62,6 +77,8 @@ import logger from "../utils/logger";
 import { SettingsRow } from "./ui/SettingsSection";
 import { useUsage } from "../hooks/useUsage";
 import { cn } from "./lib/utils";
+import { startMigration, useMigration } from "../stores/noteStore.js";
+import { formatBytes } from "../utils/formatBytes";
 
 export type SettingsSectionType =
   | "account"
@@ -72,10 +89,10 @@ export type SettingsSectionType =
   | "intelligence"
   | "privacyData"
   | "system"
-  | "dictionary"
   | "aiModels"
   | "agentConfig"
-  | "prompts";
+  | "prompts"
+  | "agentMode";
 
 interface SettingsPageProps {
   activeSection?: SettingsSectionType;
@@ -675,12 +692,22 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
     setCloudReasoningMode,
     audioCuesEnabled,
     setAudioCuesEnabled,
+    pauseMediaOnDictation,
+    setPauseMediaOnDictation,
+    keepTranscriptionInClipboard,
+    setKeepTranscriptionInClipboard,
     floatingIconAutoHide,
     setFloatingIconAutoHide,
+    startMinimized,
+    setStartMinimized,
+    panelStartPosition,
+    setPanelStartPosition,
     cloudBackupEnabled,
     setCloudBackupEnabled,
     telemetryEnabled,
     setTelemetryEnabled,
+    audioRetentionDays,
+    setAudioRetentionDays,
     customDictionary,
     setCustomDictionary,
   } = useSettings();
@@ -712,12 +739,66 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
   const isUpdateAvailable =
     !updateStatus.isDevelopment && (updateStatus.updateAvailable || updateStatus.updateDownloaded);
 
+  const migration = useMigration();
+
   const whisperHook = useWhisper();
   const permissionsHook = usePermissions(showAlertDialog);
+  const screenRecording = useScreenRecordingPermission();
   useClipboard(showAlertDialog);
   const { agentName, setAgentName } = useAgentName();
   const [agentNameInput, setAgentNameInput] = useState(agentName);
   const [newDictionaryWord, setNewDictionaryWord] = useState("");
+  const [audioStorageUsage, setAudioStorageUsage] = useState<{
+    fileCount: number;
+    totalBytes: number;
+  }>({ fileCount: 0, totalBytes: 0 });
+
+  useEffect(() => {
+    if (activeSection !== "privacyData") return;
+    window.electronAPI
+      ?.getAudioStorageUsage?.()
+      .then((usage: { fileCount: number; totalBytes: number }) => {
+        if (usage) setAudioStorageUsage(usage);
+      })
+      .catch(() => {});
+  }, [activeSection]);
+
+  const handleClearAllAudio = async () => {
+    if (!window.electronAPI?.deleteAllAudio) return;
+    try {
+      await window.electronAPI.deleteAllAudio();
+      setAudioStorageUsage({ fileCount: 0, totalBytes: 0 });
+      toast({ title: t("settingsPage.privacy.clearAllAudio"), variant: "default" });
+    } catch {
+      // silent fail
+    }
+  };
+
+  // ydotool status for Wayland paste diagnostics
+  const [ydotoolStatus, setYdotoolStatus] = useState<{
+    isLinux: boolean;
+    isWayland: boolean;
+    hasYdotool: boolean;
+    hasYdotoold: boolean;
+    daemonRunning: boolean;
+    hasService: boolean;
+    hasUinput: boolean;
+    hasUdevRule: boolean;
+    hasGroup: boolean;
+    allGood: boolean;
+  } | null>(null);
+  const [ydotoolGuideKey, setYdotoolGuideKey] = useState<string | null>(null);
+
+  const refreshYdotoolStatus = useCallback(async () => {
+    try {
+      const status = await window.electronAPI?.getYdotoolStatus?.();
+      if (status) setYdotoolStatus(status);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    refreshYdotoolStatus();
+  }, [refreshYdotoolStatus]);
 
   const handleAddDictionaryWord = useCallback(() => {
     const existingWords = new Set(customDictionary.map((w) => w.toLowerCase()));
@@ -1205,9 +1286,6 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                           {t("settingsPage.account.pricing.free.period")}
                         </span>
                       </div>
-                      <p className="text-[9px] font-medium text-primary/80 mt-1.5">
-                        {t("settingsPage.account.pricing.free.trialNote")}
-                      </p>
                       <ul className="space-y-0.5 mt-2 flex-1">
                         {(
                           t("settingsPage.account.pricing.free.features", {
@@ -1684,6 +1762,32 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                     <Toggle checked={audioCuesEnabled} onChange={setAudioCuesEnabled} />
                   </SettingsRow>
                 </SettingsPanelRow>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.general.soundEffects.pauseMedia")}
+                    description={t("settingsPage.general.soundEffects.pauseMediaDescription")}
+                  >
+                    <Toggle checked={pauseMediaOnDictation} onChange={setPauseMediaOnDictation} />
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+
+            {/* Clipboard */}
+            <div>
+              <SectionHeader title={t("settingsPage.general.clipboard.title")} />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.general.clipboard.keepInClipboard")}
+                    description={t("settingsPage.general.clipboard.keepInClipboardDescription")}
+                  >
+                    <Toggle
+                      checked={keepTranscriptionInClipboard}
+                      onChange={setKeepTranscriptionInClipboard}
+                    />
+                  </SettingsRow>
+                </SettingsPanelRow>
               </SettingsPanel>
             </div>
 
@@ -1700,6 +1804,32 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                     description={t("settingsPage.general.floatingIcon.autoHideDescription")}
                   >
                     <Toggle checked={floatingIconAutoHide} onChange={setFloatingIconAutoHide} />
+                  </SettingsRow>
+                </SettingsPanelRow>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.general.floatingIcon.startPosition")}
+                    description={t("settingsPage.general.floatingIcon.startPositionDescription")}
+                  >
+                    <select
+                      value={panelStartPosition}
+                      onChange={(e) =>
+                        setPanelStartPosition(
+                          e.target.value as "bottom-right" | "center" | "bottom-left"
+                        )
+                      }
+                      className="h-7 rounded border border-border/70 bg-surface-1/80 px-2.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm hover:border-border-hover hover:bg-surface-2/70 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:ring-offset-1 transition-colors duration-200"
+                    >
+                      <option value="bottom-right">
+                        {t("settingsPage.general.floatingIcon.bottomRight")}
+                      </option>
+                      <option value="center">
+                        {t("settingsPage.general.floatingIcon.center")}
+                      </option>
+                      <option value="bottom-left">
+                        {t("settingsPage.general.floatingIcon.bottomLeft")}
+                      </option>
+                    </select>
                   </SettingsRow>
                 </SettingsPanelRow>
               </SettingsPanel>
@@ -1742,10 +1872,13 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
             </div>
 
             {/* Startup */}
-            {platform !== "linux" && (
-              <div>
-                <SectionHeader title={t("settingsPage.general.startup.title")} />
-                <SettingsPanel>
+            <div>
+              <SectionHeader
+                title={t("settingsPage.general.startup.title")}
+                description={t("settingsPage.general.startup.description")}
+              />
+              <SettingsPanel>
+                {platform !== "linux" && (
                   <SettingsPanelRow>
                     <SettingsRow
                       label={t("settingsPage.general.startup.launchAtLogin")}
@@ -1758,9 +1891,17 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                       />
                     </SettingsRow>
                   </SettingsPanelRow>
-                </SettingsPanel>
-              </div>
-            )}
+                )}
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.general.startup.startMinimized")}
+                    description={t("settingsPage.general.startup.startMinimizedDescription")}
+                  >
+                    <Toggle checked={startMinimized} onChange={setStartMinimized} />
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
 
             {/* Microphone */}
             <div>
@@ -1779,6 +1920,466 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                 </SettingsPanelRow>
               </SettingsPanel>
             </div>
+
+            {/* Dictionary */}
+            <div>
+              <SectionHeader
+                title={t("settingsPage.dictionary.autoLearnTitle", {
+                  defaultValue: "Auto-learn from corrections",
+                })}
+              />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.dictionary.autoLearnTitle", {
+                      defaultValue: "Auto-learn from corrections",
+                    })}
+                    description={t("settingsPage.dictionary.autoLearnDescription", {
+                      defaultValue:
+                        "When you correct a transcription in the target app, the corrected word is automatically added to your dictionary.",
+                    })}
+                  >
+                    <Toggle checked={autoLearnCorrections} onChange={setAutoLearnCorrections} />
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+
+            {/* Wayland Paste Diagnostics — only on Linux + Wayland */}
+            {ydotoolStatus?.isLinux && ydotoolStatus?.isWayland && (
+              <div>
+                <SectionHeader
+                  title={t("settingsPage.general.waylandPaste.title", {
+                    defaultValue: "Wayland Paste Setup",
+                  })}
+                  description={t("settingsPage.general.waylandPaste.description", {
+                    defaultValue:
+                      "Auto-paste on Wayland requires ydotool. Check the status of each component below.",
+                  })}
+                />
+                {(() => {
+                  const checks = [
+                    {
+                      key: "hasYdotool",
+                      label: "ydotool",
+                      ok: ydotoolStatus.hasYdotool,
+                      desc: t("settingsPage.general.waylandPaste.ydotoolDesc", {
+                        defaultValue: "Input automation tool for Wayland",
+                      }),
+                      steps: [
+                        {
+                          title: t("settingsPage.general.waylandPaste.guide.ydotool.step1Title", {
+                            defaultValue: "Install ydotool",
+                          }),
+                          desc: t("settingsPage.general.waylandPaste.guide.ydotool.step1Desc", {
+                            defaultValue:
+                              "Use your distribution's package manager to install ydotool.",
+                          }),
+                          cmds: [
+                            { label: "Ubuntu / Pop!_OS / Debian", cmd: "sudo apt install ydotool" },
+                            { label: "Fedora", cmd: "sudo dnf install ydotool" },
+                            { label: "openSUSE", cmd: "sudo zypper install ydotool" },
+                          ],
+                        },
+                        {
+                          title: t("settingsPage.general.waylandPaste.guide.ydotool.step2Title", {
+                            defaultValue: "Verify installation",
+                          }),
+                          desc: t("settingsPage.general.waylandPaste.guide.ydotool.step2Desc", {
+                            defaultValue: "Check that ydotool is available in your PATH.",
+                          }),
+                          cmds: [{ cmd: "which ydotool" }],
+                        },
+                      ],
+                    },
+                    {
+                      key: "hasYdotoold",
+                      label: "ydotoold",
+                      ok: ydotoolStatus.hasYdotoold,
+                      desc: t("settingsPage.general.waylandPaste.ydotooldDesc", {
+                        defaultValue: "Daemon for ydotool (separate package on Ubuntu/Pop!_OS)",
+                      }),
+                      steps: [
+                        {
+                          title: t("settingsPage.general.waylandPaste.guide.ydotoold.step1Title", {
+                            defaultValue: "Install ydotoold",
+                          }),
+                          desc: t("settingsPage.general.waylandPaste.guide.ydotoold.step1Desc", {
+                            defaultValue:
+                              "On Ubuntu and Pop!_OS, ydotoold is a separate package. On Fedora, it's included with ydotool.",
+                          }),
+                          cmds: [
+                            {
+                              label: "Ubuntu / Pop!_OS / Debian",
+                              cmd: "sudo apt install ydotoold",
+                            },
+                            { label: "Fedora", cmd: "# Already included in the ydotool package" },
+                          ],
+                        },
+                      ],
+                    },
+                    {
+                      key: "hasUinput",
+                      label: "/dev/uinput",
+                      ok: ydotoolStatus.hasUinput,
+                      desc: t("settingsPage.general.waylandPaste.uinputDesc", {
+                        defaultValue: "Kernel input device access",
+                      }),
+                      note: !ydotoolStatus.hasUinput
+                        ? ydotoolStatus.hasUdevRule
+                          ? t("settingsPage.general.waylandPaste.uinputRuleFound", {
+                              defaultValue: "Rule present but not active. A reboot should fix it.",
+                            })
+                          : t("settingsPage.general.waylandPaste.uinputRuleMissing", {
+                              defaultValue: "no udev rule found",
+                            })
+                        : undefined,
+                      steps:
+                        ydotoolStatus.hasUdevRule && !ydotoolStatus.hasUinput
+                          ? [
+                              {
+                                title: t(
+                                  "settingsPage.general.waylandPaste.guide.uinput.ruleFoundTitle",
+                                  {
+                                    defaultValue: "udev rule already configured",
+                                  }
+                                ),
+                                desc: t(
+                                  "settingsPage.general.waylandPaste.guide.uinput.ruleFoundDesc",
+                                  {
+                                    defaultValue:
+                                      "The udev rule for /dev/uinput is already on your system but hasn't taken effect. Try reloading:",
+                                  }
+                                ),
+                                cmds: [
+                                  {
+                                    cmd: "sudo udevadm control --reload-rules && sudo udevadm trigger /dev/uinput",
+                                  },
+                                ],
+                              },
+                              {
+                                title: t(
+                                  "settingsPage.general.waylandPaste.guide.uinput.rebootTitle",
+                                  {
+                                    defaultValue: "If reloading didn't help, reboot",
+                                  }
+                                ),
+                                desc: t(
+                                  "settingsPage.general.waylandPaste.guide.uinput.rebootDesc",
+                                  {
+                                    defaultValue:
+                                      "On some distros, udev changes only apply after a full reboot. Restart your computer and come back to re-check.",
+                                  }
+                                ),
+                              },
+                            ]
+                          : [
+                              {
+                                title: t(
+                                  "settingsPage.general.waylandPaste.guide.uinput.step1Title",
+                                  {
+                                    defaultValue: "Create a udev rule",
+                                  }
+                                ),
+                                desc: t(
+                                  "settingsPage.general.waylandPaste.guide.uinput.step1Desc",
+                                  {
+                                    defaultValue:
+                                      "This rule grants access to /dev/uinput for users in the input group.",
+                                  }
+                                ),
+                                cmds: [
+                                  {
+                                    cmd: 'echo \'KERNEL=="uinput", GROUP="input", MODE="0660", TAG+="uaccess"\' | sudo tee /etc/udev/rules.d/70-uinput.rules',
+                                  },
+                                ],
+                              },
+                              {
+                                title: t(
+                                  "settingsPage.general.waylandPaste.guide.uinput.step2Title",
+                                  {
+                                    defaultValue: "Reload udev rules",
+                                  }
+                                ),
+                                desc: t(
+                                  "settingsPage.general.waylandPaste.guide.uinput.step2Desc",
+                                  {
+                                    defaultValue: "Apply the new rule without rebooting.",
+                                  }
+                                ),
+                                cmds: [
+                                  {
+                                    cmd: "sudo udevadm control --reload-rules && sudo udevadm trigger /dev/uinput",
+                                  },
+                                ],
+                              },
+                            ],
+                    },
+                    {
+                      key: "hasGroup",
+                      label: t("settingsPage.general.waylandPaste.inputGroup", {
+                        defaultValue: "input group",
+                      }),
+                      ok: ydotoolStatus.hasGroup,
+                      desc: t("settingsPage.general.waylandPaste.inputGroupDesc", {
+                        defaultValue: "User must be in the input group (requires re-login)",
+                      }),
+                      steps: [
+                        {
+                          title: t("settingsPage.general.waylandPaste.guide.group.step1Title", {
+                            defaultValue: "Add your user to the input group",
+                          }),
+                          cmds: [{ cmd: "sudo usermod -aG input $USER" }],
+                        },
+                        {
+                          title: t("settingsPage.general.waylandPaste.guide.group.step2Title", {
+                            defaultValue: "Log out and back in",
+                          }),
+                          desc: t("settingsPage.general.waylandPaste.guide.group.step2Desc", {
+                            defaultValue:
+                              "Group changes only take effect after a new login session. Log out of your desktop and log back in, then reopen OpenWhispr.",
+                          }),
+                        },
+                      ],
+                    },
+                    {
+                      key: "hasService",
+                      label: t("settingsPage.general.waylandPaste.service", {
+                        defaultValue: "systemd service",
+                      }),
+                      ok: ydotoolStatus.hasService,
+                      desc: t("settingsPage.general.waylandPaste.serviceDesc", {
+                        defaultValue: "User service file for auto-starting ydotoold",
+                      }),
+                      steps: [
+                        {
+                          title: t("settingsPage.general.waylandPaste.guide.service.step1Title", {
+                            defaultValue: "Create the service directory",
+                          }),
+                          cmds: [{ cmd: "mkdir -p ~/.config/systemd/user" }],
+                        },
+                        {
+                          title: t("settingsPage.general.waylandPaste.guide.service.step2Title", {
+                            defaultValue: "Create the service file",
+                          }),
+                          desc: t("settingsPage.general.waylandPaste.guide.service.step2Desc", {
+                            defaultValue:
+                              "This creates a user-level systemd service that starts ydotoold automatically when you log in.",
+                          }),
+                          cmds: [
+                            {
+                              cmd: `cat > ~/.config/systemd/user/ydotoold.service << 'EOF'
+[Unit]
+Description=ydotoold - ydotool daemon
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/ydotoold
+Restart=on-failure
+RestartSec=1s
+
+[Install]
+WantedBy=graphical-session.target
+EOF`,
+                            },
+                          ],
+                        },
+                        {
+                          title: t("settingsPage.general.waylandPaste.guide.service.step3Title", {
+                            defaultValue: "Reload and enable",
+                          }),
+                          cmds: [
+                            {
+                              cmd: "systemctl --user daemon-reload && systemctl --user enable ydotoold",
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    {
+                      key: "daemonRunning",
+                      label: t("settingsPage.general.waylandPaste.daemon", {
+                        defaultValue: "ydotoold daemon",
+                      }),
+                      ok: ydotoolStatus.daemonRunning,
+                      desc: t("settingsPage.general.waylandPaste.daemonDesc", {
+                        defaultValue: "Background service must be running",
+                      }),
+                      steps: [
+                        {
+                          title: t("settingsPage.general.waylandPaste.guide.daemon.step1Title", {
+                            defaultValue: "Start the daemon",
+                          }),
+                          desc: t("settingsPage.general.waylandPaste.guide.daemon.step1Desc", {
+                            defaultValue: "Start ydotoold and enable it so it runs on every login.",
+                          }),
+                          cmds: [
+                            {
+                              cmd: "systemctl --user enable ydotoold && systemctl --user start ydotoold",
+                            },
+                          ],
+                        },
+                        {
+                          title: t("settingsPage.general.waylandPaste.guide.daemon.step2Title", {
+                            defaultValue: "Verify it's running",
+                          }),
+                          cmds: [{ cmd: "systemctl --user status ydotoold" }],
+                        },
+                      ],
+                    },
+                  ];
+
+                  const allOk = checks.every((c) => c.ok);
+                  const activeGuide = checks.find((c) => c.key === ydotoolGuideKey);
+
+                  return (
+                    <>
+                      {allOk ? (
+                        <SettingsPanel>
+                          <SettingsPanelRow>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <CircleCheck className="h-4 w-4 text-emerald-500" />
+                                <span className="text-sm">
+                                  {t("settingsPage.general.waylandPaste.allGoodDesc", {
+                                    defaultValue: "Auto-paste is ready to go.",
+                                  })}
+                                </span>
+                              </div>
+                              <button
+                                onClick={refreshYdotoolStatus}
+                                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                <RotateCw className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </SettingsPanelRow>
+                        </SettingsPanel>
+                      ) : (
+                        <>
+                          <div className="rounded-xl border border-border overflow-hidden">
+                            <div className="divide-y divide-border">
+                              {checks.map((item) => (
+                                <div key={item.key} className="px-4 py-3">
+                                  <div className="flex items-center gap-2.5">
+                                    {item.ok ? (
+                                      <CircleCheck className="h-4 w-4 shrink-0 text-emerald-500" />
+                                    ) : (
+                                      <CircleX className="h-4 w-4 shrink-0 text-red-500" />
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-sm font-medium">{item.label}</span>
+                                      <span className="text-xs text-muted-foreground ml-2">
+                                        {item.desc}
+                                      </span>
+                                      {item.note && (
+                                        <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5">
+                                          {item.note}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {!item.ok && (
+                                      <button
+                                        onClick={() => setYdotoolGuideKey(item.key)}
+                                        className="shrink-0 flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border border-border hover:bg-muted transition-colors text-foreground"
+                                      >
+                                        <BookOpen className="w-3 h-3" />
+                                        {t("settingsPage.general.waylandPaste.guide.open", {
+                                          defaultValue: "Guide",
+                                        })}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <button
+                            onClick={refreshYdotoolStatus}
+                            className="flex items-center gap-1.5 mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <RotateCw className="w-3 h-3" />
+                            {t("settingsPage.general.waylandPaste.recheck", {
+                              defaultValue: "Re-check",
+                            })}
+                          </button>
+                        </>
+                      )}
+
+                      {/* Step-by-step guide dialog */}
+                      <Dialog
+                        open={!!activeGuide}
+                        onOpenChange={(open) => !open && setYdotoolGuideKey(null)}
+                      >
+                        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+                          {activeGuide && (
+                            <>
+                              <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                  <BookOpen className="w-4 h-4" />
+                                  {activeGuide.label}
+                                </DialogTitle>
+                                <DialogDescription>{activeGuide.desc}</DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-5 mt-2">
+                                {activeGuide.steps.map((step, i) => (
+                                  <div key={i}>
+                                    <div className="flex items-start gap-3">
+                                      <span className="shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
+                                        {i + 1}
+                                      </span>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium">{step.title}</p>
+                                        {step.desc && (
+                                          <p className="text-xs text-muted-foreground mt-0.5">
+                                            {step.desc}
+                                          </p>
+                                        )}
+                                        {step.cmds && step.cmds.length > 0 && (
+                                          <div className="mt-2 space-y-2">
+                                            {step.cmds.map((c, j) => (
+                                              <div key={j}>
+                                                {c.label && (
+                                                  <p className="text-[11px] text-muted-foreground mb-1">
+                                                    {c.label}
+                                                  </p>
+                                                )}
+                                                <div className="flex items-start gap-1.5">
+                                                  <pre className="flex-1 text-[11px] bg-muted/60 rounded-md px-3 py-2 font-mono whitespace-pre-wrap break-all select-all overflow-x-auto">
+                                                    {c.cmd}
+                                                  </pre>
+                                                  <button
+                                                    onClick={() =>
+                                                      navigator.clipboard.writeText(c.cmd)
+                                                    }
+                                                    className="shrink-0 p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                                                    title={t(
+                                                      "settingsPage.general.waylandPaste.copy",
+                                                      { defaultValue: "Copy" }
+                                                    )}
+                                                  >
+                                                    <Copy className="w-3.5 h-3.5" />
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </DialogContent>
+                      </Dialog>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         );
 
@@ -1858,194 +2459,6 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
             setCloudTranscriptionBaseUrl={setCloudTranscriptionBaseUrl}
             toast={toast}
           />
-        );
-
-      case "dictionary":
-        return (
-          <div className="space-y-5">
-            <SectionHeader
-              title={t("settingsPage.dictionary.title")}
-              description={t("settingsPage.dictionary.description")}
-            />
-
-            {/* Add Words */}
-            <SettingsPanel>
-              <SettingsPanelRow>
-                <div className="space-y-2">
-                  <p className="text-[12px] font-medium text-foreground">
-                    {t("settingsPage.dictionary.addWordOrPhrase")}
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder={t("settingsPage.dictionary.placeholder")}
-                      value={newDictionaryWord}
-                      onChange={(e) => setNewDictionaryWord(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleAddDictionaryWord();
-                        }
-                      }}
-                      className="flex-1 h-8 text-[12px]"
-                    />
-                    <Button
-                      onClick={handleAddDictionaryWord}
-                      disabled={!newDictionaryWord.trim()}
-                      size="sm"
-                      className="h-8"
-                    >
-                      {t("settingsPage.dictionary.add")}
-                    </Button>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground/50">
-                    {t("settingsPage.dictionary.pressEnterToAdd")}
-                  </p>
-                </div>
-              </SettingsPanelRow>
-            </SettingsPanel>
-
-            {/* Auto-learn from corrections */}
-            <div>
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <div className="flex items-center justify-between w-full">
-                    <div>
-                      <p className="text-[12px] font-medium text-foreground">
-                        {t("settingsPage.dictionary.autoLearnTitle", {
-                          defaultValue: "Auto-learn from corrections",
-                        })}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-                        {t("settingsPage.dictionary.autoLearnDescription", {
-                          defaultValue:
-                            "When you correct a transcription in the target app, the corrected word is automatically added to your dictionary.",
-                        })}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setAutoLearnCorrections(!autoLearnCorrections)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
-                        autoLearnCorrections ? "bg-primary" : "bg-muted-foreground/20"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-                          autoLearnCorrections ? "translate-x-[18px]" : "translate-x-[3px]"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-
-            {/* Word List */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[12px] font-medium text-foreground">
-                  {t("settingsPage.dictionary.yourWords")}
-                  {customDictionary.length > 0 && (
-                    <span className="ml-1.5 text-muted-foreground/50 font-normal text-[11px]">
-                      {customDictionary.length}
-                    </span>
-                  )}
-                </p>
-                {customDictionary.length > 0 && (
-                  <button
-                    onClick={() => {
-                      showConfirmDialog({
-                        title: t("settingsPage.dictionary.clearDictionaryTitle"),
-                        description: t("settingsPage.dictionary.clearDictionaryDescription"),
-                        confirmText: t("settingsPage.dictionary.clearAll"),
-                        variant: "destructive",
-                        onConfirm: () =>
-                          setCustomDictionary(customDictionary.filter((w) => w === agentName)),
-                      });
-                    }}
-                    className="text-[10px] text-muted-foreground/40 hover:text-destructive transition-colors"
-                  >
-                    {t("settingsPage.dictionary.clearAll")}
-                  </button>
-                )}
-              </div>
-
-              {customDictionary.length > 0 ? (
-                <SettingsPanel>
-                  <SettingsPanelRow>
-                    <div className="flex flex-wrap gap-1">
-                      {customDictionary.map((word) => {
-                        const isAgentName = word === agentName;
-                        return (
-                          <span
-                            key={word}
-                            className={`group inline-flex items-center gap-0.5 py-0.5 rounded-[5px] text-[11px] border transition-all ${
-                              isAgentName
-                                ? "pl-2 pr-2 bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30"
-                                : "pl-2 pr-1 bg-primary/5 dark:bg-primary/10 text-foreground border-border/30 dark:border-border-subtle hover:border-destructive/40 hover:bg-destructive/5"
-                            }`}
-                            title={
-                              isAgentName
-                                ? t("settingsPage.dictionary.agentNameAutoManaged")
-                                : undefined
-                            }
-                          >
-                            {word}
-                            {!isAgentName && (
-                              <button
-                                onClick={() => handleRemoveDictionaryWord(word)}
-                                className="ml-0.5 p-0.5 rounded-sm text-muted-foreground/40 hover:text-destructive transition-colors"
-                                title={t("settingsPage.dictionary.removeWord")}
-                              >
-                                <svg
-                                  width="9"
-                                  height="9"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2.5"
-                                  strokeLinecap="round"
-                                >
-                                  <path d="M18 6L6 18M6 6l12 12" />
-                                </svg>
-                              </button>
-                            )}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </SettingsPanelRow>
-                </SettingsPanel>
-              ) : (
-                <div className="rounded-lg border border-dashed border-border/40 dark:border-border-subtle py-6 flex flex-col items-center justify-center text-center">
-                  <p className="text-[11px] text-muted-foreground/50">
-                    {t("settingsPage.dictionary.noWords")}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground/40 mt-0.5">
-                    {t("settingsPage.dictionary.wordsAppearHere")}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* How it works */}
-            <div>
-              <SectionHeader title={t("settingsPage.dictionary.howItWorksTitle")} />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <p className="text-[12px] text-muted-foreground leading-relaxed">
-                    {t("settingsPage.dictionary.howItWorksDescription")}
-                  </p>
-                </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <p className="text-[12px] text-muted-foreground leading-relaxed">
-                    <span className="font-medium text-foreground">
-                      {t("settingsPage.dictionary.tipLabel")}
-                    </span>{" "}
-                    {t("settingsPage.dictionary.tipDescription")}
-                  </p>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-          </div>
         );
 
       case "aiModels":
@@ -2343,16 +2756,49 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
               />
 
               {isSignedIn && (
-                <SettingsPanel className="mb-4">
-                  <SettingsPanelRow>
-                    <SettingsRow
-                      label={t("settingsPage.privacy.cloudBackup")}
-                      description={t("settingsPage.privacy.cloudBackupDescription")}
-                    >
-                      <Toggle checked={cloudBackupEnabled} onChange={setCloudBackupEnabled} />
-                    </SettingsRow>
-                  </SettingsPanelRow>
-                </SettingsPanel>
+                <div className="mb-4">
+                  <SettingsPanel className="mb-2">
+                    <SettingsPanelRow>
+                      <SettingsRow
+                        label={t("settingsPage.privacy.cloudBackup")}
+                        description={t("settingsPage.privacy.cloudBackupDescription")}
+                      >
+                        <Toggle
+                          checked={cloudBackupEnabled}
+                          onChange={(v) => {
+                            setCloudBackupEnabled(v);
+                            if (v) startMigration().catch(console.error);
+                          }}
+                        />
+                      </SettingsRow>
+                    </SettingsPanelRow>
+                  </SettingsPanel>
+                  {migration && (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          {t("settingsPage.privacy.cloudNotesMigration", {
+                            done: migration.done,
+                            total: migration.total,
+                          })}
+                        </span>
+                        <span>{Math.round((migration.done / migration.total) * 100)}%</span>
+                      </div>
+                      <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full bg-primary transition-all duration-300 ease-out"
+                          style={{ width: `${(migration.done / migration.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {!migration && cloudBackupEnabled && isSignedIn && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("settingsPage.privacy.cloudNotesMigrationDone")}
+                    </p>
+                  )}
+                </div>
               )}
 
               <SettingsPanel>
@@ -2362,6 +2808,69 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                     description={t("settingsPage.privacy.usageAnalyticsDescription")}
                   >
                     <Toggle checked={telemetryEnabled} onChange={setTelemetryEnabled} />
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+
+            {/* Audio Retention */}
+            <div className="border-t border-border/40 pt-6">
+              <SectionHeader
+                title={t("settingsPage.privacy.audioRetention")}
+                description={t("settingsPage.privacy.audioRetentionDescription")}
+              />
+
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.privacy.audioRetention")}
+                    description={t("settingsPage.privacy.audioRetentionDescription")}
+                  >
+                    <select
+                      value={audioRetentionDays}
+                      onChange={(e) => setAudioRetentionDays(parseInt(e.target.value, 10))}
+                      className="h-7 rounded border border-border/70 bg-surface-1/80 px-2.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm hover:border-border-hover hover:bg-surface-2/70 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:ring-offset-1 transition-colors duration-200"
+                    >
+                      <option value={0}>{t("settingsPage.privacy.audioRetentionDisabled")}</option>
+                      <option value={7}>
+                        {t("settingsPage.privacy.audioRetentionDays", { count: 7 })}
+                      </option>
+                      <option value={14}>
+                        {t("settingsPage.privacy.audioRetentionDays", { count: 14 })}
+                      </option>
+                      <option value={30}>
+                        {t("settingsPage.privacy.audioRetentionDays", { count: 30 })}
+                      </option>
+                      <option value={60}>
+                        {t("settingsPage.privacy.audioRetentionDays", { count: 60 })}
+                      </option>
+                      <option value={90}>
+                        {t("settingsPage.privacy.audioRetentionDays", { count: 90 })}
+                      </option>
+                    </select>
+                  </SettingsRow>
+                </SettingsPanelRow>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.privacy.audioStorageUsage")}
+                    description={
+                      audioStorageUsage.fileCount > 0
+                        ? t("settingsPage.privacy.audioStorageFiles", {
+                            count: audioStorageUsage.fileCount,
+                            size: formatBytes(audioStorageUsage.totalBytes),
+                          })
+                        : t("settingsPage.privacy.audioStorageEmpty")
+                    }
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={audioStorageUsage.fileCount === 0}
+                      onClick={handleClearAllAudio}
+                    >
+                      {t("settingsPage.privacy.clearAllAudio")}
+                    </Button>
                   </SettingsRow>
                 </SettingsPanelRow>
               </SettingsPanel>
@@ -2386,15 +2895,27 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                 />
 
                 {platform === "darwin" && (
-                  <PermissionCard
-                    icon={Shield}
-                    title={t("settingsPage.permissions.accessibilityTitle")}
-                    description={t("settingsPage.permissions.accessibilityDescription")}
-                    granted={permissionsHook.accessibilityPermissionGranted}
-                    onRequest={permissionsHook.testAccessibilityPermission}
-                    buttonText={t("settingsPage.permissions.testAndGrant")}
-                    onOpenSettings={permissionsHook.openAccessibilitySettings}
-                  />
+                  <>
+                    <PermissionCard
+                      icon={Shield}
+                      title={t("settingsPage.permissions.accessibilityTitle")}
+                      description={t("settingsPage.permissions.accessibilityDescription")}
+                      granted={permissionsHook.accessibilityPermissionGranted}
+                      onRequest={permissionsHook.testAccessibilityPermission}
+                      buttonText={t("settingsPage.permissions.testAndGrant")}
+                      onOpenSettings={permissionsHook.openAccessibilitySettings}
+                    />
+                    <PermissionCard
+                      icon={Monitor}
+                      title={t("settingsPage.permissions.screenRecordingTitle")}
+                      description={t("settingsPage.permissions.screenRecordingDescription")}
+                      granted={screenRecording.granted}
+                      onRequest={screenRecording.request}
+                      buttonText={t("settingsPage.permissions.test")}
+                      onOpenSettings={screenRecording.openSettings}
+                      badge={t("settingsPage.permissions.optional")}
+                    />
+                  </>
                 )}
               </div>
 
@@ -2737,6 +3258,9 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
             </div>
           </div>
         );
+
+      case "agentMode":
+        return <AgentModeSettings />;
 
       default:
         return null;

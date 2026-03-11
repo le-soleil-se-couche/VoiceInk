@@ -58,12 +58,34 @@ const SUGGESTED_HOTKEYS = {
 
 class HotkeyManager {
   constructor() {
-    this.currentHotkey = process.platform === "darwin" ? "GLOBE" : "Control+Super";
+    this.slots = new Map();
+    const defaultDictation = process.platform === "darwin" ? "GLOBE" : "Control+Super";
+    this.slots.set("dictation", { hotkey: defaultDictation, callback: null, accelerator: null });
     this.isInitialized = false;
     this.isListeningMode = false;
     this.gnomeManager = null;
     this.useGnome = false;
-    this.hotkeyCallback = null;
+  }
+
+  // Backward-compatible property accessors
+  get currentHotkey() {
+    return this.slots.get("dictation")?.hotkey ?? null;
+  }
+
+  set currentHotkey(value) {
+    const slot = this.slots.get("dictation") || { hotkey: null, callback: null, accelerator: null };
+    slot.hotkey = value;
+    this.slots.set("dictation", slot);
+  }
+
+  get hotkeyCallback() {
+    return this.slots.get("dictation")?.callback ?? null;
+  }
+
+  set hotkeyCallback(value) {
+    const slot = this.slots.get("dictation") || { hotkey: null, callback: null, accelerator: null };
+    slot.callback = value;
+    this.slots.set("dictation", slot);
   }
 
   setListeningMode(enabled) {
@@ -117,42 +139,74 @@ class HotkeyManager {
     return suggestions.filter((s) => s !== failedHotkey).slice(0, 3);
   }
 
-  setupShortcuts(hotkey = "Control+Super", callback) {
+  registerSlot(slotName, hotkey, callback) {
+    this.unregisterSlot(slotName);
+    const result = this.setupShortcuts(hotkey, callback, slotName);
+    if (result.success) {
+      const slot = this.slots.get(slotName) || {};
+      slot.callback = callback;
+      this.slots.set(slotName, slot);
+    }
+    return result;
+  }
+
+  unregisterSlot(slotName) {
+    const slot = this.slots.get(slotName);
+    if (!slot || !slot.hotkey) return;
+
+    const hk = slot.hotkey;
+    if (!isGlobeLikeHotkey(hk) && !isRightSideModifier(hk) && !isModifierOnlyHotkey(hk)) {
+      const accel = normalizeToAccelerator(hk);
+      try {
+        globalShortcut.unregister(accel);
+      } catch {
+        // already unregistered
+      }
+    }
+    slot.hotkey = null;
+    slot.accelerator = null;
+  }
+
+  getSlotHotkey(slotName) {
+    return this.slots.get(slotName)?.hotkey ?? null;
+  }
+
+  setupShortcuts(hotkey = "Control+Super", callback, slotName = "dictation") {
     if (!callback) {
       throw new Error(i18nMain.t("hotkey.errors.callbackRequired"));
     }
 
-    debugLogger.log(`[HotkeyManager] Setting up hotkey: "${hotkey}"`);
-    debugLogger.log(`[HotkeyManager] Platform: ${process.platform}, Arch: ${process.arch}`);
-    debugLogger.log(`[HotkeyManager] Current hotkey: "${this.currentHotkey}"`);
+    const slot = this.slots.get(slotName) || { hotkey: null, callback: null, accelerator: null };
+    this.slots.set(slotName, slot);
 
-    // If we're already using this hotkey AND it's actually registered, return success
-    // Note: We need to check isRegistered because on first run, currentHotkey is set to the
-    // default value but it's not actually registered yet.
+    debugLogger.log(`[HotkeyManager] Setting up hotkey: "${hotkey}" for slot "${slotName}"`);
+    debugLogger.log(`[HotkeyManager] Platform: ${process.platform}, Arch: ${process.arch}`);
+    debugLogger.log(`[HotkeyManager] Current hotkey for slot: "${slot.hotkey}"`);
+
     const checkAccelerator = normalizeToAccelerator(hotkey);
     if (
-      hotkey === this.currentHotkey &&
+      hotkey === slot.hotkey &&
       !isGlobeLikeHotkey(hotkey) &&
       !isRightSideModifier(hotkey) &&
       !isModifierOnlyHotkey(hotkey) &&
       globalShortcut.isRegistered(checkAccelerator)
     ) {
       debugLogger.log(
-        `[HotkeyManager] Hotkey "${hotkey}" is already the current hotkey and registered, no change needed`
+        `[HotkeyManager] Hotkey "${hotkey}" is already registered for slot "${slotName}", no change needed`
       );
       return { success: true, hotkey };
     }
 
-    const previousHotkey = this.currentHotkey;
+    const previousHotkey = slot.hotkey;
 
-    // Unregister the previous hotkey (skip native-listener-only hotkeys)
+    // Unregister the previous hotkey for this slot (skip native-listener-only hotkeys)
     if (
-      this.currentHotkey &&
-      !isGlobeLikeHotkey(this.currentHotkey) &&
-      !isRightSideModifier(this.currentHotkey) &&
-      !isModifierOnlyHotkey(this.currentHotkey)
+      previousHotkey &&
+      !isGlobeLikeHotkey(previousHotkey) &&
+      !isRightSideModifier(previousHotkey) &&
+      !isModifierOnlyHotkey(previousHotkey)
     ) {
-      const prevAccelerator = normalizeToAccelerator(this.currentHotkey);
+      const prevAccelerator = normalizeToAccelerator(previousHotkey);
       try {
         debugLogger.log(`[HotkeyManager] Unregistering previous hotkey: "${prevAccelerator}"`);
         globalShortcut.unregister(prevAccelerator);
@@ -172,23 +226,24 @@ class HotkeyManager {
             error: i18nMain.t("hotkey.errors.globeOnlyMac"),
           };
         }
-        this.currentHotkey = hotkey;
+        slot.hotkey = hotkey;
+        slot.accelerator = null;
         debugLogger.log(`[HotkeyManager] GLOBE/Fn key "${hotkey}" set successfully`);
         return { success: true, hotkey };
       }
 
-      // Right-side single modifiers are handled by native listeners (Swift/C), not globalShortcut
       if (isRightSideModifier(hotkey)) {
-        this.currentHotkey = hotkey;
+        slot.hotkey = hotkey;
+        slot.accelerator = null;
         debugLogger.log(
           `[HotkeyManager] Right-side modifier "${hotkey}" set - using native listener`
         );
         return { success: true, hotkey };
       }
 
-      // Modifier-only combos use the native keyboard hook on Windows
       if (isModifierOnlyHotkey(hotkey) && process.platform === "win32") {
-        this.currentHotkey = hotkey;
+        slot.hotkey = hotkey;
+        slot.accelerator = null;
         debugLogger.log(
           `[HotkeyManager] Modifier-only "${hotkey}" set - using Windows native listener`
         );
@@ -210,7 +265,8 @@ class HotkeyManager {
       debugLogger.log(`[HotkeyManager] Registration result for "${hotkey}": ${success}`);
 
       if (success) {
-        this.currentHotkey = hotkey;
+        slot.hotkey = hotkey;
+        slot.accelerator = accelerator;
         debugLogger.log(`[HotkeyManager] Hotkey "${hotkey}" registered successfully`);
         return { success: true, hotkey };
       } else {
@@ -541,6 +597,13 @@ class HotkeyManager {
       this.gnomeManager.close();
       this.gnomeManager = null;
       this.useGnome = false;
+    }
+    for (const slotName of this.slots.keys()) {
+      const slot = this.slots.get(slotName);
+      if (slot) {
+        slot.hotkey = null;
+        slot.accelerator = null;
+      }
     }
     globalShortcut.unregisterAll();
   }

@@ -473,10 +473,74 @@ static int paste_via_uinput(int use_shift) {
 }
 #endif
 
+static int send_media_play_pause(void) {
+#ifdef HAVE_UINPUT
+    /* KEY_PLAYPAUSE = 164 (evdev) — works without X11 display */
+    int fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+    if (fd >= 0) {
+        if (ioctl(fd, UI_SET_EVBIT, EV_KEY) >= 0 &&
+            ioctl(fd, UI_SET_KEYBIT, KEY_PLAYPAUSE) >= 0) {
+
+            struct uinput_setup usetup;
+            memset(&usetup, 0, sizeof(usetup));
+            usetup.id.bustype = BUS_USB;
+            usetup.id.vendor  = 0x1234;
+            usetup.id.product = 0x5678;
+            snprintf(usetup.name, UINPUT_MAX_NAME_SIZE, "openwhispr-media");
+
+            if (ioctl(fd, UI_DEV_SETUP, &usetup) >= 0 &&
+                ioctl(fd, UI_DEV_CREATE) >= 0) {
+
+                usleep(50000);
+
+                emit(fd, EV_KEY, KEY_PLAYPAUSE, 1);
+                emit(fd, EV_SYN, SYN_REPORT, 0);
+                usleep(8000);
+                emit(fd, EV_KEY, KEY_PLAYPAUSE, 0);
+                emit(fd, EV_SYN, SYN_REPORT, 0);
+                usleep(20000);
+
+                ioctl(fd, UI_DEV_DESTROY);
+                close(fd);
+                return 0;
+            }
+        }
+        close(fd);
+    }
+#endif
+
+    /* Fallback to XTest */
+    Display *dpy = XOpenDisplay(NULL);
+    if (!dpy) return 1;
+
+    int event_base, error_base, major, minor;
+    if (!XTestQueryExtension(dpy, &event_base, &error_base, &major, &minor)) {
+        XCloseDisplay(dpy);
+        return 2;
+    }
+
+    /* XF86AudioPlay keysym = 0x1008FF14 */
+    KeyCode play = XKeysymToKeycode(dpy, 0x1008FF14);
+    if (play == 0) {
+        XCloseDisplay(dpy);
+        return 2;
+    }
+
+    XTestFakeKeyEvent(dpy, play, True, CurrentTime);
+    usleep(8000);
+    XTestFakeKeyEvent(dpy, play, False, CurrentTime);
+
+    XFlush(dpy);
+    usleep(20000);
+    XCloseDisplay(dpy);
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
     int force_terminal = 0;
     int use_uinput = 0;
     int use_portal = 0;
+    int media_play_pause = 0;
     const char *restore_token = NULL;
     Window target_window = None;
 
@@ -487,11 +551,17 @@ int main(int argc, char *argv[]) {
             use_uinput = 1;
         } else if (strcmp(argv[i], "--portal") == 0) {
             use_portal = 1;
+        } else if (strcmp(argv[i], "--media-play-pause") == 0) {
+            media_play_pause = 1;
         } else if (strcmp(argv[i], "--restore-token") == 0 && i + 1 < argc) {
             restore_token = argv[++i];
         } else if (strcmp(argv[i], "--window") == 0 && i + 1 < argc) {
             target_window = (Window)strtoul(argv[++i], NULL, 0);
         }
+    }
+
+    if (media_play_pause) {
+        return send_media_play_pause();
     }
 
     if (use_portal) {

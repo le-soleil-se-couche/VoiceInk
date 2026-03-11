@@ -12,7 +12,7 @@
   <a href="https://github.com/OpenWhispr/openwhispr/stargazers"><img src="https://img.shields.io/github/stars/OpenWhispr/openwhispr?style=flat" alt="GitHub stars" /></a>
 </p>
 
-<p align="center">Voice-to-text dictation app with local (Nvidia Parakeet/Whisper) and cloud models (BYOK).<br/>Privacy-first and available cross-platform.</p>
+<p align="center">Voice-to-text dictation and productivity app with AI agents, meeting transcription, notes, and local/cloud speech recognition.<br/>Privacy-first and available cross-platform.</p>
 
 ## Star History
 
@@ -24,38 +24,60 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Features
 
+### Dictation & Transcription
+
+- 🎤 **Global Hotkey**: Customizable hotkey to start/stop dictation from anywhere (default: backtick `)
+- ⚡ **Automatic Pasting**: Transcribed text automatically pastes at your cursor location (with toggle to disable)
+- 🔒 **Privacy-First**: Local processing keeps your voice data completely private
+- ⚡ **NVIDIA Parakeet**: Fast local transcription via sherpa-onnx (multilingual, 25 languages)
+- 🔧 **Model Management**: Download and manage local Whisper models (tiny, base, small, medium, large, turbo)
+- 📖 **Custom Dictionary**: Add words, names, and technical terms to improve transcription accuracy, with auto-learn that detects your corrections and updates the dictionary automatically
+- 🗄️ **Transcription History**: SQLite database stores all your transcriptions locally with audio retention and retry
+- 🎵 **Auto-Pause Media**: Automatically pauses media playback (Spotify, Apple Music, etc.) during dictation and resumes afterward
+
+### AI Agent Mode
+
+- 🤖 **Agent Overlay**: Glassmorphism chat overlay with real-time AI streaming, resizable window, and conversation history
+- 🎯 **Agent Naming**: Personalize your AI assistant with a custom name — say "Hey [AgentName]" to give commands
+- 🧠 **Multi-Provider AI**:
+  - **OpenAI**: GPT-5, GPT-4.1, o-series reasoning models
+  - **Anthropic**: Claude Opus 4.6, Claude Sonnet 4.6
+  - **Google**: Gemini 3.1 Pro, Gemini 3 Flash, Gemini 2.5 Flash Lite
+  - **Groq**: Ultra-fast inference with Llama and Mixtral models
+  - **Local**: Qwen, LLaMA, Mistral, Gemma models via llama.cpp
+- 🤖 **AI Actions**: Apply AI-powered actions to notes with customizable processing templates
+
+### Meeting Transcription
+
+- 📅 **Google Calendar Integration**: Connect multiple Google accounts, view upcoming meetings in the sidebar, and receive auto-detection prompts
+- 🎙️ **Live Meeting Transcription**: Record and transcribe meetings in real-time via OpenAI Realtime API with automatic meeting detection (Zoom, Teams, FaceTime)
+- ⚡ **WebSocket Streaming for BYOK**: Real-time OpenAI Realtime API streaming for standard dictation mode, not just meetings — unified streaming path for all transcription
+- 🔍 **Smart Detection**: Combines process monitoring, sustained audio detection, and calendar awareness to detect meetings automatically
+
+### Notes
+
+- 📝 **Notes System**: Create, edit, and organize notes with folders, audio upload, and real-time dictation
+- 🔎 **Full-Text Search**: FTS5-powered search across all note content with Cmd+K command palette
+- ☁️ **Cloud Sync**: Local-first storage with cloud backup and semantic search
+- 📁 **Folder Organization**: Organize notes into custom folders with drag-and-drop
+
+### Cloud & Account
+
 - ☁️ **OpenWhispr Cloud**: Sign in and transcribe instantly — no API keys needed, with free and Pro plans
 - 🔐 **Account System**: Google OAuth and email/password sign-in with email verification
 - 💳 **Subscription Management**: Free tier (2,000 words/week), Pro tier (unlimited), 7-day free trial
-- 🎤 **Global Hotkey**: Customizable hotkey to start/stop dictation from anywhere (default: backtick `)
-- 🤖 **Multi-Provider AI Processing**: Choose between OpenAI, Anthropic Claude, Google Gemini, or local models
-- 🎯 **Agent Naming**: Personalize your AI assistant with a custom name for natural interactions
-- 🧠 **Multi-Provider AI**:
-  - **OpenAI**: GPT-5, GPT-4.1, o-series reasoning models
-  - **Anthropic**: Claude Opus 4.6, Claude Sonnet 4.5
-  - **Google**: Gemini 3.1 Pro, Gemini 3 Flash, Gemini 2.5 Pro/Flash
-  - **Groq**: Ultra-fast inference with Llama and Mixtral models
-  - **Local**: Qwen, LLaMA, Mistral models via llama.cpp
-- 🔒 **Privacy-First**: Local processing keeps your voice data completely private
-- 🎨 **Modern UI**: Built with React 19, TypeScript, and Tailwind CSS v4
-- 🚀 **Fast**: Optimized with Vite and modern tooling
-- 📱 **Control Panel**: Manage settings, view history, and configure API keys
-- 🗄️ **Transcription History**: SQLite database stores all your transcriptions locally
-- 🔧 **Model Management**: Download and manage local Whisper models (tiny, base, small, medium, large, turbo)
-- ⚡ **NVIDIA Parakeet**: Fast local transcription via sherpa-onnx (multilingual, 25 languages)
-- 🧹 **Model Cleanup**: One-click removal of cached Whisper models with uninstall hooks to keep disks tidy
+- 🔗 **Referral Program**: Invite friends and earn free Pro months with shareable referral cards
+
+### Platform & UI
+
 - 🌐 **Cross-Platform**: Works on macOS, Windows, and Linux
-- ⚡ **Automatic Pasting**: Transcribed text automatically pastes at your cursor location
-- 🖱️ **Draggable Interface**: Move the dictation panel anywhere on your screen
-- 🔄 **OpenAI Responses API**: Using the latest Responses API for improved performance
-- 🌐 **Globe Key Toggle (macOS)**: Optional Fn/Globe key listener for a hardware-level dictation trigger
+- 🎨 **Modern UI**: Built with React 19, TypeScript, and Tailwind CSS v4
+- 🖱️ **Draggable Interface**: Move the dictation panel anywhere on your screen with configurable start position
+- 🌐 **Globe Key Toggle (macOS)**: Optional Fn/Globe key listener for a hardware-level dictation trigger — no Input Monitoring permission required
 - ⌨️ **Compound Hotkeys**: Support for multi-key combinations like `Cmd+Shift+K`
 - 🎙️ **Push-to-Talk (Windows)**: Native low-level keyboard hook for true push-to-talk with compound hotkey support
-- 📖 **Custom Dictionary**: Add words, names, and technical terms to improve transcription accuracy, with auto-learn that detects your corrections and updates the dictionary automatically
 - 🐧 **GNOME Wayland Support**: Native global shortcuts via D-Bus for GNOME Wayland users
-- 📝 **Notes System**: Create, edit, and organize transcription notes with folders, audio upload, and real-time dictation
-- 🤖 **AI Actions**: Apply AI-powered actions to notes with customizable processing templates
-- 🔗 **Referral Program**: Invite friends and earn free Pro months with shareable referral cards
+- 🧹 **Model Cleanup**: One-click removal of cached models with uninstall hooks to keep disks tidy
 
 ## Prerequisites
 
@@ -363,6 +385,7 @@ npm run build:linux  # Linux
 2. **Grant Permissions**:
    - **Microphone Access**: Required for voice recording
    - **Accessibility Permissions**: Required for automatic text pasting (macOS)
+   - **Screen Recording** (optional, macOS): Required for meeting audio capture — prompted during onboarding if you want meeting features
 
 3. **Name Your Agent**: Give your AI assistant a personal name (e.g., "Assistant", "Jarvis", "Alex")
    - Makes interactions feel more natural and conversational
@@ -385,17 +408,21 @@ npm run build:linux  # Linux
 
 - **Access**: Right-click the tray icon (macOS) or through the system menu
 - **Configure**: Choose between local and cloud processing
-- **History**: View, copy, and delete past transcriptions
-- **Models**: Download and manage local Whisper models
-- **Storage Cleanup**: Remove downloaded Whisper models from cache to reclaim space
-- **Settings**: Configure API keys, customize hotkeys, and manage permissions
+- **History**: View, copy, and delete past transcriptions — with audio playback and retry for failed transcriptions
+- **Notes**: Create, edit, and organize notes with folders, AI actions, and full-text search
+- **Integrations**: Connect Google Calendar accounts for meeting detection and transcription
+- **Models**: Download and manage local Whisper and Parakeet models
+- **Storage Cleanup**: Remove downloaded models from cache to reclaim space
+- **Settings**: Configure API keys, customize hotkeys, manage permissions, and set up Agent Mode
+- **Cmd+K Search**: Quick search across notes and transcripts from anywhere in the app
 
 ### Uninstall & Cache Cleanup
 
-- **In-App**: Use _Settings → General → Local Model Storage → Remove Downloaded Models_ to clear `~/.cache/openwhispr/whisper-models` (or `%USERPROFILE%\.cache\openwhispr\whisper-models` on Windows).
-- **Windows Uninstall**: The NSIS uninstaller automatically deletes the same cache directory.
+- **In-App**: Use _Settings → General → Local Model Storage → Remove Downloaded Models_ to clear cached Whisper and Parakeet models from `~/.cache/openwhispr/` (or `%USERPROFILE%\.cache\openwhispr\` on Windows).
+- **Audio Files**: Retained audio files are stored in your app data directory and cleaned up automatically after 30 days. Clear manually via Settings if needed.
+- **Windows Uninstall**: The NSIS uninstaller automatically deletes the cache directory.
 - **Linux Packages**: `deb`/`rpm` post-uninstall scripts also remove cached models.
-- **macOS**: If you uninstall manually, remove `~/Library/Caches` or `~/.cache/openwhispr/whisper-models` if desired.
+- **macOS**: If you uninstall manually, remove `~/Library/Caches` or `~/.cache/openwhispr/` if desired.
 
 ### Agent Naming & AI Processing
 
@@ -411,10 +438,10 @@ Once you've named your agent during setup, you can interact with it using multip
 **🤖 AI Provider Options**:
 
 - **OpenAI**: GPT-5, GPT-4.1, o-series reasoning models
-- **Anthropic**: Claude Opus 4.6, Sonnet 4.5, Haiku 4.5
-- **Google**: Gemini 3.1 Pro, Gemini 3 Flash, Gemini 2.5 Pro/Flash
+- **Anthropic**: Claude Opus 4.6, Sonnet 4.6, Haiku 4.5
+- **Google**: Gemini 3.1 Pro, Gemini 3 Flash, Gemini 2.5 Flash Lite
 - **Groq**: Ultra-fast Llama and Mixtral inference
-- **Local**: Qwen, LLaMA, Mistral via llama.cpp
+- **Local**: Qwen, LLaMA, Mistral, Gemma models via llama.cpp
 
 **📝 Regular Dictation** (for normal text):
 
@@ -438,6 +465,26 @@ Improve transcription accuracy for specific words, names, or technical terms:
 - Technical jargon (e.g., "Kubernetes", "OAuth")
 - Brand names (e.g., "OpenWhispr", "whisper.cpp")
 - Domain-specific terms (e.g., "amortization", "polymerase")
+
+### Agent Mode
+
+Agent Mode opens a resizable glassmorphism chat overlay for interactive AI conversations:
+
+1. **Enable**: Go to Settings → Agent Mode and toggle it on
+2. **Set a Hotkey**: Assign a dedicated hotkey to open the agent overlay
+3. **Chat**: Press the hotkey to open the overlay, dictate your message, and receive streaming AI responses
+4. **Customize**: Set a custom system prompt, choose your preferred AI provider and model
+5. **History**: All conversations are saved and can be resumed
+
+### Meeting Transcription
+
+Automatically detect and transcribe meetings with Google Calendar integration:
+
+1. **Connect Calendar**: Go to Integrations → Google Calendar and sign in
+2. **Grant Screen Recording** (macOS): Required to capture meeting audio
+3. **Auto-Detection**: When a meeting starts (Zoom, Teams, FaceTime), a notification appears asking to record
+4. **Live Transcription**: Meeting audio is transcribed in real-time via OpenAI Realtime API
+5. **Review**: Meeting transcriptions are saved as notes for later review and AI enhancement
 
 ### Processing Options
 
@@ -473,21 +520,46 @@ open-whispr/
 │   │   ├── ControlPanel.tsx     # Settings and history UI
 │   │   ├── OnboardingFlow.tsx   # First-time setup wizard
 │   │   ├── SettingsPage.tsx     # Settings interface
+│   │   ├── AgentOverlay.tsx     # Agent mode chat overlay
+│   │   ├── CommandSearch.tsx    # Cmd+K command palette
+│   │   ├── IntegrationsView.tsx # Google Calendar & integrations
+│   │   ├── UpcomingMeetings.tsx # Sidebar meeting list
+│   │   ├── agent/               # Agent mode components
+│   │   │   ├── AgentChat.tsx
+│   │   │   ├── AgentInput.tsx
+│   │   │   ├── AgentMessage.tsx
+│   │   │   └── AgentTitleBar.tsx
+│   │   ├── notes/               # Notes system components
+│   │   │   ├── NoteEditor.tsx
+│   │   │   ├── ActionPicker.tsx
+│   │   │   ├── ActionManagerDialog.tsx
+│   │   │   └── ...
+│   │   ├── settings/            # Settings sub-components
+│   │   │   └── AgentModeSettings.tsx
 │   │   ├── ui/                  # shadcn/ui components
-│   │   │   ├── button.tsx
-│   │   │   ├── card.tsx
-│   │   │   ├── input.tsx
-│   │   │   ├── LoadingDots.tsx
-│   │   │   ├── Toast.tsx
-│   │   │   ├── toggle.tsx
-│   │   │   └── tooltip.tsx
 │   │   └── lib/
 │   │       └── utils.ts         # Utility functions
+│   ├── config/
+│   │   └── prompts.ts           # Centralized AI prompt definitions
 │   ├── services/
-│   │   └── ReasoningService.ts  # Multi-provider AI processing (OpenAI/Anthropic/Gemini)
+│   │   └── ReasoningService.ts  # Multi-provider AI processing with streaming
+│   ├── hooks/
+│   │   ├── useMeetingTranscription.ts  # Meeting audio capture
+│   │   ├── useUpcomingEvents.ts        # Calendar event fetching
+│   │   ├── useScreenRecordingPermission.ts  # macOS permission
+│   │   └── ...
+│   ├── helpers/
+│   │   ├── googleCalendarManager.js    # Calendar sync & events
+│   │   ├── googleCalendarOAuth.js      # OAuth 2.0 PKCE flow
+│   │   ├── meetingDetectionEngine.js   # Smart meeting detection
+│   │   ├── audioStorage.js             # Audio file retention
+│   │   ├── mediaPlayer.js             # Cross-platform media control
+│   │   └── ...
 │   ├── utils/
 │   │   └── agentName.ts         # Agent name management utility
 │   └── components.json          # shadcn/ui configuration
+├── resources/
+│   └── bin/                     # Native binaries (whisper-cpp, sherpa-onnx, etc.)
 └── assets/                      # App icons and resources
 ```
 
@@ -497,8 +569,11 @@ open-whispr/
 - **Build Tool**: Vite with optimized Tailwind plugin
 - **Desktop**: Electron 36 with context isolation
 - **UI Components**: shadcn/ui with Radix primitives
-- **Database**: better-sqlite3 for local transcription storage
+- **Database**: better-sqlite3 with FTS5 for local storage (transcriptions, notes, agents, calendar)
 - **Speech-to-Text**: OpenAI Whisper (whisper.cpp) + NVIDIA Parakeet (sherpa-onnx) for local, OpenAI API for cloud
+- **Live Transcription**: OpenAI Realtime API over WebSocket for meeting transcription
+- **AI Processing**: Multi-provider streaming (OpenAI, Anthropic, Gemini, Groq, local llama.cpp)
+- **Calendar**: Google Calendar API with OAuth 2.0 PKCE
 - **Icons**: Lucide React for consistent iconography
 
 ## Development
@@ -515,7 +590,7 @@ open-whispr/
 - `npm run download:llama-server:all` - Download llama.cpp server for all platforms
 - `npm run download:sherpa-onnx` - Download sherpa-onnx for Parakeet local transcription
 - `npm run download:sherpa-onnx:all` - Download sherpa-onnx for all platforms
-- `npm run compile:native` - Compile native helpers (Globe key listener for macOS, key listener and fast paste for Windows, fast paste for Linux)
+- `npm run compile:native` - Compile native helpers (Globe key listener and media remote for macOS, key listener and fast paste for Windows, fast paste for Linux, text monitor for auto-learn)
 - `npm run build` - Full build with signing (requires certificates)
 - `npm run build:mac` - macOS build with signing
 - `npm run build:win` - Windows build with signing
@@ -541,9 +616,17 @@ Both use the same React codebase but render different components based on URL pa
 - **main.js**: Electron main process, IPC handlers, database operations
 - **preload.js**: Secure bridge between main and renderer processes
 - **App.jsx**: Main dictation interface with recording controls
-- **ControlPanel.tsx**: Settings, history, and model management
+- **ControlPanel.tsx**: Settings, history, notes, integrations, and model management
+- **AgentOverlay.tsx**: Agent mode chat overlay with streaming AI responses
+- **CommandSearch.tsx**: Cmd+K command palette for searching notes and transcripts
+- **IntegrationsView.tsx**: Google Calendar connection and meeting settings
 - **src/helpers/whisper.js**: whisper.cpp integration for local processing
-- **better-sqlite3**: Local database for transcription history
+- **src/helpers/googleCalendarManager.js**: Calendar sync and event management
+- **src/helpers/meetingDetectionEngine.js**: Smart meeting detection orchestrator
+- **src/helpers/audioStorage.js**: Audio file retention and management
+- **src/helpers/mediaPlayer.js**: Cross-platform media pause/resume
+- **src/services/ReasoningService.ts**: Multi-provider AI processing with streaming
+- **better-sqlite3**: Local database for transcriptions, notes, agents, and calendar data
 
 ### Tailwind CSS v4 Setup
 
@@ -676,7 +759,9 @@ OpenWhispr is designed with privacy and security in mind:
 - **No Analytics**: We don't collect any usage data or telemetry
 - **Open Source**: All code is available for review
 - **Secure Storage**: API keys are stored securely in your system's keychain/credential manager
-- **Minimal Permissions**: Only requests necessary permissions (microphone, accessibility)
+- **Minimal Permissions**: Only requests necessary permissions (microphone, accessibility, screen recording for meetings)
+- **OAuth 2.0 PKCE**: Google Calendar uses secure PKCE flow — no client secrets stored
+- **Local-First Notes**: Notes are stored locally in SQLite; cloud sync is optional
 
 ## Troubleshooting
 
@@ -702,6 +787,14 @@ OpenWhispr is designed with privacy and security in mind:
    - Linux Wayland: Install `wtype` or `ydotool` for paste simulation (ensure `ydotoold` daemon is running)
    - All platforms: Text is always copied to clipboard - use Ctrl+V (Cmd+V on macOS) to paste manually
 7. **Panel position**: If the panel appears off-screen, restart the app to reset position
+8. **Meeting detection not working**:
+   - macOS: Grant screen recording permission in System Settings → Privacy & Security → Screen Recording
+   - Ensure Google Calendar is connected in Integrations
+   - Check that meeting detection is enabled in settings
+9. **Agent Mode issues**:
+   - Ensure Agent Mode is enabled in Settings → Agent Mode
+   - Verify you have a valid API key for your selected AI provider
+   - Check that the agent hotkey doesn't conflict with other shortcuts
 
 ### Getting Help
 
@@ -721,7 +814,7 @@ OpenWhispr is designed with privacy and security in mind:
 ## FAQ
 
 **Q: Is OpenWhispr really free?**
-A: Yes! OpenWhispr is open source and free to use. The free plan includes 2,000 words/week of cloud transcription, and local processing is completely free with no limits. Pro plan ($9/month) offers unlimited cloud transcription.
+A: Yes! OpenWhispr is open source and free to use. The free plan includes 2,000 words/week of cloud transcription, and local processing is completely free with no limits. Paid plans start from as little as $8/month.
 
 **Q: Which processing method should I use?**
 A: Use local processing for privacy and offline use. Use cloud processing for speed and convenience.
@@ -738,22 +831,37 @@ A: With local processing, your audio never leaves your device. With cloud proces
 **Q: What languages are supported?**
 A: OpenWhispr supports 58 languages including English, Spanish, French, German, Chinese, Japanese, and more. Set your preferred language in the .env file or use auto-detect.
 
+**Q: What is Agent Mode?**
+A: Agent Mode opens a chat overlay where you can have interactive AI conversations using voice. It supports streaming responses from all providers (OpenAI, Anthropic, Gemini, Groq, local) and saves conversation history.
+
+**Q: How does meeting transcription work?**
+A: Connect your Google Calendar in Integrations. When a meeting starts (Zoom, Teams, FaceTime), OpenWhispr detects it and offers to record. Audio is transcribed in real-time via OpenAI Realtime API. On macOS, screen recording permission is required to capture meeting audio.
+
+**Q: Where are my notes stored?**
+A: Notes are stored locally in SQLite with optional cloud sync. They support full-text search (FTS5), folder organization, and AI-powered enhancement actions.
+
+**Q: Does OpenWhispr require Input Monitoring on macOS?**
+A: No. As of v1.6.0, OpenWhispr uses NSEvent monitors instead of CGEvent taps, eliminating the Input Monitoring permission requirement. Only Microphone and Accessibility permissions are needed (plus Screen Recording for meeting features).
+
 ## Project Status
 
-OpenWhispr is actively maintained and ready for production use. Current version: 1.5.4
+OpenWhispr is actively maintained and ready for production use. Current version: 1.6.2
 
-- ✅ Core functionality complete
+- ✅ Core dictation with local and cloud processing
 - ✅ Cross-platform support (macOS, Windows, Linux)
-- ✅ OpenWhispr Cloud with account system and usage tracking
-- ✅ Free and Pro plans with Stripe billing
-- ✅ Local and cloud processing
+- ✅ OpenWhispr Cloud with account system, usage tracking, and Stripe billing
 - ✅ Multi-provider AI (OpenAI, Anthropic, Gemini, Groq, Mistral, Local)
-- ✅ Compound hotkey support
-- ✅ Windows Push-to-Talk with native key listener
-- ✅ Custom dictionary for improved transcription accuracy
+- ✅ Agent Mode with streaming chat overlay and conversation history
+- ✅ Google Calendar integration with automatic meeting detection
+- ✅ Live meeting transcription via OpenAI Realtime API
+- ✅ Notes system with FTS5 search, cloud sync, folders, and AI actions
+- ✅ Audio retention with playback and retry for failed transcriptions
+- ✅ Cmd+K command search across notes and transcripts
+- ✅ Auto-pause media playback during dictation
+- ✅ Custom dictionary with auto-learn correction monitoring
 - ✅ NVIDIA Parakeet support via sherpa-onnx
+- ✅ Compound hotkeys and Windows Push-to-Talk
 - ✅ GNOME Wayland native global shortcuts
-- ✅ Notes system with folders, audio upload, and AI actions
 - ✅ Referral program with shareable invite cards
 
 ## Acknowledgments
@@ -765,4 +873,5 @@ OpenWhispr is actively maintained and ready for production use. Current version:
 - **[Electron](https://www.electronjs.org/)** - Cross-platform desktop application framework
 - **[React](https://react.dev/)** - UI component library
 - **[shadcn/ui](https://ui.shadcn.com/)** - Beautiful UI components built on Radix primitives
+- **[Hugging Face](https://huggingface.co/)** - Model hosting platform for our local speech recognition and language models
 - **[llama.cpp](https://github.com/ggerganov/llama.cpp)** - Local LLM inference for AI-powered text processing

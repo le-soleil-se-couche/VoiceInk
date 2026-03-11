@@ -20,8 +20,10 @@ const PERSISTED_KEYS = [
   "LLAMA_GPU_BACKEND",
   "LLAMA_VULKAN_ENABLED",
   "DICTATION_KEY",
+  "AGENT_KEY",
   "ACTIVATION_MODE",
   "FLOATING_ICON_AUTO_HIDE",
+  "START_MINIMIZED",
   "UI_LANGUAGE",
   "WHISPER_CUDA_ENABLED",
 ];
@@ -131,6 +133,16 @@ class EnvironmentManager {
     return result;
   }
 
+  getAgentKey() {
+    return this._getKey("AGENT_KEY");
+  }
+
+  saveAgentKey(key) {
+    const result = this._saveKey("AGENT_KEY", key);
+    this.saveAllKeysToEnvFile().catch(() => {});
+    return result;
+  }
+
   getActivationMode() {
     const mode = this._getKey("ACTIVATION_MODE");
     return mode === "push" ? "push" : "tap";
@@ -149,6 +161,16 @@ class EnvironmentManager {
 
   saveFloatingIconAutoHide(enabled) {
     const result = this._saveKey("FLOATING_ICON_AUTO_HIDE", String(enabled));
+    this.saveAllKeysToEnvFile().catch(() => {});
+    return result;
+  }
+
+  getStartMinimized() {
+    return this._getKey("START_MINIMIZED") === "true";
+  }
+
+  saveStartMinimized(enabled) {
+    const result = this._saveKey("START_MINIMIZED", String(enabled));
     this.saveAllKeysToEnvFile().catch(() => {});
     return result;
   }

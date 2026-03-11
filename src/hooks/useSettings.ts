@@ -53,10 +53,20 @@ export interface ApiKeySettings {
 export interface PrivacySettings {
   cloudBackupEnabled: boolean;
   telemetryEnabled: boolean;
+  audioRetentionDays: number;
 }
 
 export interface ThemeSettings {
   theme: "light" | "dark" | "auto";
+}
+
+export interface AgentModeSettings {
+  agentModel: string;
+  agentProvider: string;
+  agentKey: string;
+  agentSystemPrompt: string;
+  agentEnabled: boolean;
+  cloudAgentMode: string;
 }
 
 function useSettingsInternal() {
@@ -213,18 +223,28 @@ function useSettingsInternal() {
     setActivationMode: store.setActivationMode,
     audioCuesEnabled: store.audioCuesEnabled,
     setAudioCuesEnabled: store.setAudioCuesEnabled,
+    pauseMediaOnDictation: store.pauseMediaOnDictation,
+    setPauseMediaOnDictation: store.setPauseMediaOnDictation,
     floatingIconAutoHide: store.floatingIconAutoHide,
     setFloatingIconAutoHide: store.setFloatingIconAutoHide,
+    startMinimized: store.startMinimized,
+    setStartMinimized: store.setStartMinimized,
+    panelStartPosition: store.panelStartPosition,
+    setPanelStartPosition: store.setPanelStartPosition,
     preferBuiltInMic: store.preferBuiltInMic,
     selectedMicDeviceId: store.selectedMicDeviceId,
     setPreferBuiltInMic: store.setPreferBuiltInMic,
     setSelectedMicDeviceId: store.setSelectedMicDeviceId,
     autoLearnCorrections,
     setAutoLearnCorrections,
+    keepTranscriptionInClipboard: store.keepTranscriptionInClipboard,
+    setKeepTranscriptionInClipboard: store.setKeepTranscriptionInClipboard,
     cloudBackupEnabled: store.cloudBackupEnabled,
     setCloudBackupEnabled: store.setCloudBackupEnabled,
     telemetryEnabled: store.telemetryEnabled,
     setTelemetryEnabled: store.setTelemetryEnabled,
+    audioRetentionDays: store.audioRetentionDays,
+    setAudioRetentionDays: store.setAudioRetentionDays,
     updateTranscriptionSettings: store.updateTranscriptionSettings,
     updateReasoningSettings: store.updateReasoningSettings,
     updateApiKeys: store.updateApiKeys,
