@@ -1451,11 +1451,7 @@
       "live": "即時",
       "transcript": "轉錄",
       "notes": "筆記",
-      "generateNotes": "生成筆記",
-      "micOnly": "僅麥克風",
-      "micSystem": "麥克風 + 系統音訊",
-      "systemAudioPermissionRequired": "系統音訊需要螢幕錄製權限",
-      "systemAudioFallback": "僅使用麥克風"
+      "generateNotes": "生成筆記"
     },
     "upload": {
       "title": "上傳音訊",
@@ -1572,7 +1568,13 @@
         "createDescription": "使用你自己的 AI 提示詞定義自訂動作。你隨時可以在設定中編輯或新增更多。",
         "created": "已建立！"
       },
-      "getStarted": "開始使用"
+      "getStarted": "開始使用",
+      "systemAudio": {
+        "title": "系統音訊",
+        "description": "在使用麥克風的同時擷取會議和其他應用程式的音訊。",
+        "grant": "授予權限",
+        "enabled": "已啟用"
+      }
     },
     "realtimeBanner": {
       "message": "Pro 方案可使用即時轉錄",

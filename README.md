@@ -845,7 +845,7 @@ A: No. As of v1.6.0, OpenWhispr uses NSEvent monitors instead of CGEvent taps, e
 
 ## Project Status
 
-OpenWhispr is actively maintained and ready for production use. Current version: 1.6.1
+OpenWhispr is actively maintained and ready for production use. Current version: 1.6.2
 
 - ✅ Core dictation with local and cloud processing
 - ✅ Cross-platform support (macOS, Windows, Linux)

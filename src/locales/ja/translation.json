@@ -1350,10 +1350,6 @@
       "transcript": "文字起こし",
       "notes": "ノート",
       "generateNotes": "ノートを生成",
-      "micOnly": "マイクのみ",
-      "micSystem": "マイク + システム音声",
-      "systemAudioPermissionRequired": "システム音声には画面収録の許可が必要です",
-      "systemAudioFallback": "マイクのみを使用します",
       "untitled": "無題",
       "noteTitle": "ノートのタイトル",
       "stop": "停止",
@@ -1500,7 +1496,13 @@
         "createDescription": "独自の AI プロンプトでカスタムアクションを定義できます。設定からいつでも編集・追加できます。",
         "created": "作成しました！"
       },
-      "getStarted": "始める"
+      "getStarted": "始める",
+      "systemAudio": {
+        "title": "システム音声",
+        "description": "マイクと一緒にミーティングや他のアプリの音声をキャプチャします。",
+        "grant": "権限を許可",
+        "enabled": "有効"
+      }
     },
     "realtimeBanner": {
       "message": "Pro でリアルタイム文字起こしが利用可能",

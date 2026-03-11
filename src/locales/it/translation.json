@@ -1455,11 +1455,7 @@
       "live": "Dal vivo",
       "transcript": "Trascrizione",
       "notes": "Note",
-      "generateNotes": "Genera note",
-      "micOnly": "Solo microfono",
-      "micSystem": "Microfono + audio di sistema",
-      "systemAudioPermissionRequired": "Autorizzazione registrazione schermo necessaria per l'audio di sistema",
-      "systemAudioFallback": "Utilizzo del solo microfono"
+      "generateNotes": "Genera note"
     },
     "upload": {
       "title": "Carica audio",
@@ -1576,7 +1572,13 @@
         "createDescription": "Definisci un'azione personalizzata con il tuo prompt IA. Puoi sempre modificarle o aggiungerne altre nelle impostazioni.",
         "created": "Creata!"
       },
-      "getStarted": "Inizia"
+      "getStarted": "Inizia",
+      "systemAudio": {
+        "title": "Audio di sistema",
+        "description": "Cattura l'audio delle riunioni e di altre app insieme al microfono.",
+        "grant": "Concedi permesso",
+        "enabled": "Attivato"
+      }
     },
     "realtimeBanner": {
       "message": "Trascrizione in tempo reale disponibile con Pro",

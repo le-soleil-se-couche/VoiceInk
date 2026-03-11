@@ -67,8 +67,6 @@ interface NoteEditorProps {
   meetingTranscript?: string;
   onStopMeetingRecording?: () => void;
   onGenerateNotes?: () => void;
-  recordingMode?: "mic-only" | "mic-system";
-  onRecordingModeChange?: (mode: "mic-only" | "mic-system") => void;
   liveTranscript?: string;
 }
 
@@ -166,8 +164,6 @@ export default function NoteEditor({
   meetingTranscript,
   onStopMeetingRecording,
   onGenerateNotes,
-  recordingMode,
-  onRecordingModeChange,
   liveTranscript,
 }: NoteEditorProps) {
   const { t } = useTranslation();
@@ -461,22 +457,21 @@ export default function NoteEditor({
     onStartRecording();
   }, [onStartRecording, syncSelectionRefs]);
 
+  const pendingTranscriptSwitchRef = useRef(false);
+
   useEffect(() => {
     if (isRecording && !prevRecordingRef.current) {
-      if (recordingMode === "mic-system") {
-        // System audio mode: show transcript tab for live transcription
-        setViewMode("transcript");
-      } else {
-        const selStart = cursorPosRef.current;
-        const selEnd = selectionEndRef.current;
-        dictationRef.current = {
-          start: selStart,
-          partialStart: selStart,
-          end: selEnd,
-          committedChars: 0,
-        };
-        if (viewMode === "enhanced") setViewMode("raw");
-      }
+      const selStart = cursorPosRef.current;
+      const selEnd = selectionEndRef.current;
+      dictationRef.current = {
+        start: selStart,
+        partialStart: selStart,
+        end: selEnd,
+        committedChars: 0,
+      };
+      if (viewMode === "enhanced") setViewMode("raw");
+      // Mark that we should switch to transcript view once transcript arrives
+      pendingTranscriptSwitchRef.current = true;
     }
     if (!isRecording && prevRecordingRef.current) {
       // Only clear if no progressive text was inserted (non-streaming case).
@@ -489,6 +484,14 @@ export default function NoteEditor({
     }
     prevRecordingRef.current = isRecording;
   }, [isRecording]);
+
+  // Auto-switch to transcript view after recording stops and transcript is ready
+  useEffect(() => {
+    if (!isRecording && !isProcessing && pendingTranscriptSwitchRef.current && liveTranscript) {
+      pendingTranscriptSwitchRef.current = false;
+      setViewMode("transcript");
+    }
+  }, [isRecording, isProcessing, liveTranscript]);
 
   // Partial effect: only replace the active partial zone [partialStart, end].
   // Committed text before partialStart is untouched — users can edit it freely.
@@ -833,8 +836,6 @@ export default function NoteEditor({
           isProcessing={isProcessing}
           onStart={handleStartRecording}
           onStop={isMeetingRecording ? onStopMeetingRecording! : onStopRecording}
-          recordingMode={recordingMode}
-          onRecordingModeChange={onRecordingModeChange}
           actionPicker={
             isMeetingRecording
               ? undefined

@@ -37,8 +37,6 @@ import { useScreenRecordingPermission } from "../../hooks/useScreenRecordingPerm
 import { useNotesOnboarding } from "../../hooks/useNotesOnboarding";
 import NotesOnboarding from "./NotesOnboarding";
 
-type NoteRecordingMode = "mic-only" | "mic-system";
-
 const FOLDER_INPUT_CLASS =
   "w-full h-6 bg-foreground/5 dark:bg-white/5 rounded px-2 text-xs text-foreground outline-none border border-primary/30 focus:border-primary/50";
 
@@ -81,35 +79,11 @@ export default function PersonalNotesView({
   const effectiveModelId = useSettingsStore((s) => s.reasoningModel);
   const { isComplete: isOnboardingComplete, complete: completeOnboarding } = useNotesOnboarding();
 
-  const [noteRecordingMode, setNoteRecordingMode] = useState<NoteRecordingMode>(() => {
-    const saved = localStorage.getItem("noteRecordingMode");
-    return saved === "mic-only" ? "mic-only" : "mic-system";
-  });
   const [liveTranscript, setLiveTranscript] = useState("");
   const liveTranscriptRef = useRef("");
-  const { granted: screenRecordingGranted, request: requestScreenRecording } =
-    useScreenRecordingPermission();
+  const { granted: screenRecordingGranted } = useScreenRecordingPermission();
 
-  const handleRecordingModeChange = useCallback(
-    async (mode: NoteRecordingMode) => {
-      if (mode === "mic-system" && !screenRecordingGranted) {
-        const granted = await requestScreenRecording();
-        if (!granted) {
-          toast({
-            title: t("notes.editor.systemAudioPermissionRequired"),
-            description: t("notes.editor.systemAudioFallback"),
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-      setNoteRecordingMode(mode);
-      localStorage.setItem("noteRecordingMode", mode);
-    },
-    [screenRecordingGranted, requestScreenRecording, toast, t]
-  );
-
-  const systemAudioEnabled = noteRecordingMode === "mic-system";
+  const systemAudioEnabled = screenRecordingGranted;
 
   const {
     isRecording: isMeetingRecording,
@@ -815,8 +789,6 @@ export default function PersonalNotesView({
               meetingTranscript={meetingTranscript}
               onStopMeetingRecording={stopMeetingTranscription}
               onGenerateNotes={handleGenerateNotes}
-              recordingMode={noteRecordingMode}
-              onRecordingModeChange={handleRecordingModeChange}
               liveTranscript={liveTranscript}
               actionProcessingState={actionProcessingState}
               actionName={actionName}

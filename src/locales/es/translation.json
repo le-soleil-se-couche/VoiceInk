@@ -1455,11 +1455,7 @@
       "live": "En vivo",
       "transcript": "Transcripción",
       "notes": "Notas",
-      "generateNotes": "Generar notas",
-      "micOnly": "Solo micrófono",
-      "micSystem": "Micrófono + audio del sistema",
-      "systemAudioPermissionRequired": "Se requiere permiso de grabación de pantalla para el audio del sistema",
-      "systemAudioFallback": "Usando solo el micrófono"
+      "generateNotes": "Generar notas"
     },
     "upload": {
       "title": "Subir audio",
@@ -1576,7 +1572,13 @@
         "createDescription": "Define una acción personalizada con tu propio prompt de IA. Puedes editar o agregar más después en los ajustes.",
         "created": "¡Creada!"
       },
-      "getStarted": "Comenzar"
+      "getStarted": "Comenzar",
+      "systemAudio": {
+        "title": "Audio del sistema",
+        "description": "Captura audio de reuniones y otras aplicaciones junto con tu micrófono.",
+        "grant": "Conceder permiso",
+        "enabled": "Activado"
+      }
     },
     "realtimeBanner": {
       "message": "Transcripción en tiempo real disponible con Pro",

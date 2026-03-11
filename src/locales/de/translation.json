@@ -1451,11 +1451,7 @@
       "live": "Live",
       "transcript": "Transkript",
       "notes": "Notizen",
-      "generateNotes": "Notizen generieren",
-      "micOnly": "Nur Mikrofon",
-      "micSystem": "Mikrofon + Systemaudio",
-      "systemAudioPermissionRequired": "Bildschirmaufnahme-Berechtigung für Systemaudio erforderlich",
-      "systemAudioFallback": "Nur Mikrofon wird verwendet"
+      "generateNotes": "Notizen generieren"
     },
     "upload": {
       "title": "Audio hochladen",
@@ -1572,7 +1568,13 @@
         "createDescription": "Definieren Sie eine benutzerdefinierte Aktion mit Ihrem eigenen KI-Prompt. Sie können später jederzeit weitere hinzufügen oder bearbeiten.",
         "created": "Erstellt!"
       },
-      "getStarted": "Loslegen"
+      "getStarted": "Loslegen",
+      "systemAudio": {
+        "title": "Systemaudio",
+        "description": "Erfassen Sie Audio aus Meetings und anderen Apps zusätzlich zu Ihrem Mikrofon.",
+        "grant": "Berechtigung erteilen",
+        "enabled": "Aktiviert"
+      }
     },
     "realtimeBanner": {
       "message": "Echtzeit-Transkription mit Pro verfügbar",

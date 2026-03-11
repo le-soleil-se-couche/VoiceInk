@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Mic, Square, Loader2, Monitor } from "lucide-react";
+import { Mic, Square, Loader2 } from "lucide-react";
 import { cn } from "../lib/utils";
 
 interface DictationWidgetProps {
@@ -9,8 +9,6 @@ interface DictationWidgetProps {
   onStart: () => void;
   onStop: () => void;
   actionPicker?: React.ReactNode;
-  recordingMode?: "mic-only" | "mic-system";
-  onRecordingModeChange?: (mode: "mic-only" | "mic-system") => void;
 }
 
 const BAR_COUNT = 7;
@@ -21,8 +19,6 @@ export default function DictationWidget({
   onStart,
   onStop,
   actionPicker,
-  recordingMode = "mic-system",
-  onRecordingModeChange,
 }: DictationWidgetProps) {
   const { t } = useTranslation();
   const [elapsed, setElapsed] = useState(0);
@@ -39,8 +35,6 @@ export default function DictationWidget({
   const minutes = String(Math.floor(elapsed / 60)).padStart(2, "0");
   const seconds = String(elapsed % 60).padStart(2, "0");
 
-  const isSystemAudio = recordingMode === "mic-system";
-
   return (
     <div className="absolute bottom-5 left-0 right-0 z-10 flex justify-center pointer-events-none">
       {isRecording ? (
@@ -56,15 +50,6 @@ export default function DictationWidget({
             animation: "grow-to-bar 0.45s cubic-bezier(0.22, 1, 0.36, 1) both",
           }}
         >
-          {isSystemAudio && (
-            <Monitor
-              size={12}
-              className="text-primary/50 shrink-0"
-              style={{
-                animation: "fade-in-content 0.3s ease-out 0.15s both",
-              }}
-            />
-          )}
           <div
             className="flex items-end gap-0.75 h-5"
             style={{
@@ -126,24 +111,6 @@ export default function DictationWidget({
         </div>
       ) : (
         <div className="flex items-center gap-2 pointer-events-auto">
-          {onRecordingModeChange && (
-            <button
-              onClick={() => onRecordingModeChange(isSystemAudio ? "mic-only" : "mic-system")}
-              className={cn(
-                "flex items-center justify-center w-8 h-8 rounded-full",
-                "backdrop-blur-xl",
-                "border transition-all duration-200",
-                "active:scale-[0.95]",
-                isSystemAudio
-                  ? "bg-primary/10 dark:bg-primary/15 border-primary/20 dark:border-primary/25 text-primary/70 hover:text-primary hover:bg-primary/16"
-                  : "bg-foreground/4 dark:bg-white/5 border-foreground/8 dark:border-white/8 text-foreground/30 hover:text-foreground/50 hover:bg-foreground/8"
-              )}
-              aria-label={isSystemAudio ? t("notes.editor.micSystem") : t("notes.editor.micOnly")}
-              title={isSystemAudio ? t("notes.editor.micSystem") : t("notes.editor.micOnly")}
-            >
-              <Monitor size={12} />
-            </button>
-          )}
           <button
             onClick={onStart}
             className={cn(

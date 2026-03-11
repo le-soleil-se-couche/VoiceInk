@@ -1564,11 +1564,7 @@
       "live": "Live",
       "transcript": "Transcript",
       "notes": "Notes",
-      "generateNotes": "Generate notes",
-      "micOnly": "Microphone only",
-      "micSystem": "Mic + System Audio",
-      "systemAudioPermissionRequired": "Screen recording permission required for system audio",
-      "systemAudioFallback": "Falling back to microphone only"
+      "generateNotes": "Generate notes"
     },
     "upload": {
       "title": "Upload Audio",
@@ -1685,7 +1681,13 @@
         "createDescription": "Define a custom action with your own AI prompt. You can always edit or add more later in settings.",
         "created": "Created!"
       },
-      "getStarted": "Get Started"
+      "getStarted": "Get Started",
+      "systemAudio": {
+        "title": "System Audio",
+        "description": "Capture audio from meetings and other apps alongside your microphone.",
+        "grant": "Grant Permission",
+        "enabled": "Enabled"
+      }
     },
     "realtimeBanner": {
       "message": "Real-time transcription available on Pro",

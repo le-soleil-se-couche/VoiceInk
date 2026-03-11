@@ -1451,11 +1451,7 @@
       "live": "实时",
       "transcript": "转录",
       "notes": "笔记",
-      "generateNotes": "生成笔记",
-      "micOnly": "仅麦克风",
-      "micSystem": "麦克风 + 系统音频",
-      "systemAudioPermissionRequired": "系统音频需要屏幕录制权限",
-      "systemAudioFallback": "仅使用麦克风"
+      "generateNotes": "生成笔记"
     },
     "upload": {
       "title": "上传音频",
@@ -1572,7 +1568,13 @@
         "createDescription": "使用你自己的 AI 提示词定义自定义操作。你可以随时在设置中编辑或添加更多。",
         "created": "已创建！"
       },
-      "getStarted": "开始使用"
+      "getStarted": "开始使用",
+      "systemAudio": {
+        "title": "系统音频",
+        "description": "在使用麦克风的同时捕获会议和其他应用程序的音频。",
+        "grant": "授予权限",
+        "enabled": "已启用"
+      }
     },
     "realtimeBanner": {
       "message": "Pro 版可使用实时转录",
