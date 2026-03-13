@@ -49,12 +49,29 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
   private tokenizeForOverlap(text: string): string[] {
     if (!text) return [];
-    return text
+    const CJK_RE = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
+    const raw = text
       .toLowerCase()
       .normalize("NFKC")
       .replace(/[^\p{L}\p{N}'-]+/gu, " ")
       .split(/\s+/)
-      .filter((token) => token.length > 1);
+      .filter(Boolean);
+
+    const tokens: string[] = [];
+    for (const token of raw) {
+      if (CJK_RE.test(token)) {
+        for (const char of token) {
+          if (CJK_RE.test(char)) {
+            tokens.push(char);
+          } else if (char.trim()) {
+            tokens.push(char);
+          }
+        }
+      } else if (token.length > 1) {
+        tokens.push(token);
+      }
+    }
+    return tokens;
   }
 
   private isAnswerLikeOutput(text: string): boolean {
