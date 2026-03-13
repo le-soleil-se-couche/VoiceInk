@@ -28,7 +28,13 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npm ci --ignore-scripts
+          else
+            npm ci
+          fi
 
       - name: Cache native binaries
         uses: actions/cache@v4
@@ -64,7 +70,13 @@ jobs:
           sudo apt-get install -y rpm libx11-dev libxtst-dev libatspi2.0-dev libglib2.0-dev
 
       - name: Build Application
-        run: npm run build:linux -- --publish never
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npm run build:renderer
+          else
+            npm run build:linux -- --publish never
+          fi
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
           VITE_NEON_AUTH_URL: ${{ vars.VITE_NEON_AUTH_URL }}
@@ -90,7 +102,13 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npm ci --ignore-scripts
+          else
+            npm ci
+          fi
 
       - name: Cache native binaries
         uses: actions/cache@v4
@@ -136,7 +154,13 @@ jobs:
           restore-keys: windows-electron-
 
       - name: Build Application
-        run: npm run build:win -- --publish never
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npm run build:renderer
+          else
+            npm run build:win -- --publish never
+          fi
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
           VITE_NEON_AUTH_URL: ${{ vars.VITE_NEON_AUTH_URL }}
@@ -166,7 +190,13 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npm ci --ignore-scripts
+          else
+            npm ci
+          fi
 
       - name: Install ffmpeg-static for target architecture
         if: matrix.arch == 'x64'
@@ -226,7 +256,13 @@ jobs:
           echo "APPLE_API_KEY=$API_KEY_PATH" >> $GITHUB_ENV
 
       - name: Build Application (${{ matrix.arch }})
-        run: npm run build:mac -- --${{ matrix.arch }} --publish never
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npm run build:renderer
+          else
+            npm run build:mac -- --${{ matrix.arch }} --publish never
+          fi
         env:
           TARGET_ARCH: ${{ matrix.arch }}
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
