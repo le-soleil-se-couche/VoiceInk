@@ -1467,6 +1467,83 @@ class IPCHandlers {
       }
     );
 
+    ipcMain.handle(
+      "proxy-custom-transcription",
+      async (event, { audioBuffer, endpoint, model, language, prompt, mimeType, isQwenAsr }) => {
+        if (!endpoint) {
+          throw new Error("Custom transcription endpoint is empty");
+        }
+
+        const apiKey = this.environmentManager.getCustomTranscriptionKey();
+        const headers = {};
+        if (apiKey) {
+          headers.Authorization = `Bearer ${apiKey}`;
+        }
+
+        let response;
+
+        if (isQwenAsr) {
+          // Qwen ASR uses chat-completions format with base64 audio
+          const chatEndpoint = /chat\/completions$/i.test(endpoint.trim())
+            ? endpoint.trim()
+            : `${endpoint.trim().replace(/\/+$/, "")}/chat/completions`;
+
+          const audioBase64 = Buffer.from(audioBuffer).toString("base64");
+          const payload = {
+            model,
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "input_audio",
+                    input_audio: {
+                      data: `data:${mimeType || "audio/webm"};base64,${audioBase64}`,
+                    },
+                  },
+                ],
+              },
+            ],
+            stream: false,
+            asr_options: { enable_itn: false },
+          };
+
+          response = await fetch(chatEndpoint, {
+            method: "POST",
+            headers: { ...headers, "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          // Standard OpenAI-compatible multipart form-data
+          const formData = new FormData();
+          const audioBlob = new Blob([Buffer.from(audioBuffer)], {
+            type: mimeType || "audio/webm",
+          });
+          formData.append("file", audioBlob, `audio.${mimeType?.includes("mp3") ? "mp3" : mimeType?.includes("wav") ? "wav" : "webm"}`);
+          formData.append("model", model);
+          if (language && language !== "auto") {
+            formData.append("language", language);
+          }
+          if (prompt) {
+            formData.append("prompt", prompt);
+          }
+
+          response = await fetch(endpoint, {
+            method: "POST",
+            headers,
+            body: formData,
+          });
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Custom transcription API error: ${response.status} ${errorText}`);
+        }
+
+        return await response.json();
+      }
+    );
+
     ipcMain.handle("get-custom-transcription-key", async () => {
       return this.environmentManager.getCustomTranscriptionKey();
     });
