@@ -638,6 +638,7 @@ class AudioManager {
     this.workletModuleLoaded = false;
     this.workletBlobUrl = null;
     this.streamingStartInProgress = false;
+    this.streamingStopInProgress = false;
     this.stopRequestedDuringStreamingStart = false;
     this.streamingFallbackRecorder = null;
     this.streamingFallbackChunks = [];
@@ -3053,14 +3054,21 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       return true;
     }
 
+    if (this.streamingStopInProgress) {
+      logger.debug("Streaming stop already in progress, ignoring duplicate request", {}, "streaming");
+      return true;
+    }
+
     if (!this.isStreaming) return false;
 
-    const durationSeconds = this.recordingStartTime
-      ? (Date.now() - this.recordingStartTime) / 1000
-      : null;
+    this.streamingStopInProgress = true;
+    try {
+      const durationSeconds = this.recordingStartTime
+        ? (Date.now() - this.recordingStartTime) / 1000
+        : null;
 
-    const t0 = performance.now();
-    let finalText = this.streamingFinalText || "";
+      const t0 = performance.now();
+      let finalText = this.streamingFinalText || "";
 
     // 1. Update UI immediately
     this.isRecording = false;
@@ -3343,16 +3351,19 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       );
     }
 
-    this.isProcessing = false;
-    this.onStateChange?.({ isRecording: false, isProcessing: false, isStreaming: false });
+      this.isProcessing = false;
+      this.onStateChange?.({ isRecording: false, isProcessing: false, isStreaming: false });
 
-    if (this.shouldUseStreaming()) {
-      this.warmupStreamingConnection().catch((e) => {
-        logger.debug("Background re-warm failed", { error: e.message }, "streaming");
-      });
+      if (this.shouldUseStreaming()) {
+        this.warmupStreamingConnection().catch((e) => {
+          logger.debug("Background re-warm failed", { error: e.message }, "streaming");
+        });
+      }
+
+      return true;
+    } finally {
+      this.streamingStopInProgress = false;
     }
-
-    return true;
   }
 
   cleanupStreamingAudio() {
