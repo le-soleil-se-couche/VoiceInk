@@ -1304,6 +1304,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       const geminiKey = await window.electronAPI?.getGeminiKey?.();
       const groqKey = await window.electronAPI?.getGroqKey?.();
       const localAvailable = await window.electronAPI?.checkLocalReasoningAvailable?.();
+      const customKey = await window.electronAPI?.getCustomReasoningKey?.();
 
       logger.logReasoning("API_KEY_CHECK", {
         hasOpenAI: !!openaiKey,
@@ -1311,9 +1312,10 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         hasGemini: !!geminiKey,
         hasGroq: !!groqKey,
         hasLocal: !!localAvailable,
+        hasCustom: !!customKey,
       });
 
-      return !!(openaiKey || anthropicKey || geminiKey || groqKey || localAvailable);
+      return !!(openaiKey || anthropicKey || geminiKey || groqKey || localAvailable || customKey);
     } catch (error) {
       logger.logReasoning("API_KEY_CHECK_ERROR", {
         error: (error as Error).message,
