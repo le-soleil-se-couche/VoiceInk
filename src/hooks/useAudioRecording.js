@@ -6,6 +6,9 @@ import { playStartCue, playStopCue } from "../utils/dictationCues";
 import { getSettings } from "../stores/settingsStore";
 import { getRecordingErrorTitle } from "../utils/recordingErrors";
 
+const STOP_CUE_UNMUTE_SETTLE_MS = 120;
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const useAudioRecording = (toast, options = {}) => {
   const { t } = useTranslation();
   const [isRecording, setIsRecording] = useState(false);
@@ -59,10 +62,14 @@ export const useAudioRecording = (toast, options = {}) => {
       if (!currentState.isRecording && !currentState.isStreamingStartInProgress) return false;
 
       if (currentState.isStreaming || currentState.isStreamingStartInProgress) {
+        await audioManagerRef.current.releaseRecordingOutputMute();
+        await wait(STOP_CUE_UNMUTE_SETTLE_MS);
         void playStopCue();
         return await audioManagerRef.current.stopStreamingRecording();
       }
 
+      await audioManagerRef.current.releaseRecordingOutputMute();
+      await wait(STOP_CUE_UNMUTE_SETTLE_MS);
       const didStop = audioManagerRef.current.stopRecording();
 
       if (didStop) {

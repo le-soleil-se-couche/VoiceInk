@@ -32,6 +32,20 @@
 - 默认 BYOK 模式，不绑定订阅制
 - 接受 issue；PR 可能会审核合并，但维护频率较低（维护模式）
 
+### 最近更新（2026-03）
+
+- **历史修复批次：#11 / #12 / #13（含冲突重提）**
+  - PR [#11](https://github.com/le-soleil-se-couche/VoiceInk/pull/11)（已关闭）：自定义转录端点 CORS 代理思路。
+  - PR [#12](https://github.com/le-soleil-se-couche/VoiceInk/pull/12)（已合并）：自定义 reasoning key 可用性检查修复。
+  - PR [#13](https://github.com/le-soleil-se-couche/VoiceInk/pull/13)（已关闭）：CJK 严格模式分词/重叠率修复思路。
+  - 其中 #11 / #13 因分支冲突后，等价修复已分别在 PR [#17](https://github.com/le-soleil-se-couche/VoiceInk/pull/17) 与 PR [#18](https://github.com/le-soleil-se-couche/VoiceInk/pull/18) 合并落地；PR [#16](https://github.com/le-soleil-se-couche/VoiceInk/pull/16) 同步处理了 CI lockfile 问题。
+- **Issue [#14](https://github.com/le-soleil-se-couche/VoiceInk/issues/14)（文字重复）**  
+  已由 PR [#19](https://github.com/le-soleil-se-couche/VoiceInk/pull/19) 修复：防止 streaming 并发 stop 导致重复插入。
+- **PR [#20](https://github.com/le-soleil-se-couche/VoiceInk/pull/20)（进行中）**
+  - 新增 Windows 下“录音时临时静音系统播放、停止后自动恢复”。
+  - 调整开始/结束提示音时序，结束提示音更清晰可感知。
+  - 补充 `SenseVoice Small` 官方下载入口（ModelScope + GitHub）说明。当前为外部模型信息入口，尚未在 OpenWhispr 内原生执行 SenseVoice 推理链路。
+
 ---
 
 ## 主要增强

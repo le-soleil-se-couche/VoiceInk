@@ -20,6 +20,7 @@ export interface TranscriptionSettings {
   cloudTranscriptionMode: string;
   customDictionary: string[];
   assemblyAiStreaming: boolean;
+  muteSystemAudioWhileRecording: boolean;
 }
 
 export interface ReasoningSettings {
@@ -168,7 +169,9 @@ function useSettingsInternal() {
     cloudReasoningMode: store.cloudReasoningMode,
     customDictionary: store.customDictionary,
     assemblyAiStreaming: store.assemblyAiStreaming,
+    muteSystemAudioWhileRecording: store.muteSystemAudioWhileRecording,
     setAssemblyAiStreaming: store.setAssemblyAiStreaming,
+    setMuteSystemAudioWhileRecording: store.setMuteSystemAudioWhileRecording,
     useReasoningModel: store.useReasoningModel,
     reasoningModel: store.reasoningModel,
     reasoningProvider: store.reasoningProvider,

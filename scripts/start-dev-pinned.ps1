@@ -37,7 +37,8 @@ $shouldKill = Convert-ToBool -Value $KillExisting -Default $true
 if ($shouldKill) {
   Write-Host "Stopping existing electron/VoiceInk processes..."
   $currentPid = $PID
-  $targets = Get-CimInstance Win32_Process |
+  $targetProcesses = Get-CimInstance Win32_Process -Filter "Name='openwhispr.exe' OR Name='electron.exe' OR Name='node.exe' OR Name='esbuild.exe'" -ErrorAction SilentlyContinue
+  $targets = $targetProcesses |
     Where-Object {
       if ($_.ProcessId -eq $currentPid) { return $false }
 
@@ -82,10 +83,15 @@ if ($DryRun) {
   exit 0
 }
 
-Write-Host "Ensuring nircmd fallback is available..."
-npm run download:nircmd
-if ($LASTEXITCODE -ne 0) {
-  Write-Host "[WARN] download:nircmd failed. Dev will continue with available paste tools."
+$nircmdPath = Join-Path $repoRoot "resources\bin\nircmd.exe"
+if (Test-Path $nircmdPath) {
+  Write-Host "nircmd.exe already available, skip download."
+} else {
+  Write-Host "Ensuring nircmd fallback is available..."
+  npm run download:nircmd
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "[WARN] download:nircmd failed. Dev will continue with available paste tools."
+  }
 }
 
 Write-Host "Starting: npm run dev"
