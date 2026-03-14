@@ -32,6 +32,15 @@
 - 默认 BYOK 模式，不绑定订阅制
 - 接受 issue；PR 可能会审核合并，但维护频率较低（维护模式）
 
+### 最近更新（2026-03）
+
+- **PR [#19](https://github.com/le-soleil-se-couche/VoiceInk/pull/19)（已合并）**  
+  修复 streaming 模式在并发 stop 场景下的重复插入问题（duplicate insertion）。
+- **PR [#20](https://github.com/le-soleil-se-couche/VoiceInk/pull/20)（进行中）**  
+  新增 Windows 下“录音时临时静音系统播放、停止后自动恢复”；并调整开始/结束提示音时序，结束提示音更清晰可感知。
+- **本地模型入口补充（README/设置页）**  
+  增加 `SenseVoice Small` 官方下载入口（ModelScope + GitHub）说明。当前为外部模型信息入口，尚未在 OpenWhispr 内原生执行 SenseVoice 推理链路。
+
 ---
 
 ## 主要增强
