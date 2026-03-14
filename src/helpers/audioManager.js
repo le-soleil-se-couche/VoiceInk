@@ -15,6 +15,7 @@ import {
 
 const SHORT_CLIP_DURATION_SECONDS = 2.5;
 const REASONING_CACHE_TTL = 30000; // 30 seconds
+const RECORDING_OUTPUT_MUTE_DELAY_MS = 260;
 
 const PLACEHOLDER_KEYS = {
   openai: "your_openai_api_key_here",
@@ -645,6 +646,8 @@ class AudioManager {
     this.skipReasoning = false;
     this.context = "dictation";
     this.sttConfig = null;
+    this.systemPlaybackMutedForRecording = false;
+    this.recordingOutputMuteTimer = null;
   }
 
   getWorkletBlobUrl() {
@@ -720,6 +723,73 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
   setSttConfig(config) {
     this.sttConfig = config;
+  }
+
+  shouldMuteSystemPlaybackWhileRecording() {
+    if (typeof window === "undefined") return false;
+    if (window.electronAPI?.getPlatform?.() !== "win32") return false;
+    return Boolean(getSettings().muteSystemAudioWhileRecording);
+  }
+
+  clearPendingRecordingOutputMute() {
+    if (!this.recordingOutputMuteTimer) return;
+    clearTimeout(this.recordingOutputMuteTimer);
+    this.recordingOutputMuteTimer = null;
+  }
+
+  scheduleRecordingOutputMute(delayMs = RECORDING_OUTPUT_MUTE_DELAY_MS) {
+    if (!this.shouldMuteSystemPlaybackWhileRecording()) return;
+    this.clearPendingRecordingOutputMute();
+    this.recordingOutputMuteTimer = setTimeout(() => {
+      this.recordingOutputMuteTimer = null;
+      if (!this.isRecording && !this.isStreaming && !this.streamingStartInProgress) return;
+      this.applyRecordingOutputMute().catch((error) => {
+        logger.debug(
+          "Delayed recording output mute failed",
+          { error: error.message },
+          "audio"
+        );
+      });
+    }, delayMs);
+  }
+
+  async setRecordingOutputMuted(muted) {
+    if (typeof window === "undefined" || !window.electronAPI?.setRecordingOutputMuted) return false;
+    try {
+      const result = await window.electronAPI.setRecordingOutputMuted(Boolean(muted));
+      if (!result?.success) {
+        logger.debug(
+          "Failed to update recording output mute",
+          { muted: Boolean(muted), error: result?.error, reason: result?.reason },
+          "audio"
+        );
+        return false;
+      }
+      return true;
+    } catch (error) {
+      logger.debug(
+        "Recording output mute IPC failed",
+        { muted: Boolean(muted), error: error.message },
+        "audio"
+      );
+      return false;
+    }
+  }
+
+  async applyRecordingOutputMute() {
+    if (!this.shouldMuteSystemPlaybackWhileRecording()) return;
+    if (this.systemPlaybackMutedForRecording) return;
+    const muted = await this.setRecordingOutputMuted(true);
+    if (muted) {
+      this.systemPlaybackMutedForRecording = true;
+    }
+  }
+
+  async releaseRecordingOutputMute() {
+    this.clearPendingRecordingOutputMute();
+    if (!this.systemPlaybackMutedForRecording) return;
+    await this.setRecordingOutputMuted(false);
+    this.systemPlaybackMutedForRecording = false;
   }
 
   getStreamingProvider() {
@@ -868,6 +938,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         this.isRecording = false;
         this.isProcessing = true;
         this.onStateChange?.({ isRecording: false, isProcessing: true });
+        await this.releaseRecordingOutputMute();
 
         const audioBlob = new Blob(this.audioChunks, { type: this.recordingMimeType });
 
@@ -893,9 +964,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       this.mediaRecorder.start();
       this.isRecording = true;
       this.onStateChange?.({ isRecording: true, isProcessing: false });
+      this.scheduleRecordingOutputMute();
 
       return true;
     } catch (error) {
+      await this.releaseRecordingOutputMute();
       let errorTitle = "Recording Error";
       let errorDescription = `Failed to access microphone: ${error.message}`;
 
@@ -930,12 +1003,13 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
   cancelRecording() {
     if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
-      this.mediaRecorder.onstop = () => {
+      this.mediaRecorder.onstop = async () => {
         this.isRecording = false;
         this.isProcessing = false;
         this.audioChunks = [];
         this.recordingStartTime = null;
         this.onStateChange?.({ isRecording: false, isProcessing: false });
+        await this.releaseRecordingOutputMute();
       };
 
       this.mediaRecorder.stop();
@@ -2878,7 +2952,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         this.streamingStartInProgress = false;
         return false;
       }
-
       this.stopRequestedDuringStreamingStart = false;
 
       const t0 = performance.now();
@@ -3052,10 +3125,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         logger.debug("Applying deferred streaming stop requested during startup", {}, "streaming");
         return this.stopStreamingRecording();
       }
+      this.scheduleRecordingOutputMute();
       return true;
     } catch (error) {
       this.streamingStartInProgress = false;
       this.stopRequestedDuringStreamingStart = false;
+      await this.releaseRecordingOutputMute();
       logger.error("Failed to start streaming recording", { error: error.message }, "streaming");
 
       let errorTitle = "Streaming Error";
@@ -3111,6 +3186,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     this.isRecording = false;
     this.recordingStartTime = null;
     this.onStateChange?.({ isRecording: false, isProcessing: true, isStreaming: false });
+    await this.releaseRecordingOutputMute();
 
     // 2. Stop the processor — it flushes its remaining buffer on "stop".
     //    Keep isStreaming TRUE so the port.onmessage handler forwards the flush to WebSocket.
@@ -3460,9 +3536,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   async cleanupStreaming() {
     this.cleanupStreamingAudio();
     this.cleanupStreamingListeners();
+    await this.releaseRecordingOutputMute();
   }
 
   cleanup() {
+    void this.releaseRecordingOutputMute();
     if (this.isStreaming) {
       this.cleanupStreaming();
     }

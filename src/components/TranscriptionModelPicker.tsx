@@ -219,6 +219,9 @@ const LOCAL_PROVIDER_TABS: Array<{ id: string; name: string; disabled?: boolean 
   { id: "nvidia", name: "NVIDIA Parakeet" },
 ];
 
+const SENSEVOICE_OFFICIAL_REPO_URL = "https://github.com/FunAudioLLM/SenseVoice";
+const SENSEVOICE_MODEL_PAGE_URL = "https://www.modelscope.cn/models/iic/SenseVoiceSmall";
+
 interface ModeToggleProps {
   useLocalWhisper: boolean;
   onModeChange: (useLocal: boolean) => void;
@@ -570,6 +573,33 @@ export default function TranscriptionModelPicker({
       onLocalModelSelect(modelId);
     },
     [onLocalModelSelect, onLocalProviderSelect]
+  );
+
+  const renderSenseVoiceInfo = () => (
+    <div className="mt-2.5 rounded-md border border-border bg-surface-1 p-2.5">
+      <div className="text-xs font-medium text-foreground">SenseVoice Small</div>
+      <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+        External local ASR option. OpenWhispr does not natively run SenseVoice yet. Download from
+        official sources and review upstream license terms before use.
+      </p>
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={createExternalLinkHandler(SENSEVOICE_MODEL_PAGE_URL)}
+          className="text-xs text-primary/80 hover:text-primary transition-colors"
+        >
+          Official model page
+        </button>
+        <span className="text-xs text-muted-foreground/40">|</span>
+        <button
+          type="button"
+          onClick={createExternalLinkHandler(SENSEVOICE_OFFICIAL_REPO_URL)}
+          className="text-xs text-primary/80 hover:text-primary transition-colors"
+        >
+          GitHub repository
+        </button>
+      </div>
+    </div>
   );
 
   const handleBaseUrlBlur = useCallback(() => {
@@ -991,6 +1021,7 @@ export default function TranscriptionModelPicker({
           <div className="p-2">
             {internalLocalProvider === "whisper" && renderLocalModels()}
             {internalLocalProvider === "nvidia" && renderParakeetModels()}
+            {renderSenseVoiceInfo()}
           </div>
         </div>
       )}

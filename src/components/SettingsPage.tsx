@@ -692,6 +692,8 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
     setCloudReasoningMode,
     audioCuesEnabled,
     setAudioCuesEnabled,
+    muteSystemAudioWhileRecording,
+    setMuteSystemAudioWhileRecording,
     floatingIconAutoHide,
     setFloatingIconAutoHide,
     cloudBackupEnabled,
@@ -1749,6 +1751,27 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                     <Toggle checked={audioCuesEnabled} onChange={setAudioCuesEnabled} />
                   </SettingsRow>
                 </SettingsPanelRow>
+                {platform === "win32" && (
+                  <SettingsPanelRow>
+                    <SettingsRow
+                      label={t("settingsPage.general.soundEffects.muteSystemWhileRecording", {
+                        defaultValue: "Mute speaker playback while recording",
+                      })}
+                      description={t(
+                        "settingsPage.general.soundEffects.muteSystemWhileRecordingDescription",
+                        {
+                          defaultValue:
+                            "Temporarily mute other app sounds during dictation, then restore when recording stops.",
+                        }
+                      )}
+                    >
+                      <Toggle
+                        checked={muteSystemAudioWhileRecording}
+                        onChange={setMuteSystemAudioWhileRecording}
+                      />
+                    </SettingsRow>
+                  </SettingsPanelRow>
+                )}
               </SettingsPanel>
             </div>
 

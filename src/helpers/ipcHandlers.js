@@ -3,6 +3,7 @@ const path = require("path");
 const http = require("http");
 const https = require("https");
 const crypto = require("crypto");
+const { spawnSync } = require("child_process");
 const AppUtils = require("../utils");
 const debugLogger = require("./debugLogger");
 const GnomeShortcutManager = require("./gnomeShortcut");
@@ -220,7 +221,14 @@ class IPCHandlers {
     this._autoLearnDebounceTimer = null;
     this._autoLearnLatestData = null;
     this._textEditHandler = null;
+    this._recordingOutputMuted = false;
     this._setupTextEditMonitor();
+    app.on("before-quit", () => {
+      if (this._recordingOutputMuted) {
+        this._setWindowsSystemPlaybackMute(false);
+        this._recordingOutputMuted = false;
+      }
+    });
     this.setupHandlers();
 
     if (this.whisperManager?.serverManager) {
@@ -363,6 +371,40 @@ class IPCHandlers {
         cleared: clearVars.filter((k) => !process.env[k]),
       });
       this.environmentManager.saveAllKeysToEnvFile().catch(() => {});
+    }
+  }
+
+  _setWindowsSystemPlaybackMute(muted) {
+    if (process.platform !== "win32") {
+      return { success: false, error: "System playback mute is only supported on Windows." };
+    }
+
+    const nircmdPath = this.clipboardManager?.getNircmdPath?.();
+    if (!nircmdPath) {
+      return { success: false, error: "nircmd.exe is not available." };
+    }
+
+    try {
+      const result = spawnSync(nircmdPath, ["mutesysvolume", muted ? "1" : "0"], {
+        windowsHide: true,
+        timeout: 2000,
+      });
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      if (result.status !== 0) {
+        const stderr = result.stderr ? String(result.stderr).trim() : "";
+        return {
+          success: false,
+          error: stderr || `nircmd exited with status ${result.status}`,
+        };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
   }
 
@@ -1966,6 +2008,34 @@ class IPCHandlers {
     ipcMain.handle("open-microphone-settings", () => openSystemSettings("microphone"));
     ipcMain.handle("open-sound-input-settings", () => openSystemSettings("sound"));
     ipcMain.handle("open-accessibility-settings", () => openSystemSettings("accessibility"));
+    ipcMain.handle("set-recording-output-muted", async (_event, muted) => {
+      const shouldMute = Boolean(muted);
+
+      if (process.platform !== "win32") {
+        return {
+          success: true,
+          state: this._recordingOutputMuted,
+          applied: false,
+          reason: "unsupported-platform",
+        };
+      }
+
+      if (shouldMute === this._recordingOutputMuted) {
+        return { success: true, state: this._recordingOutputMuted, applied: false };
+      }
+
+      const result = this._setWindowsSystemPlaybackMute(shouldMute);
+      if (result.success) {
+        this._recordingOutputMuted = shouldMute;
+        return { success: true, state: this._recordingOutputMuted, applied: true };
+      }
+
+      debugLogger.debug("Failed to update recording output mute state", {
+        muted: shouldMute,
+        error: result.error,
+      });
+      return { success: false, state: this._recordingOutputMuted, error: result.error };
+    });
 
     ipcMain.handle("request-microphone-access", async () => {
       if (process.platform !== "darwin") {

@@ -21,6 +21,15 @@ let _ReasoningService: typeof import("../services/ReasoningService").default | n
 const isBrowser = typeof window !== "undefined";
 const CLOUD_AUTH_AVAILABLE = Boolean(RUNTIME_CONFIG.authUrl);
 
+function isWindowsPlatform(): boolean {
+  if (!isBrowser) return false;
+  try {
+    return window.electronAPI?.getPlatform?.() === "win32";
+  } catch {
+    return false;
+  }
+}
+
 function readString(key: string, fallback: string): string {
   if (!isBrowser) return fallback;
   return localStorage.getItem(key) ?? fallback;
@@ -53,6 +62,7 @@ const BOOLEAN_SETTINGS = new Set([
   "assemblyAiStreaming",
   "useReasoningModel",
   "preferBuiltInMic",
+  "muteSystemAudioWhileRecording",
   "cloudBackupEnabled",
   "telemetryEnabled",
   "audioCuesEnabled",
@@ -86,6 +96,7 @@ export interface SettingsState
   isSignedIn: boolean;
   audioCuesEnabled: boolean;
   floatingIconAutoHide: boolean;
+  muteSystemAudioWhileRecording: boolean;
 
   setUseLocalWhisper: (value: boolean) => void;
   setWhisperModel: (value: string) => void;
@@ -120,6 +131,7 @@ export interface SettingsState
   setActivationMode: (mode: "tap" | "push") => void;
 
   setPreferBuiltInMic: (value: boolean) => void;
+  setMuteSystemAudioWhileRecording: (value: boolean) => void;
   setSelectedMicDeviceId: (value: string) => void;
 
   setTheme: (value: "light" | "dark" | "auto") => void;
@@ -227,6 +239,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     | "push",
 
   preferBuiltInMic: readBoolean("preferBuiltInMic", true),
+  muteSystemAudioWhileRecording: readBoolean(
+    "muteSystemAudioWhileRecording",
+    isWindowsPlatform()
+  ),
   selectedMicDeviceId: readString("selectedMicDeviceId", ""),
 
   theme: (() => {
@@ -351,6 +367,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   },
 
   setPreferBuiltInMic: createBooleanSetter("preferBuiltInMic"),
+  setMuteSystemAudioWhileRecording: createBooleanSetter("muteSystemAudioWhileRecording"),
   setSelectedMicDeviceId: createStringSetter("selectedMicDeviceId"),
 
   setTheme: (value: "light" | "dark" | "auto") => {
@@ -403,6 +420,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     if (settings.customDictionary !== undefined) s.setCustomDictionary(settings.customDictionary);
     if (settings.assemblyAiStreaming !== undefined)
       s.setAssemblyAiStreaming(settings.assemblyAiStreaming);
+    if (settings.muteSystemAudioWhileRecording !== undefined)
+      s.setMuteSystemAudioWhileRecording(settings.muteSystemAudioWhileRecording);
   },
 
   updateReasoningSettings: (settings: Partial<ReasoningSettings>) => {
