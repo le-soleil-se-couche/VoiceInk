@@ -76,11 +76,17 @@ if (process.platform === "win32") {
 }
 
 // Enable native Wayland support: Ozone platform for native rendering.
-// GlobalShortcutsPortal is intentionally omitted — GNOME uses its own
-// D-Bus shortcut manager, and on KDE the portal causes unwanted permission
-// dialogs while XWayland globalShortcut works fine without it.
+// KDE is forced to XWayland because globalShortcut doesn't work on native
+// Wayland without the GlobalShortcuts portal, and the portal causes unwanted
+// permission dialogs with broken hotkey registration.
+// GNOME and Hyprland use their own D-Bus shortcut managers so they're fine.
 if (process.platform === "linux" && process.env.XDG_SESSION_TYPE === "wayland") {
-  app.commandLine.appendSwitch("ozone-platform-hint", "auto");
+  const desktop = (process.env.XDG_CURRENT_DESKTOP || "").toLowerCase();
+  if (desktop.includes("kde")) {
+    app.commandLine.appendSwitch("ozone-platform-hint", "x11");
+  } else {
+    app.commandLine.appendSwitch("ozone-platform-hint", "auto");
+  }
   app.commandLine.appendSwitch(
     "enable-features",
     "UseOzonePlatform,WaylandWindowDecorations"
