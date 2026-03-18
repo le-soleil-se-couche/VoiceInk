@@ -302,6 +302,7 @@ class IPCHandlers {
 
     ipcMain.handle("restore-from-meeting-mode", () => {
       this.windowManager.restoreControlPanelFromMeetingMode();
+      this.meetingDetectionEngine?.setMeetingModeActive(false);
     });
 
     ipcMain.handle("app-quit", () => {

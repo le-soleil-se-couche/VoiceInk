@@ -19,6 +19,7 @@ class MeetingDetectionEngine {
     this.activeDetections = new Map();
     this.preferences = { processDetection: true, audioDetection: true };
     this._userRecording = false;
+    this._meetingModeActive = false;
     this._notificationQueue = [];
     this._postRecordingCooldown = null;
     this._bindListeners();
@@ -54,6 +55,15 @@ class MeetingDetectionEngine {
 
     if (this.activeDetections.has(detectionId)) {
       debugLogger.debug("Detection already active, skipping", { detectionId }, "meeting");
+      return;
+    }
+
+    if (this._meetingModeActive) {
+      debugLogger.info(
+        "Suppressing detection — meeting mode already active",
+        { detectionId },
+        "meeting"
+      );
       return;
     }
 
@@ -165,6 +175,7 @@ class MeetingDetectionEngine {
       const detection = this.activeDetections.get(detectionId);
 
       if (action === "start" && detection) {
+        this._meetingModeActive = true;
         const eventSummary = detection.event?.summary || "New note";
 
         const noteResult = this.databaseManager.saveNote(eventSummary, "", "meeting");
@@ -195,6 +206,7 @@ class MeetingDetectionEngine {
   }
 
   async startManualMeeting() {
+    this._meetingModeActive = true;
     debugLogger.info("Starting manual meeting", {}, "meeting");
 
     const event = {
@@ -247,6 +259,12 @@ class MeetingDetectionEngine {
   _flushNotificationQueue() {
     if (this._notificationQueue.length === 0) return;
 
+    if (this._meetingModeActive) {
+      debugLogger.info("Dropping queued notifications — meeting mode active", {}, "meeting");
+      this._notificationQueue = [];
+      return;
+    }
+
     debugLogger.info(
       "Flushing notification queue",
       { count: this._notificationQueue.length },
@@ -276,6 +294,11 @@ class MeetingDetectionEngine {
 
   _dismiss() {
     this.audioActivityDetector.dismiss();
+  }
+
+  setMeetingModeActive(active) {
+    this._meetingModeActive = active;
+    debugLogger.info("Meeting mode active state changed", { active }, "meeting");
   }
 
   setUserRecording(active) {
@@ -327,6 +350,7 @@ class MeetingDetectionEngine {
     this.meetingProcessDetector.stop();
     this.audioActivityDetector.stop();
     this.activeDetections.clear();
+    this._meetingModeActive = false;
     if (this._postRecordingCooldown) {
       clearTimeout(this._postRecordingCooldown);
       this._postRecordingCooldown = null;

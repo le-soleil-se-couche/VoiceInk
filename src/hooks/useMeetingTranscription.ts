@@ -233,6 +233,7 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
   const isPreparedRef = useRef(false);
   const preparePromiseRef = useRef<Promise<void> | null>(null);
   const ipcCleanupsRef = useRef<Array<() => void>>([]);
+  const mountGenRef = useRef(0);
 
   const cleanup = useCallback(async () => {
     const processors = [processorRef, micProcessorRef];
@@ -264,6 +265,8 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
     ipcCleanupsRef.current.forEach((fn) => fn());
     ipcCleanupsRef.current = [];
     isPreparedRef.current = false;
+    isRecordingRef.current = false;
+    isStartingRef.current = false;
   }, []);
 
   const stopTranscription = useCallback(async () => {
@@ -335,8 +338,9 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
   const startTranscription = useCallback(async () => {
     if (isRecordingRef.current || isStartingRef.current) return;
     isStartingRef.current = true;
+    const gen = mountGenRef.current;
 
-    logger.info("Meeting transcription starting...", {}, "meeting");
+    logger.info("Meeting transcription starting...", { gen }, "meeting");
     setTranscript("");
     setPartialTranscript("");
     setSegments([]);
@@ -352,6 +356,15 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
     if (preparePromiseRef.current) {
       logger.debug("Waiting for in-flight prepare to finish...", {}, "meeting");
       await preparePromiseRef.current;
+    }
+
+    // Abort if component was remounted (StrictMode) during prepare wait
+    if (mountGenRef.current !== gen) {
+      logger.info("startTranscription aborted — stale mount (after prepare)", { gen }, "meeting");
+      isRecordingRef.current = false;
+      isStartingRef.current = false;
+      setIsRecording(false);
+      return;
     }
 
     try {
@@ -374,9 +387,13 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
 
       const streamsMs = performance.now() - startTime;
 
-      // Abort if stop was called during setup
-      if (!isRecordingRef.current) {
-        logger.info("Meeting transcription aborted during setup (stop called)", {}, "meeting");
+      // Abort if stop was called during setup or component remounted (StrictMode)
+      if (!isRecordingRef.current || mountGenRef.current !== gen) {
+        logger.info(
+          "Meeting transcription aborted during setup",
+          { gen, stale: mountGenRef.current !== gen },
+          "meeting"
+        );
         stream?.getTracks().forEach((t) => t.stop());
         micResult?.getTracks().forEach((t) => t.stop());
         isStartingRef.current = false;
@@ -520,11 +537,11 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
         processorRef.current = systemPipeline.processor;
       }
 
-      // Abort if stop was called during pipeline setup
-      if (!isRecordingRef.current) {
+      // Abort if stop was called during pipeline setup or component remounted
+      if (!isRecordingRef.current || mountGenRef.current !== gen) {
         logger.info(
-          "Meeting transcription aborted during pipeline setup (stop called)",
-          {},
+          "Meeting transcription aborted during pipeline setup",
+          { gen, stale: mountGenRef.current !== gen },
           "meeting"
         );
         isStartingRef.current = false;
@@ -571,11 +588,9 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
   }, []);
 
   useEffect(() => {
+    mountGenRef.current++;
     return () => {
-      // Don't reset isRecordingRef here — StrictMode double-mount would abort in-flight setup
-      if (isRecordingRef.current) {
-        void cleanup();
-      }
+      void cleanup();
     };
   }, [cleanup]);
 
