@@ -27,6 +27,14 @@ export const useAudioRecording = (toast, options = {}) => {
       const currentState = audioManagerRef.current.getState();
       if (currentState.isRecording || currentState.isProcessing) return false;
 
+      // Retry STT config fetch if it wasn't loaded on mount (e.g. auth wasn't ready)
+      if (!audioManagerRef.current.sttConfig) {
+        const config = await window.electronAPI.getSttConfig?.();
+        if (config?.success) {
+          audioManagerRef.current.setSttConfig(config);
+        }
+      }
+
       const didStart = audioManagerRef.current.shouldUseStreaming()
         ? await audioManagerRef.current.startStreamingRecording()
         : await audioManagerRef.current.startRecording();
@@ -159,7 +167,7 @@ export const useAudioRecording = (toast, options = {}) => {
 
     audioManagerRef.current.setContext("dictation");
     window.electronAPI.getSttConfig?.().then((config) => {
-      if (config && audioManagerRef.current) {
+      if (config?.success && audioManagerRef.current) {
         audioManagerRef.current.setSttConfig(config);
         if (audioManagerRef.current.shouldUseStreaming()) {
           audioManagerRef.current.warmupStreamingConnection();

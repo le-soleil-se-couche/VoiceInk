@@ -80,6 +80,13 @@ class ClipboardManager {
     this.linuxFastPastePath = null;
     this.linuxFastPasteChecked = false;
     this.portalDenied = false;
+    this._kwinScriptPath = null;
+
+    process.on("exit", () => {
+      if (this._kwinScriptPath) {
+        try { fs.unlinkSync(this._kwinScriptPath); } catch {}
+      }
+    });
   }
 
   _isWayland() {
@@ -393,25 +400,67 @@ class ClipboardManager {
       } catch {}
     }
 
+    // Fallback (KDE 5 and 6): load a tiny script into KWin via D-Bus that
+    // prints the active window's resourceClass to the journal, read it back.
     const qdbus = ["qdbus6", "qdbus"].find((cmd) => this.commandExists(cmd));
     if (qdbus) {
+      const journalMarker = `OW_CLASS_${process.pid}`;
       try {
-        const result = spawnSync(qdbus, ["org.kde.KWin", "/KWin", "supportInformation"], {
-          timeout: 2000,
-          maxBuffer: 512 * 1024,
-        });
-        if (result.status === 0) {
-          const lines = result.stdout.toString().split("\n");
-          let lastClass = null;
-          for (const line of lines) {
-            const classMatch = line.match(/^\s*resourceClass:\s+(.+)$/);
-            if (classMatch) lastClass = classMatch[1].trim();
-            if (/^\s*active:\s+(1|true)\s*$/i.test(line) && lastClass) {
-              return lastClass.toLowerCase();
+        if (!this._kwinScriptPath) {
+          this._kwinScriptPath = path.join(os.tmpdir(), `kwin-active-class-${process.pid}.js`);
+          fs.writeFileSync(
+            this._kwinScriptPath,
+            `print("${journalMarker}:" + (workspace.activeWindow ? workspace.activeWindow.resourceClass : ""))`
+          );
+        }
+        const loadResult = spawnSync(
+          qdbus,
+          ["org.kde.KWin", "/Scripting", "loadScript", this._kwinScriptPath],
+          { timeout: 1000, stdio: "pipe" }
+        );
+        if (loadResult.status === 0) {
+          const scriptId = loadResult.stdout.toString().trim();
+          spawnSync(
+            qdbus,
+            ["org.kde.KWin", `/Scripting/Script${scriptId}`, "run"],
+            { timeout: 1000, stdio: "pipe" }
+          );
+          // KWin script executes in the compositor; brief pause lets the journal flush.
+          spawnSync("sleep", ["0.03"], { timeout: 100 });
+
+          const journalResult = spawnSync(
+            "journalctl",
+            [
+              "--user",
+              // KDE 6 logs KWin output under this identifier
+              "--identifier=kwin_wayland_wrapper",
+              "--since=3 seconds ago",
+              "-n", "5",
+              "--no-pager",
+              "-o", "cat",
+            ],
+            { timeout: 1000, stdio: "pipe" }
+          );
+          spawnSync(
+            qdbus,
+            ["org.kde.KWin", `/Scripting/Script${scriptId}`, "stop"],
+            { timeout: 1000, stdio: "pipe" }
+          );
+
+          if (journalResult.status === 0) {
+            const lines = journalResult.stdout.toString().split("\n");
+            for (let i = lines.length - 1; i >= 0; i--) {
+              const idx = lines[i].indexOf(`${journalMarker}:`);
+              if (idx !== -1) {
+                const cls = lines[i].slice(idx + journalMarker.length + 1).trim().toLowerCase();
+                if (cls) return cls;
+              }
             }
           }
         }
-      } catch {}
+      } catch (err) {
+        debugLogger.warn("KWin script fallback failed", { error: err?.message }, "clipboard");
+      }
     }
 
     return null;
@@ -1058,9 +1107,38 @@ class ClipboardManager {
         });
 
       if (isWayland) {
-        // On GNOME/KDE Wayland, try portal mode first (RemoteDesktop D-Bus portal).
-        // uinput events are accepted by the kernel but Mutter doesn't reliably
-        // route them to focused native Wayland windows (issue #292).
+        // On KDE Wayland, uinput works reliably for all apps (including
+        // Chromium/Electron which ignore RemoteDesktop portal keystrokes).
+        // On GNOME, Mutter doesn't reliably route uinput to native Wayland
+        // windows (issue #292), so portal is tried first there.
+        const preferUinput = isKde;
+
+        const tryUinputPaste = async () => {
+          const args = ["--uinput"];
+          if (earlyIsTerminal) args.push("--terminal");
+          await spawnFastPaste(args, "uinput");
+          this.safeLog("✅ Paste successful using native linux-fast-paste (uinput)");
+          debugLogger.info(
+            "Paste successful",
+            { tool: "linux-fast-paste", method: "uinput", detectedWindowClass },
+            "clipboard"
+          );
+          restoreClipboard();
+        };
+
+        if (preferUinput) {
+          try {
+            await tryUinputPaste();
+            return "uinput";
+          } catch (uinputError) {
+            debugLogger.warn(
+              "uinput paste failed on KDE, falling back to portal",
+              { error: uinputError?.message },
+              "clipboard"
+            );
+          }
+        }
+
         if ((isGnome || isKde) && linuxFastPaste && !this.portalDenied) {
           const MAX_PORTAL_RETRIES = 3;
           for (let attempt = 0; attempt < MAX_PORTAL_RETRIES; attempt++) {
@@ -1102,50 +1180,43 @@ class ClipboardManager {
           }
         }
 
-        const uinputArgs = ["--uinput"];
-        if (earlyIsTerminal) uinputArgs.push("--terminal");
-
-        try {
-          await spawnFastPaste(uinputArgs, "uinput");
-          this.safeLog("✅ Paste successful using native linux-fast-paste (uinput)");
-          debugLogger.info(
-            "Paste successful",
-            { tool: "linux-fast-paste", method: "uinput" },
-            "clipboard"
-          );
-          restoreClipboard();
-          return "uinput";
-        } catch (uinputError) {
-          debugLogger.warn("uinput paste failed", { error: uinputError?.message }, "clipboard");
-
-          if (xwaylandAvailable) {
-            const xtestArgs = [];
-            if (targetWindowId) xtestArgs.push("--window", targetWindowId);
-            if (earlyIsTerminal) xtestArgs.push("--terminal");
-
-            try {
-              await spawnFastPaste(xtestArgs, "XTest/XWayland fallback");
-              this.safeLog("✅ Paste successful using native linux-fast-paste (XTest/XWayland)");
-              debugLogger.info(
-                "Paste successful",
-                { tool: "linux-fast-paste", method: "xtest-xwayland" },
-                "clipboard"
-              );
-              restoreClipboard();
-              return "xtest-xwayland";
-            } catch (xtestError) {
-              debugLogger.warn(
-                "XTest/XWayland fallback also failed",
-                { error: xtestError?.message },
-                "clipboard"
-              );
-            }
+        if (!preferUinput) {
+          try {
+            await tryUinputPaste();
+            return "uinput";
+          } catch (uinputError) {
+            debugLogger.warn("uinput paste failed", { error: uinputError?.message }, "clipboard");
           }
-
-          this.safeLog(
-            `⚠️ Native linux-fast-paste failed: ${uinputError?.message || uinputError}, falling back to system tools`
-          );
         }
+
+        // XTest/XWayland fallback: works for XWayland apps on any Wayland compositor
+        if (xwaylandAvailable) {
+          const xtestArgs = [];
+          if (targetWindowId) xtestArgs.push("--window", targetWindowId);
+          if (earlyIsTerminal) xtestArgs.push("--terminal");
+
+          try {
+            await spawnFastPaste(xtestArgs, "XTest/XWayland fallback");
+            this.safeLog("✅ Paste successful using native linux-fast-paste (XTest/XWayland)");
+            debugLogger.info(
+              "Paste successful",
+              { tool: "linux-fast-paste", method: "xtest-xwayland" },
+              "clipboard"
+            );
+            restoreClipboard();
+            return "xtest-xwayland";
+          } catch (xtestError) {
+            debugLogger.warn(
+              "XTest/XWayland fallback also failed",
+              { error: xtestError?.message },
+              "clipboard"
+            );
+          }
+        }
+
+        this.safeLog(
+          "⚠️ Native linux-fast-paste failed, falling back to system tools"
+        );
       } else {
         const xtestArgs = [];
         if (targetWindowId) xtestArgs.push("--window", targetWindowId);

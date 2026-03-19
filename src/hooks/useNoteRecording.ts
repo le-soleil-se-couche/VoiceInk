@@ -107,7 +107,7 @@ export function useNoteRecording({
 
     manager.setContext("notes");
     window.electronAPI.getSttConfig?.().then((config) => {
-      if (config && audioManagerRef.current) {
+      if (config?.success && audioManagerRef.current) {
         audioManagerRef.current.setSttConfig(config);
         if (manager.shouldUseStreaming()) {
           manager.warmupStreamingConnection();
@@ -131,6 +131,14 @@ export function useNoteRecording({
 
     const state = manager.getState();
     if (state.isRecording || state.isProcessing) return;
+
+    // Retry STT config fetch if it wasn't loaded on mount (e.g. auth wasn't ready)
+    if (!manager.sttConfig) {
+      const config = await window.electronAPI.getSttConfig?.();
+      if (config?.success) {
+        manager.setSttConfig(config);
+      }
+    }
 
     const didStart = manager.shouldUseStreaming()
       ? await manager.startStreamingRecording()

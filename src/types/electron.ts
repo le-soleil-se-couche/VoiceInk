@@ -969,7 +969,7 @@ declare global {
       }>;
 
       // Agent Mode
-      notifyAgentHotkeyChanged?: (hotkey: string) => void;
+      updateAgentHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
       getAgentKey?: () => Promise<string>;
       saveAgentKey?: (key: string) => Promise<void>;
       createAgentConversation?: (title: string) => Promise<{
