@@ -10,6 +10,7 @@ import {
   MessageSquareText,
 } from "lucide-react";
 import { MarkdownTextarea } from "../ui/MarkdownTextarea";
+import { RichTextEditor } from "../ui/RichTextEditor";
 import { MeetingTranscriptChat } from "./MeetingTranscriptChat";
 import type { TranscriptSegment } from "../../hooks/useMeetingTranscription";
 import {
@@ -671,8 +672,8 @@ export default function NoteEditor({
   };
 
   const handleEnhancedChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      enhancement?.onChange(e.target.value);
+    (value: string) => {
+      enhancement?.onChange(value);
     },
     [enhancement]
   );
@@ -827,9 +828,9 @@ export default function NoteEditor({
               systemPartial={isMeetingRecording ? meetingSystemPartial : undefined}
             />
           ) : viewMode === "transcript" && hasMeetingTranscript ? (
-            <MarkdownTextarea value={effectiveTranscript} disabled />
+            <RichTextEditor value={effectiveTranscript} disabled />
           ) : viewMode === "enhanced" && enhancement ? (
-            <MarkdownTextarea value={enhancement.content} onChange={handleEnhancedChange} />
+            <RichTextEditor value={enhancement.content} onChange={handleEnhancedChange} />
           ) : (
             <MarkdownTextarea
               value={note.content}
