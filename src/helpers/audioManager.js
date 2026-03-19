@@ -239,13 +239,14 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const { preferBuiltInMic: preferBuiltIn, selectedMicDeviceId: selectedDeviceId } =
       getSettings();
 
-    // AGC enabled to boost quiet/soft speech — essential for low-volume voice recognition.
-    // Echo cancellation and noise suppression stay off to avoid latency and speech distortion.
+    // All browser audio processing disabled to avoid OS-level side-effects.
+    // AGC off: Chromium's AGC on Windows mutates the system mic volume via WASAPI (#476).
+    // Echo cancellation and noise suppression off to avoid latency and speech distortion.
     // Stereo recording required — mono WebM breaks silence detection on Linux/PipeWire (#472).
     const noProcessing = {
       echoCancellation: false,
       noiseSuppression: false,
-      autoGainControl: true,
+      autoGainControl: false,
       channelCount: 2,
     };
 

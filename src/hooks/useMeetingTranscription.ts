@@ -93,7 +93,7 @@ const getMeetingMicConstraints = async (): Promise<MediaStreamConstraints> => {
   const micProcessing = {
     echoCancellation: false,
     noiseSuppression: false,
-    autoGainControl: true,
+    autoGainControl: false,
   };
 
   if (preferBuiltInMic) {
