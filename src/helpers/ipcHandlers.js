@@ -2286,7 +2286,6 @@ class IPCHandlers {
             model: opts.model,
             agentName: opts.agentName,
             customDictionary: opts.customDictionary,
-            customPrompt: opts.customPrompt,
             systemPrompt: opts.systemPrompt,
             language: opts.language,
             locale: opts.locale,

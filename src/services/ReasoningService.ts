@@ -1265,7 +1265,6 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         const res = await (window as any).electronAPI.cloudReason(text, {
           agentName,
           customDictionary,
-          customPrompt: this.getCustomPrompt(),
           systemPrompt,
           language,
           locale,
@@ -1295,17 +1294,6 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       throw error;
     } finally {
       this.isProcessing = false;
-    }
-  }
-
-  private getCustomPrompt(): string | undefined {
-    try {
-      const raw = localStorage.getItem("customUnifiedPrompt");
-      if (!raw) return undefined;
-      const parsed = JSON.parse(raw);
-      return typeof parsed === "string" ? parsed : undefined;
-    } catch {
-      return undefined;
     }
   }
 
