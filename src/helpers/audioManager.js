@@ -1605,6 +1605,38 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     return directAddress.test(normalizedText);
   }
 
+  stripWakeAddressPrefix(text, agentName) {
+    const normalizedText = typeof text === "string" ? text.trim() : "";
+    const normalizedAgentName = typeof agentName === "string" ? agentName.trim() : "";
+    if (!normalizedText || !normalizedAgentName) {
+      return { text: normalizedText, stripped: false };
+    }
+
+    const escapedName = escapeRegExp(normalizedAgentName);
+    if (!escapedName) {
+      return { text: normalizedText, stripped: false };
+    }
+
+    const wakePrefix = new RegExp(
+      `^(?:\\s*(?:hey|hi|ok|okay|嘿|嗨|喂|好|好的)\\s+)?${escapedName}(?:\\s*[:,，：]\\s*|\\s+)(?:please\\s+)?`,
+      "i"
+    );
+
+    if (!wakePrefix.test(normalizedText)) {
+      return { text: normalizedText, stripped: false };
+    }
+
+    const strippedText = normalizedText
+      .replace(wakePrefix, "")
+      .replace(/^([,，:：-]+)\s*/, "")
+      .trim();
+
+    return {
+      text: strippedText,
+      stripped: strippedText !== normalizedText,
+    };
+  }
+
   async processWithReasoningModel(text, model, agentName, config = {}) {
     logger.logReasoning("CALLING_REASONING_SERVICE", {
       model,
@@ -1715,12 +1747,27 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
   async processTranscription(text, source) {
     const normalizedText = typeof text === "string" ? text.trim() : "";
+    const agentName =
+      typeof window !== "undefined" && window.localStorage
+        ? localStorage.getItem("agentName") || null
+        : null;
+    const wakePrefixCleanup = this.stripWakeAddressPrefix(normalizedText, agentName);
+    const textForProcessing = wakePrefixCleanup.text;
     const cleanedText = this.applyDictionaryNormalization(
-      this.basicDictationCleanup(normalizedText),
+      this.basicDictationCleanup(textForProcessing),
       `${source}-cleanup`
     );
 
-    if (!normalizedText) {
+    if (wakePrefixCleanup.stripped) {
+      logger.logReasoning("AGENT_WAKE_PREFIX_REMOVED", {
+        source,
+        agentName,
+        beforeLength: normalizedText.length,
+        afterLength: textForProcessing.length,
+      });
+    }
+
+    if (!textForProcessing) {
       logger.logReasoning("TRANSCRIPTION_EMPTY_SKIPPING_REASONING", {
         source,
         reason: "Empty text after normalization",
@@ -1730,18 +1777,15 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
     logger.logReasoning("TRANSCRIPTION_RECEIVED", {
       source,
-      textLength: normalizedText.length,
-      textPreview: normalizedText.substring(0, 100) + (normalizedText.length > 100 ? "..." : ""),
+      textLength: textForProcessing.length,
+      textPreview:
+        textForProcessing.substring(0, 100) + (textForProcessing.length > 100 ? "..." : ""),
       timestamp: new Date().toISOString(),
     });
 
     const reasoningModel = getEffectiveReasoningModel();
     const isCloud = isCloudReasoningMode();
     const reasoningProvider = getSettings().reasoningProvider || "auto";
-    const agentName =
-      typeof window !== "undefined" && window.localStorage
-        ? localStorage.getItem("agentName") || null
-        : null;
     if (!reasoningModel && !isCloud) {
       logger.logReasoning("REASONING_SKIPPED", {
         reason: "No reasoning model selected",
@@ -1758,11 +1802,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       agentName,
     });
 
-    const explicitInstruction = this.isExplicitAgentInstruction(normalizedText, agentName);
+    const explicitInstruction = this.isExplicitAgentInstruction(textForProcessing, agentName);
     if (explicitInstruction) {
       logger.logReasoning("AGENT_WAKE_PHRASE_DETECTED_CLEANUP_ONLY_ENFORCED", {
         source,
-        textLength: normalizedText.length,
+        textLength: textForProcessing.length,
         agentName,
       });
     }
@@ -1770,15 +1814,15 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     if (useReasoning) {
       try {
         logger.logReasoning("SENDING_TO_REASONING", {
-          preparedTextLength: normalizedText.length,
+          preparedTextLength: textForProcessing.length,
           model: reasoningModel,
           provider: reasoningProvider,
         });
 
-        let contextClassification = await this.buildReasoningContext(normalizedText, agentName);
+        let contextClassification = await this.buildReasoningContext(textForProcessing, agentName);
         contextClassification = this.enforceCleanupOnlyReasoningContext(contextClassification);
         const result = await this.processWithReasoningModel(
-          normalizedText,
+          textForProcessing,
           reasoningModel,
           agentName,
           this.buildReasoningConfig(contextClassification)
@@ -2039,9 +2083,20 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
     // Process with reasoning if enabled
     let processedText = result.text;
+    const agentName = localStorage.getItem("agentName") || "";
+    const wakePrefixCleanup = this.stripWakeAddressPrefix(processedText, agentName);
+    if (wakePrefixCleanup.stripped) {
+      logger.logReasoning("AGENT_WAKE_PREFIX_REMOVED", {
+        source: "openwhispr-cloud",
+        agentName,
+        beforeLength: processedText.length,
+        afterLength: wakePrefixCleanup.text.length,
+      });
+    }
+    processedText = wakePrefixCleanup.text;
+
     if (settings.useReasoningModel && processedText && !this.skipReasoning) {
       const reasoningStart = performance.now();
-      const agentName = localStorage.getItem("agentName") || "";
       const explicitInstruction = this.isExplicitAgentInstruction(processedText, agentName);
       if (explicitInstruction) {
         logger.logReasoning("AGENT_WAKE_PHRASE_DETECTED_CLEANUP_ONLY_ENFORCED", {
@@ -2068,7 +2123,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           const res = await window.electronAPI.cloudReason(processedText, {
             agentName,
             customDictionary: settings.customDictionary,
-            customPrompt: this.getCustomPrompt(),
             systemPrompt,
             language: settings.preferredLanguage || "auto",
             locale: settings.uiLanguage || "en",
@@ -2133,17 +2187,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
   getCustomDictionaryArray() {
     return getSettings().customDictionary;
-  }
-
-  getCustomPrompt() {
-    try {
-      const raw = localStorage.getItem("customUnifiedPrompt");
-      if (!raw) return undefined;
-      const parsed = JSON.parse(raw);
-      return typeof parsed === "string" ? parsed : undefined;
-    } catch {
-      return undefined;
-    }
   }
 
   getKeyterms() {
@@ -3284,11 +3327,21 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const streamingAudioBytesSent = stopResult?.audioBytesSent || 0;
     const streamingSttLanguage = getBaseLanguageCode(stSettings.preferredLanguage) || undefined;
     const streamingSttWordCount = finalText ? finalText.split(/\s+/).filter(Boolean).length : 0;
+    const agentName = localStorage.getItem("agentName") || "";
+    const wakePrefixCleanup = this.stripWakeAddressPrefix(finalText, agentName);
+    if (wakePrefixCleanup.stripped) {
+      logger.logReasoning("AGENT_WAKE_PREFIX_REMOVED", {
+        source: "streaming",
+        agentName,
+        beforeLength: finalText.length,
+        afterLength: wakePrefixCleanup.text.length,
+      });
+    }
+    finalText = wakePrefixCleanup.text;
 
     let usedCloudReasoning = false;
     if (stSettings.useReasoningModel && finalText && !this.skipReasoning) {
       const reasoningStart = performance.now();
-      const agentName = localStorage.getItem("agentName") || "";
       const explicitInstruction = this.isExplicitAgentInstruction(finalText, agentName);
       if (explicitInstruction) {
         logger.logReasoning("AGENT_WAKE_PHRASE_DETECTED_CLEANUP_ONLY_ENFORCED", {
@@ -3316,7 +3369,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             const res = await window.electronAPI.cloudReason(finalText, {
               agentName,
               customDictionary: stSettings.customDictionary,
-              customPrompt: this.getCustomPrompt(),
               systemPrompt,
               language: stSettings.preferredLanguage || "auto",
               locale: stSettings.uiLanguage || "en",
