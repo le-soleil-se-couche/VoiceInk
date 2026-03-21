@@ -777,7 +777,7 @@ declare global {
           model?: string;
           agentName?: string;
           customDictionary?: string[];
-          customPrompt?: string;
+          systemPrompt?: string;
           language?: string;
           locale?: string;
         }

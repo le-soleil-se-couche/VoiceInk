@@ -6,6 +6,8 @@ export interface ReasoningConfig {
   temperature?: number;
   contextSize?: number;
   systemPrompt?: string;
+  strictMode?: boolean;
+  strictOverlapThreshold?: number;
 }
 
 export abstract class BaseReasoningService {

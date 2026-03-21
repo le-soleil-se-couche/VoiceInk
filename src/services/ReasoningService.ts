@@ -24,6 +24,187 @@ class ReasoningService extends BaseReasoningService {
     }
   }
 
+  private containsAnswerPatterns(text: string): boolean {
+    const normalized = typeof text === "string" ? text.trim() : "";
+    if (!normalized) {
+      return false;
+    }
+
+    const answerPatterns = [
+      /^(sure|certainly|of course|here's|here is|i can|i will|let me)\b/i,
+      /^(答案|结果|结论|答复|回复)\s*(是|为)?/i,
+      /^(the\s+answer|answer|result)\s*(is|:)/i,
+      /^(it's|it is|this is)\b/i,
+      /^(based on|according to)\b/i,
+    ];
+
+    return answerPatterns.some((re) => re.test(normalized));
+  }
+
+  private isQuestionLikeText(text: string): boolean {
+    const normalized = typeof text === "string" ? text.trim() : "";
+    if (!normalized) {
+      return false;
+    }
+
+    if (/[?？]/.test(normalized)) {
+      return true;
+    }
+
+    const zhQuestionSignals =
+      /(什么|多少|几(?:点|月|号|岁|个)|哪(?:个|里|儿)|谁|为何|为什么|怎么|怎样|是否|是不是|能不能|可不可以|要不要|吗|么|嘛|呢)/;
+    if (zhQuestionSignals.test(normalized)) {
+      return true;
+    }
+
+    const enQuestionSignals =
+      /\b(what|why|how|when|where|who|whom|whose|which|can|could|would|should|is|are|am|do|does|did|will|shall)\b/i;
+    return enQuestionSignals.test(normalized);
+  }
+
+  private isQuestionToAnswerDrift(source: string, candidate: string): boolean {
+    if (!this.isQuestionLikeText(source)) {
+      return false;
+    }
+
+    const trimmedCandidate = typeof candidate === "string" ? candidate.trim() : "";
+    if (!trimmedCandidate) {
+      return true;
+    }
+
+    if (this.isQuestionLikeText(trimmedCandidate)) {
+      return false;
+    }
+
+    const answerLeadPatterns = [
+      /^(答案|结果|结论|答复|回复)\s*(是|为)?/i,
+      /^(the\s+answer|answer|result)\s*(is|:)/i,
+      /^(it's|it is|this is)\b/i,
+      /^\s*\d+(?:[.,]\d+)?\s*(?:%|[a-z]+)?\s*$/i,
+    ];
+    if (answerLeadPatterns.some((re) => re.test(trimmedCandidate))) {
+      return true;
+    }
+
+    const sourceEndsWithQuestion = /[?？]\s*$/.test(source.trim());
+    const candidateEndsWithQuestion = /[?？]\s*$/.test(trimmedCandidate);
+    if (sourceEndsWithQuestion && !candidateEndsWithQuestion) {
+      return true;
+    }
+
+    const compressionRatio = trimmedCandidate.length / Math.max(source.trim().length, 1);
+    return compressionRatio < 0.6;
+  }
+
+  private tokenizeForOverlap(text: string): string[] {
+    const normalized = typeof text === "string" ? text.trim() : "";
+    if (!normalized) {
+      return [];
+    }
+
+    const latinTokens = normalized
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .split(/\s+/)
+      .filter(Boolean);
+    const cjkTokens = normalized.match(/[\u4e00-\u9fff]/g) || [];
+
+    return [...latinTokens, ...cjkTokens];
+  }
+
+  private calculateOverlapScore(source: string, candidate: string): number {
+    const sourceTokens = this.tokenizeForOverlap(source);
+    const candidateTokens = this.tokenizeForOverlap(candidate);
+
+    if (sourceTokens.length === 0) {
+      return candidateTokens.length === 0 ? 1 : 0;
+    }
+
+    const sourceSet = new Set(sourceTokens);
+    const candidateSet = new Set(candidateTokens);
+    let overlapCount = 0;
+
+    for (const token of sourceSet) {
+      if (candidateSet.has(token)) {
+        overlapCount += 1;
+      }
+    }
+
+    return overlapCount / sourceSet.size;
+  }
+
+  private localCleanupFallback(source: string): string {
+    return typeof source === "string" ? source.trim() : "";
+  }
+
+  enforceStrictMode(
+    source: string,
+    candidate: string,
+    config: ReasoningConfig = {},
+    provider = "unknown",
+    model = "unknown"
+  ): string {
+    if (!config.strictMode) {
+      return candidate;
+    }
+
+    const normalizedSource = typeof source === "string" ? source.trim() : "";
+    const normalizedCandidate = typeof candidate === "string" ? candidate.trim() : "";
+
+    if (!normalizedSource) {
+      return normalizedCandidate;
+    }
+
+    if (!normalizedCandidate) {
+      const fallback = this.localCleanupFallback(normalizedSource);
+      logger.logReasoning("STRICT_MODE_EMPTY_OUTPUT_FALLBACK", {
+        provider,
+        model,
+        sourceLength: normalizedSource.length,
+      });
+      return fallback;
+    }
+
+    if (this.containsAnswerPatterns(normalizedCandidate)) {
+      const fallback = this.localCleanupFallback(normalizedSource);
+      logger.logReasoning("STRICT_MODE_ANSWER_PATTERN_BLOCKED", {
+        provider,
+        model,
+        sourceLength: normalizedSource.length,
+        candidateLength: normalizedCandidate.length,
+      });
+      return fallback;
+    }
+
+    if (this.isQuestionToAnswerDrift(normalizedSource, normalizedCandidate)) {
+      const fallback = this.localCleanupFallback(normalizedSource);
+      logger.logReasoning("STRICT_MODE_QUESTION_DRIFT_BLOCKED", {
+        provider,
+        model,
+        sourceLength: normalizedSource.length,
+        candidateLength: normalizedCandidate.length,
+      });
+      return fallback;
+    }
+
+    const threshold = config.strictOverlapThreshold ?? 0.86;
+    const overlapScore = this.calculateOverlapScore(normalizedSource, normalizedCandidate);
+    if (overlapScore < threshold) {
+      const fallback = this.localCleanupFallback(normalizedSource);
+      logger.logReasoning("STRICT_MODE_LOW_OVERLAP_FALLBACK", {
+        provider,
+        model,
+        sourceLength: normalizedSource.length,
+        candidateLength: normalizedCandidate.length,
+        overlapScore,
+        threshold,
+      });
+      return fallback;
+    }
+
+    return normalizedCandidate;
+  }
+
   private getConfiguredOpenAIBase(): string {
     if (typeof window === "undefined") {
       return API_ENDPOINTS.OPENAI_BASE;
@@ -449,6 +630,16 @@ class ReasoningService extends BaseReasoningService {
       }
 
       const processingTime = Date.now() - startTime;
+
+      if (config.strictMode) {
+        result = this.enforceStrictMode(
+          text,
+          result,
+          config,
+          provider,
+          trimmedModel || model || "unknown"
+        );
+      }
 
       logger.logReasoning("PROVIDER_SUCCESS", {
         provider,
@@ -1055,7 +1246,6 @@ class ReasoningService extends BaseReasoningService {
         const res = await (window as any).electronAPI.cloudReason(text, {
           agentName,
           customDictionary,
-          customPrompt: this.getCustomPrompt(),
           systemPrompt: config.systemPrompt,
           language,
           locale,
@@ -1087,17 +1277,6 @@ class ReasoningService extends BaseReasoningService {
       throw error;
     } finally {
       this.isProcessing = false;
-    }
-  }
-
-  private getCustomPrompt(): string | undefined {
-    try {
-      const raw = localStorage.getItem("customUnifiedPrompt");
-      if (!raw) return undefined;
-      const parsed = JSON.parse(raw);
-      return typeof parsed === "string" ? parsed : undefined;
-    } catch {
-      return undefined;
     }
   }
 
