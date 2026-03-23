@@ -10,6 +10,10 @@ export interface ReasoningConfig {
   contextClassification?: ContextClassification;
   strictMode?: boolean;
   strictOverlapThreshold?: number;
+  strictShortInputThreshold?: number;
+  allowSafeShortPolish?: boolean;
+  strictMaxExpansionRatio?: number;
+  strictMinOutputCoverage?: number;
 }
 
 export abstract class BaseReasoningService {

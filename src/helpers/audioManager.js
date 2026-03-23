@@ -7,6 +7,7 @@ import { isSecureEndpoint } from "../utils/urlUtils";
 import { withSessionRefresh } from "../lib/neonAuth";
 import { getBaseLanguageCode, validateLanguageForModel } from "../utils/languageSupport";
 import { classifyContext, getTargetAppInfo, DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
+import { canonicalizeDictationText } from "../utils/dictationCanonicalizer";
 import {
   getSettings,
   getEffectiveReasoningModel,
@@ -16,6 +17,14 @@ import {
 const SHORT_CLIP_DURATION_SECONDS = 2.5;
 const REASONING_CACHE_TTL = 30000; // 30 seconds
 const RECORDING_OUTPUT_MUTE_DELAY_MS = 260;
+const STREAMING_CANONICALIZER_TARGET_MS = 5;
+const STREAMING_CANONICALIZER_HARD_LIMIT_MS = 10;
+const MAC_STRICT_SHORT_INPUT_THRESHOLD = 18;
+const MAC_STRICT_MAX_EXPANSION_RATIO = 1.35;
+const MAC_STRICT_MIN_OUTPUT_COVERAGE = 0.7;
+const FLAG_CANONICALIZER_ENABLED = "dictationCanonicalizerEnabled";
+const FLAG_NUMBER_CANONICALIZER_ENABLED = "dictationNumberCanonicalizerEnabled";
+const FLAG_PUNCTUATION_CANONICALIZER_ENABLED = "dictationPunctuationCanonicalizerEnabled";
 
 const PLACEHOLDER_KEYS = {
   openai: "your_openai_api_key_here",
@@ -239,27 +248,6 @@ const normalizeSpokenChineseNumbers = (value) =>
     const parsed = parseChineseNumberWords(segment);
     return parsed ?? segment;
   });
-
-const toArabicNumeral = (value) => {
-  const parsed = parseChineseNumberWords(value);
-  return parsed ?? value;
-};
-
-const normalizeChineseDateExpressions = (value) => {
-  if (typeof value !== "string" || !value) return value;
-
-  return value
-    .replace(
-      /([零〇一二两三四五六七八九十百千万萬]{2,})\s*年\s*([零〇一二两三四五六七八九十百千万萬]{1,3})\s*月\s*([零〇一二两三四五六七八九十百千万萬]{1,3})\s*(日|号)/g,
-      (_match, yearText, monthText, dayText, suffix) =>
-        `${toArabicNumeral(yearText)}年${toArabicNumeral(monthText)}月${toArabicNumeral(dayText)}${suffix}`
-    )
-    .replace(
-      /([零〇一二两三四五六七八九十百千万萬]{1,3})\s*月\s*([零〇一二两三四五六七八九十百千万萬]{1,3})\s*(日|号)/g,
-      (_match, monthText, dayText, suffix) =>
-        `${toArabicNumeral(monthText)}月${toArabicNumeral(dayText)}${suffix}`
-    );
-};
 
 const buildTargetedCanonicalAliasKeys = (normalizedKey) => {
   const aliases = new Set();
@@ -725,6 +713,88 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     this.sttConfig = config;
   }
 
+  getRuntimePlatform() {
+    if (typeof window === "undefined") return "unknown";
+    return window.electronAPI?.getPlatform?.() || "unknown";
+  }
+
+  isDarwinPlatform() {
+    return this.getRuntimePlatform() === "darwin";
+  }
+
+  buildOpenWhisprCloudTranscribeOptions(settings = getSettings()) {
+    const language = getBaseLanguageCode(settings.preferredLanguage);
+    const opts = {};
+    if (language) opts.language = language;
+
+    const reasoningMode = settings.cloudReasoningMode || "openwhispr";
+    if (settings.useReasoningModel && !this.skipReasoning && reasoningMode === "openwhispr") {
+      opts.sendLogs = "false";
+    }
+
+    const dictionaryPrompt = this.getCustomDictionaryPrompt();
+    if (dictionaryPrompt) opts.prompt = dictionaryPrompt;
+
+    return opts;
+  }
+
+  async requestOpenWhisprCloudTranscription(arrayBuffer, opts) {
+    return withSessionRefresh(async () => {
+      const res = await window.electronAPI.cloudTranscribe(arrayBuffer, opts);
+      if (!res.success) {
+        const err = new Error(res.error || "Cloud transcription failed");
+        err.code = res.code;
+        throw err;
+      }
+      return res;
+    });
+  }
+
+  buildAnswerLikeAsrError(source) {
+    const err = new Error(
+      "Detected assistant-style transcription twice. Please re-record this sentence in plain dictation."
+    );
+    err.code = "ASR_ANSWER_LIKE_OUTPUT";
+    err.source = source;
+    return err;
+  }
+
+  async guardMacAsrAnswerLikeOutput(text, { source, retryOnce } = {}) {
+    const normalizedText = typeof text === "string" ? text : "";
+    if (!this.isDarwinPlatform()) {
+      return normalizedText;
+    }
+
+    if (!isAnswerLikeTranscriptionOutput(normalizedText)) {
+      return normalizedText;
+    }
+
+    logger.logReasoning("ASR_GUARD_RETRY_MAC", {
+      source,
+      textLength: normalizedText.length,
+      preview: normalizedText.slice(0, 120),
+    });
+
+    let retriedText = "";
+    if (typeof retryOnce === "function") {
+      retriedText = (await retryOnce()) || "";
+    }
+
+    if (!isAnswerLikeTranscriptionOutput(retriedText)) {
+      return retriedText;
+    }
+
+    logger.logReasoning("ASR_GUARD_BLOCKED_MAC", {
+      source,
+      firstTextLength: normalizedText.length,
+      retryTextLength: retriedText.length,
+      firstPreview: normalizedText.slice(0, 120),
+      retryPreview: retriedText.slice(0, 120),
+    });
+
+    throw this.buildAnswerLikeAsrError(source || "openwhispr-cloud");
+  }
+
   shouldMuteSystemPlaybackWhileRecording() {
     if (typeof window === "undefined") return false;
     if (window.electronAPI?.getPlatform?.() !== "win32") return false;
@@ -1139,9 +1209,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       );
 
       if (error.message !== "No audio detected") {
+        const isAsrGuardBlocked = error.code === "ASR_ANSWER_LIKE_OUTPUT";
         this.onError?.({
-          title: "Transcription Error",
-          description: `Transcription failed: ${error.message}`,
+          title: isAsrGuardBlocked ? "Transcription Blocked" : "Transcription Error",
+          description: isAsrGuardBlocked
+            ? error.message
+            : `Transcription failed: ${error.message}`,
           code: error.code,
         });
       }
@@ -1492,11 +1565,20 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const strictOverlapThreshold =
       Number(contextClassification?.strictOverlapThreshold) || DEFAULT_STRICT_OVERLAP_THRESHOLD;
 
-    return {
+    const config = {
       contextClassification: contextClassification || undefined,
       strictMode: contextClassification?.strictMode ?? true,
       strictOverlapThreshold,
     };
+
+    if (this.isDarwinPlatform()) {
+      config.strictShortInputThreshold = MAC_STRICT_SHORT_INPUT_THRESHOLD;
+      config.allowSafeShortPolish = true;
+      config.strictMaxExpansionRatio = MAC_STRICT_MAX_EXPANSION_RATIO;
+      config.strictMinOutputCoverage = MAC_STRICT_MIN_OUTPUT_COVERAGE;
+    }
+
+    return config;
   }
 
   enforceCleanupOnlyReasoningContext(contextClassification) {
@@ -1533,7 +1615,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
   basicDictationCleanup(text) {
     if (typeof text !== "string") return "";
-    const normalized = text
+    return text
+      .replace(/^[\s\u200B-\u200D\uFEFF]*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*[，,、]?\s*/g, "")
+      .replace(/^[\u200B-\u200D\uFEFF]+/g, "")
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
       .replace(ENGLISH_FILLER_WORD_RE, "")
@@ -1555,7 +1639,89 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(/[ \t]{2,}/g, " ")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
-    return normalizeChineseDateExpressions(normalized);
+  }
+
+  getLocalStorageFlag(key, fallback = true) {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return fallback;
+    }
+
+    const raw = window.localStorage.getItem(key);
+    if (raw === null) return fallback;
+    if (raw === "false") return false;
+    if (raw === "0") return false;
+    if (raw === "off") return false;
+    return true;
+  }
+
+  getCanonicalizerRuntimeOptions(source = "unknown") {
+    const settings = getSettings();
+    return {
+      source,
+      locale: settings.uiLanguage || "en",
+      preferredLanguage: settings.preferredLanguage || "auto",
+      canonicalizerEnabled: this.getLocalStorageFlag(FLAG_CANONICALIZER_ENABLED, true),
+      numberEnabled: this.getLocalStorageFlag(FLAG_NUMBER_CANONICALIZER_ENABLED, true),
+      punctuationEnabled: this.getLocalStorageFlag(FLAG_PUNCTUATION_CANONICALIZER_ENABLED, true),
+    };
+  }
+
+  finalizeDictationOutput(text, source = "unknown") {
+    const cleanedText = this.basicDictationCleanup(text);
+    const runtimeOptions = this.getCanonicalizerRuntimeOptions(source);
+    const isStreamingSource = source.includes("streaming");
+    const start = typeof performance !== "undefined" ? performance.now() : Date.now();
+
+    const { text: canonicalizedText, stats } = canonicalizeDictationText(cleanedText, runtimeOptions);
+
+    const elapsedMs = Number(
+      (
+        (typeof performance !== "undefined" ? performance.now() : Date.now()) -
+        start
+      ).toFixed(3)
+    );
+
+    let canonicalizedFinal = canonicalizedText;
+    if (isStreamingSource && elapsedMs > STREAMING_CANONICALIZER_HARD_LIMIT_MS) {
+      canonicalizedFinal = cleanedText;
+      logger.logReasoning("CANONICALIZER_SKIPPED_TIMEOUT", {
+        source,
+        elapsedMs,
+        hardLimitMs: STREAMING_CANONICALIZER_HARD_LIMIT_MS,
+        targetMs: STREAMING_CANONICALIZER_TARGET_MS,
+      });
+    } else {
+      if (
+        stats.enabled &&
+        stats.chineseEnabled &&
+        (stats.numberReplacements > 0 ||
+          stats.punctuationReplacements > 0 ||
+          stats.literalProtections > 0 ||
+          stats.idiomProtections > 0 ||
+          elapsedMs > STREAMING_CANONICALIZER_TARGET_MS)
+      ) {
+        logger.logReasoning("CANONICALIZER_APPLIED", {
+          source,
+          elapsedMs,
+          targetMs: STREAMING_CANONICALIZER_TARGET_MS,
+          numberReplacements: stats.numberReplacements,
+          punctuationReplacements: stats.punctuationReplacements,
+          literalProtections: stats.literalProtections,
+          idiomProtections: stats.idiomProtections,
+          dotConversions: stats.dotConversions,
+        });
+      }
+
+      if (stats.literalProtections > 0) {
+        logger.logReasoning("CANONICALIZER_LITERAL_PROTECTED", {
+          source,
+          elapsedMs,
+          literalProtections: stats.literalProtections,
+        });
+      }
+    }
+
+    return this.applyDictionaryNormalization(canonicalizedFinal, `${source}-final`);
   }
 
   applyDictionaryNormalization(text, source = "unknown") {
@@ -1753,10 +1919,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         : null;
     const wakePrefixCleanup = this.stripWakeAddressPrefix(normalizedText, agentName);
     const textForProcessing = wakePrefixCleanup.text;
-    const cleanedText = this.applyDictionaryNormalization(
-      this.basicDictationCleanup(textForProcessing),
-      `${source}-cleanup`
-    );
+    const finalizeFallbackOutput = () => this.finalizeDictationOutput(textForProcessing, source);
 
     if (wakePrefixCleanup.stripped) {
       logger.logReasoning("AGENT_WAKE_PREFIX_REMOVED", {
@@ -1772,7 +1935,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         source,
         reason: "Empty text after normalization",
       });
-      return cleanedText;
+      return finalizeFallbackOutput();
     }
 
     logger.logReasoning("TRANSCRIPTION_RECEIVED", {
@@ -1790,7 +1953,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       logger.logReasoning("REASONING_SKIPPED", {
         reason: "No reasoning model selected",
       });
-      return cleanedText;
+      return finalizeFallbackOutput();
     }
 
     const useReasoning = await this.isReasoningAvailable();
@@ -1834,10 +1997,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           processingTime: new Date().toISOString(),
         });
 
-        const postProcessed = this.applyDictionaryNormalization(
-          this.basicDictationCleanup(result),
-          `${source}-reasoned`
-        );
+        const postProcessed = this.finalizeDictationOutput(result, `${source}-reasoned`);
         if (postProcessed !== result) {
           logger.logReasoning("REASONING_POST_CLEANUP_APPLIED", {
             beforeLength: result.length,
@@ -1859,7 +2019,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       reason: useReasoning ? "Reasoning failed" : "Reasoning not enabled",
     });
 
-    return cleanedText;
+    return finalizeFallbackOutput();
   }
 
   shouldStreamTranscription(model, provider) {
@@ -2053,36 +2213,33 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
     const timings = {};
     const settings = getSettings();
-    const language = getBaseLanguageCode(settings.preferredLanguage);
 
     const arrayBuffer = await audioBlob.arrayBuffer();
     const audioSizeBytes = audioBlob.size;
     const audioFormat = audioBlob.type;
-    const opts = {};
-    if (language) opts.language = language;
-    const reasoningMode = settings.cloudReasoningMode || "openwhispr";
-    if (settings.useReasoningModel && !this.skipReasoning && reasoningMode === "openwhispr") {
-      opts.sendLogs = "false";
-    }
+    const opts = this.buildOpenWhisprCloudTranscribeOptions(settings);
+    let result = null;
+    let transcriptionProcessingDurationMs = 0;
 
-    const dictionaryPrompt = this.getCustomDictionaryPrompt();
-    if (dictionaryPrompt) opts.prompt = dictionaryPrompt;
+    const runCloudTranscriptionAttempt = async () => {
+      const transcriptionStart = performance.now();
+      const response = await this.requestOpenWhisprCloudTranscription(arrayBuffer, opts);
+      transcriptionProcessingDurationMs += Math.round(performance.now() - transcriptionStart);
+      return response;
+    };
 
-    // Use withSessionRefresh to handle AUTH_EXPIRED automatically
-    const transcriptionStart = performance.now();
-    const result = await withSessionRefresh(async () => {
-      const res = await window.electronAPI.cloudTranscribe(arrayBuffer, opts);
-      if (!res.success) {
-        const err = new Error(res.error || "Cloud transcription failed");
-        err.code = res.code;
-        throw err;
-      }
-      return res;
+    result = await runCloudTranscriptionAttempt();
+    let processedText = result?.text || "";
+    processedText = await this.guardMacAsrAnswerLikeOutput(processedText, {
+      source: "openwhispr-cloud",
+      retryOnce: async () => {
+        result = await runCloudTranscriptionAttempt();
+        return result?.text || "";
+      },
     });
-    timings.transcriptionProcessingDurationMs = Math.round(performance.now() - transcriptionStart);
+    timings.transcriptionProcessingDurationMs = transcriptionProcessingDurationMs;
 
     // Process with reasoning if enabled
-    let processedText = result.text;
     const agentName = localStorage.getItem("agentName") || "";
     const wakePrefixCleanup = this.stripWakeAddressPrefix(processedText, agentName);
     if (wakePrefixCleanup.stripped) {
@@ -2169,10 +2326,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       timings.reasoningProcessingDurationMs = Math.round(performance.now() - reasoningStart);
     }
 
-    processedText = this.applyDictionaryNormalization(
-      this.basicDictationCleanup(processedText),
-      "openwhispr-cloud-final"
-    );
+    processedText = this.finalizeDictationOutput(processedText, "openwhispr-cloud");
 
     return {
       success: true,
@@ -2661,6 +2815,19 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
       // For custom provider, use whatever model is set (or fallback to whisper-1)
       if (provider === "custom") {
+        const isQwenFamilyModel = /^qwen[\w.-]*/i.test(trimmedModel);
+        const isQwenAsrLikeModel = /(?:asr|audio)/i.test(trimmedModel);
+
+        if (this.isDarwinPlatform() && isQwenFamilyModel && !isQwenAsrLikeModel) {
+          const fallbackModel = "qwen3-asr-flash";
+          logger.warn(
+            "Custom transcription model appears non-ASR; auto-switching to ASR-capable Qwen model",
+            { configuredModel: trimmedModel, fallbackModel },
+            "transcription"
+          );
+          return fallbackModel;
+        }
+
         return trimmedModel || "whisper-1";
       }
 
@@ -3326,6 +3493,19 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const streamingSttProcessingMs = Math.round(tTerminate - t0);
     const streamingAudioBytesSent = stopResult?.audioBytesSent || 0;
     const streamingSttLanguage = getBaseLanguageCode(stSettings.preferredLanguage) || undefined;
+    finalText = await this.guardMacAsrAnswerLikeOutput(finalText, {
+      source: "openwhispr-streaming",
+      retryOnce: async () => {
+        if (!fallbackBlob?.size) {
+          return finalText;
+        }
+        const retryBuffer = await fallbackBlob.arrayBuffer();
+        const retryOpts = this.buildOpenWhisprCloudTranscribeOptions(stSettings);
+        const retryResult = await this.requestOpenWhisprCloudTranscription(retryBuffer, retryOpts);
+        return retryResult?.text || "";
+      },
+    });
+
     const streamingSttWordCount = finalText ? finalText.split(/\s+/).filter(Boolean).length : 0;
     const agentName = localStorage.getItem("agentName") || "";
     const wakePrefixCleanup = this.stripWakeAddressPrefix(finalText, agentName);
@@ -3460,10 +3640,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     }
 
     if (finalText) {
-      finalText = this.applyDictionaryNormalization(
-        this.basicDictationCleanup(finalText),
-        "streaming-final"
-      );
+      finalText = this.finalizeDictationOutput(finalText, "streaming-final");
 
       const tBeforePaste = performance.now();
       const clientTotalMs = Math.round(tBeforePaste - t0);
@@ -3526,6 +3703,27 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       }
 
       return true;
+    } catch (error) {
+      logger.error(
+        "Failed to stop streaming recording",
+        { error: error.message, code: error.code },
+        "streaming"
+      );
+
+      const isAsrGuardBlocked = error.code === "ASR_ANSWER_LIKE_OUTPUT";
+      this.onError?.({
+        title: isAsrGuardBlocked ? "Transcription Blocked" : "Streaming Error",
+        description: isAsrGuardBlocked
+          ? error.message
+          : `Failed to stop streaming: ${error.message}`,
+        code: error.code,
+      });
+
+      await this.cleanupStreaming();
+      this.isRecording = false;
+      this.isProcessing = false;
+      this.onStateChange?.({ isRecording: false, isProcessing: false, isStreaming: false });
+      return false;
     } finally {
       this.streamingStopInProgress = false;
     }
