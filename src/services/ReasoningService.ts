@@ -100,12 +100,20 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return patterns.some((re) => re.test(text));
   }
 
-  private calculateOverlapScore(source: string, candidate: string): number {
+  private calculateOverlapMetrics(source: string, candidate: string): {
+    score: number;
+    outputCoverage: number;
+    sourceCoverage: number;
+  } {
     const sourceTokens = this.tokenizeForOverlap(source);
     const candidateTokens = this.tokenizeForOverlap(candidate);
 
     if (sourceTokens.length === 0 || candidateTokens.length === 0) {
-      return 0;
+      return {
+        score: 0,
+        outputCoverage: 0,
+        sourceCoverage: 0,
+      };
     }
 
     const sourceSet = new Set(sourceTokens);
@@ -128,7 +136,15 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     const outputCoverage = outputMatches / candidateTokens.length;
     const sourceCoverage = sourceMatches / sourceSet.size;
 
-    return Number(((outputCoverage + sourceCoverage) / 2).toFixed(4));
+    return {
+      outputCoverage: Number(outputCoverage.toFixed(4)),
+      sourceCoverage: Number(sourceCoverage.toFixed(4)),
+      score: Number(((outputCoverage + sourceCoverage) / 2).toFixed(4)),
+    };
+  }
+
+  private calculateOverlapScore(source: string, candidate: string): number {
+    return this.calculateOverlapMetrics(source, candidate).score;
   }
 
   private localCleanupFallback(text: string): string {
@@ -179,37 +195,120 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return fallback;
     }
 
-    const shortInputThreshold = 24;
-    if (source.trim().length < shortInputThreshold) {
+    const defaultShortInputThreshold = 24;
+    const configuredShortInputThreshold = Number(config.strictShortInputThreshold);
+    const shortInputThreshold = Number.isFinite(configuredShortInputThreshold)
+      ? Math.max(1, configuredShortInputThreshold)
+      : defaultShortInputThreshold;
+    const allowSafeShortPolish = config.allowSafeShortPolish === true;
+    const sourceLength = source.trim().length;
+    const candidateLength = candidate.trim().length;
+
+    if (sourceLength < shortInputThreshold) {
+      if (allowSafeShortPolish) {
+        const shortOverlap = this.calculateOverlapScore(source, candidate);
+        const safeShortOverlapThreshold = 0.85;
+        if (shortOverlap >= safeShortOverlapThreshold) {
+          logger.logReasoning("STRICT_MODE_SHORT_INPUT_SAFE_PASS", {
+            provider,
+            model,
+            sourceLength,
+            threshold: shortInputThreshold,
+            shortOverlap,
+            safeShortOverlapThreshold,
+            candidateLength: candidate.length,
+          });
+          return candidate;
+        }
+
+        logger.logReasoning("STRICT_MODE_SHORT_INPUT_SAFE_REJECTED", {
+          provider,
+          model,
+          sourceLength,
+          threshold: shortInputThreshold,
+          shortOverlap,
+          safeShortOverlapThreshold,
+          candidateLength: candidate.length,
+        });
+      }
+
       const fallback = this.localCleanupFallback(source);
       logger.logReasoning("STRICT_MODE_SHORT_INPUT_LOCAL_CLEANUP", {
         provider,
         model,
-        sourceLength: source.trim().length,
+        sourceLength,
         threshold: shortInputThreshold,
+        allowSafeShortPolish,
         candidateLength: candidate.length,
         fallbackLength: fallback.length,
       });
       return fallback;
     }
 
+    const configuredMaxExpansionRatio = Number(config.strictMaxExpansionRatio);
+    if (
+      Number.isFinite(configuredMaxExpansionRatio) &&
+      configuredMaxExpansionRatio > 1 &&
+      sourceLength >= 12 &&
+      candidateLength > sourceLength
+    ) {
+      const expansionRatio = Number((candidateLength / sourceLength).toFixed(3));
+      if (expansionRatio > configuredMaxExpansionRatio) {
+        const fallback = this.localCleanupFallback(source);
+        logger.logReasoning("STRICT_MODE_EXPANSION_BLOCKED", {
+          provider,
+          model,
+          sourceLength,
+          candidateLength,
+          expansionRatio,
+          maxExpansionRatio: configuredMaxExpansionRatio,
+          fallbackLength: fallback.length,
+        });
+        return fallback;
+      }
+    }
+
     const threshold =
       config.strictOverlapThreshold ||
       config.contextClassification?.strictOverlapThreshold ||
       DEFAULT_STRICT_OVERLAP_THRESHOLD;
-    const overlap = this.calculateOverlapScore(source, candidate);
+    const overlapMetrics = this.calculateOverlapMetrics(source, candidate);
+    const overlap = overlapMetrics.score;
+    const configuredMinOutputCoverage = Number(config.strictMinOutputCoverage);
+    const hasMinOutputCoverage =
+      Number.isFinite(configuredMinOutputCoverage) && configuredMinOutputCoverage > 0;
 
     logger.logReasoning("STRICT_MODE_OVERLAP_CHECK", {
       provider,
       model,
       overlap,
+      outputCoverage: overlapMetrics.outputCoverage,
+      sourceCoverage: overlapMetrics.sourceCoverage,
       threshold,
+      minOutputCoverage: hasMinOutputCoverage ? configuredMinOutputCoverage : null,
       context: config.contextClassification?.context || "unknown",
       intent: config.contextClassification?.intent || "cleanup",
     });
 
-    if (overlap >= threshold) {
+    if (
+      overlap >= threshold &&
+      (!hasMinOutputCoverage || overlapMetrics.outputCoverage >= configuredMinOutputCoverage)
+    ) {
       return candidate;
+    }
+
+    if (overlap >= threshold && hasMinOutputCoverage) {
+      logger.logReasoning("STRICT_MODE_OUTPUT_COVERAGE_BLOCKED", {
+        provider,
+        model,
+        overlap,
+        outputCoverage: overlapMetrics.outputCoverage,
+        sourceCoverage: overlapMetrics.sourceCoverage,
+        threshold,
+        minOutputCoverage: configuredMinOutputCoverage,
+        sourceLength,
+        candidateLength,
+      });
     }
 
     const fallback = this.localCleanupFallback(source);
@@ -625,6 +724,10 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       context: config.contextClassification?.context || "general",
       intent: config.contextClassification?.intent || "cleanup",
       strictMode: config.strictMode ?? config.contextClassification?.strictMode ?? false,
+      strictShortInputThreshold: config.strictShortInputThreshold ?? null,
+      allowSafeShortPolish: config.allowSafeShortPolish ?? false,
+      strictMaxExpansionRatio: config.strictMaxExpansionRatio ?? null,
+      strictMinOutputCoverage: config.strictMinOutputCoverage ?? null,
       timestamp: new Date().toISOString(),
     });
 

@@ -80,11 +80,58 @@ function getDictionaryEnforcementInstruction(uiLanguage?: string): string {
   ].join("\n");
 }
 
+function shouldApplyChineseCanonicalizationInstruction(
+  language?: string,
+  transcript?: string | null
+): boolean {
+  const normalizedLanguage = typeof language === "string" ? language.trim() : "";
+  if (normalizedLanguage === "zh-CN" || normalizedLanguage === "zh-TW") {
+    return true;
+  }
+  if (normalizedLanguage && normalizedLanguage !== "auto") {
+    return false;
+  }
+
+  const text = typeof transcript === "string" ? transcript : "";
+  const compact = text.replace(/\s+/g, "");
+  if (!compact) return false;
+  const hanCount = (compact.match(/[\u4e00-\u9fff]/g) || []).length;
+  return hanCount / Math.max(1, compact.length) > 0.2;
+}
+
+function getChineseCanonicalizationInstruction(
+  language?: string,
+  transcript?: string | null,
+  uiLanguage?: string
+): string {
+  if (!shouldApplyChineseCanonicalizationInstruction(language, transcript)) {
+    return "";
+  }
+
+  const locale = normalizeUiLanguage(uiLanguage || "en");
+  const isZhUi = locale.startsWith("zh");
+  if (isZhUi) {
+    return [
+      "中文转写收紧规则：",
+      "- 日期、时间、金额、编号、版本号、IP 优先输出阿拉伯数字；普通口语中的小数字可保留汉字。",
+      "- 成语、固定搭配、字面提及（如“这个词是问号”）必须保持原文，不要机械数字化或符号化。",
+      "- 口述标点按语境转换为符号；若明显是解释词义而非标点指令，则保持汉字词。",
+    ].join("\n");
+  }
+
+  return [
+    "Chinese canonicalization tightening:",
+    "- Prefer Arabic numerals for dates, time, currency, IDs, versions, and IP; keep small conversational numbers as Chinese when natural.",
+    "- Keep idioms/fixed phrases and literal mentions (e.g. \"the word is question mark\") unchanged.",
+    "- Convert spoken punctuation words to symbols only when context indicates punctuation intent.",
+  ].join("\n");
+}
+
 export function getSystemPrompt(
   agentName: string | null,
   customDictionary?: string[],
   language?: string,
-  _transcript?: string,
+  transcript?: string,
   uiLanguage?: string,
   context?: ContextClassification
 ): string {
@@ -101,6 +148,15 @@ export function getSystemPrompt(
   const contextInstruction = getContextInstruction(context);
   if (contextInstruction) {
     prompt += "\n\n" + contextInstruction;
+  }
+
+  const chineseCanonicalizationInstruction = getChineseCanonicalizationInstruction(
+    language,
+    transcript,
+    uiLanguage
+  );
+  if (chineseCanonicalizationInstruction) {
+    prompt += "\n\n" + chineseCanonicalizationInstruction;
   }
 
   if (customDictionary && customDictionary.length > 0) {

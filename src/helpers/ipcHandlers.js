@@ -1512,27 +1512,19 @@ class IPCHandlers {
     ipcMain.handle(
       "proxy-custom-transcription",
       async (event, { audioBuffer, endpoint, model, language, prompt, mimeType, isQwenAsr }) => {
-        if (!endpoint) {
+        const trimmedEndpoint = (endpoint || "").trim();
+        if (!trimmedEndpoint) {
           throw new Error("Custom transcription endpoint is empty");
         }
 
-        const apiKey = this.environmentManager.getCustomTranscriptionKey();
-        const headers = {};
-        if (apiKey) {
-          headers.Authorization = `Bearer ${apiKey}`;
-        }
+        const normalizedEndpoint = trimmedEndpoint.replace(/\/+$/, "");
+        const trimmedModel = (model || "").trim();
+        const isQwenFamilyModel = /^qwen[\w.-]*/i.test(trimmedModel);
 
-        let response;
-
-        if (isQwenAsr) {
-          // Qwen ASR uses chat-completions format with base64 audio
-          const chatEndpoint = /chat\/completions$/i.test(endpoint.trim())
-            ? endpoint.trim()
-            : `${endpoint.trim().replace(/\/+$/, "")}/chat/completions`;
-
+        const buildQwenAudioPayload = () => {
           const audioBase64 = Buffer.from(audioBuffer).toString("base64");
-          const payload = {
-            model,
+          return {
+            model: trimmedModel || model,
             messages: [
               {
                 role: "user",
@@ -1549,12 +1541,62 @@ class IPCHandlers {
             stream: false,
             asr_options: { enable_itn: false },
           };
+        };
 
-          response = await fetch(chatEndpoint, {
+        const apiKey = this.environmentManager.getCustomTranscriptionKey();
+        const headers = {};
+        if (apiKey) {
+          headers.Authorization = `Bearer ${apiKey}`;
+        }
+
+        const shouldRetryNetworkError = (error) => {
+          const message = String(error?.message || "").toLowerCase();
+          if (!message) return false;
+          return (
+            message.includes("fetch failed") ||
+            message.includes("network") ||
+            message.includes("econnreset") ||
+            message.includes("enotfound") ||
+            message.includes("etimedout") ||
+            message.includes("eai_again")
+          );
+        };
+
+        const fetchWithNetworkRetry = async (requestUrl, requestOptions, label = "custom") => {
+          const maxAttempts = 2;
+          let lastError = null;
+          for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+            try {
+              return await fetch(requestUrl, requestOptions);
+            } catch (error) {
+              lastError = error;
+              if (!shouldRetryNetworkError(error) || attempt >= maxAttempts) {
+                const networkError = new Error(
+                  `Custom transcription network error (${label}): ${error.message}. Endpoint: ${requestUrl}`
+                );
+                networkError.code = "CUSTOM_TRANSCRIPTION_NETWORK_ERROR";
+                throw networkError;
+              }
+              await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+            }
+          }
+          throw lastError;
+        };
+
+        let response;
+
+        if (isQwenAsr) {
+          // Qwen ASR uses chat-completions format with base64 audio
+          const chatEndpoint = /chat\/completions$/i.test(normalizedEndpoint)
+            ? normalizedEndpoint
+            : `${normalizedEndpoint}/chat/completions`;
+          const payload = buildQwenAudioPayload();
+
+          response = await fetchWithNetworkRetry(chatEndpoint, {
             method: "POST",
             headers: { ...headers, "Content-Type": "application/json" },
             body: JSON.stringify(payload),
-          });
+          }, "qwen-chat");
         } else {
           // Standard OpenAI-compatible multipart form-data
           const formData = new FormData();
@@ -1570,15 +1612,44 @@ class IPCHandlers {
             formData.append("prompt", prompt);
           }
 
-          response = await fetch(endpoint, {
+          // Allow users to input only base URL (e.g. https://.../v1).
+          // For non-Qwen ASR, resolve to OpenAI-compatible audio transcription endpoint.
+          const transcriptionEndpoint = /\/audio\/(transcriptions|translations)$/i.test(
+            normalizedEndpoint
+          )
+            ? normalizedEndpoint
+            : `${normalizedEndpoint}/audio/transcriptions`;
+
+          response = await fetchWithNetworkRetry(transcriptionEndpoint, {
             method: "POST",
             headers,
             body: formData,
-          });
+          }, "audio-transcriptions");
+
+          if (!response.ok && response.status === 404 && isQwenFamilyModel) {
+            const chatEndpoint = /chat\/completions$/i.test(normalizedEndpoint)
+              ? normalizedEndpoint
+              : `${normalizedEndpoint}/chat/completions`;
+            response = await fetchWithNetworkRetry(chatEndpoint, {
+              method: "POST",
+              headers: { ...headers, "Content-Type": "application/json" },
+              body: JSON.stringify(buildQwenAudioPayload()),
+            }, "qwen-chat-fallback");
+          }
         }
 
         if (!response.ok) {
           const errorText = await response.text();
+          if (
+            response.status === 400 &&
+            /incorrect modal [`'"]?audio[`'"]?|invalidparameter|invalid_parameter_error/i.test(
+              errorText
+            )
+          ) {
+            throw new Error(
+              "Custom transcription API error: 400 Model does not accept audio input. Use an ASR model (for example: qwen3-asr-flash or whisper-1)."
+            );
+          }
           throw new Error(`Custom transcription API error: ${response.status} ${errorText}`);
         }
 

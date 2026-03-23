@@ -54,6 +54,7 @@
     "format:check": "eslint . && cd src && eslint . && prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "lint": "eslint . && cd src && eslint .",
     "typecheck": "cd src && tsc --noEmit",
+    "test:unit": "cd src && vitest run --config vitest.config.mjs --coverage",
     "quality-check": "npm run format:check && npm run typecheck",
     "i18n:check": "node scripts/check-i18n.js",
     "preview": "cd src && vite preview",
@@ -78,6 +79,7 @@
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
+    "@vitest/coverage-v8": "^4.1.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^8.2.2",
     "cross-env": "^10.0.0",
@@ -92,7 +94,8 @@
     "tailwindcss": "^4.1.10",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.20.0",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vitest": "^4.1.0"
   },
   "dependencies": {
     "@neondatabase/auth": "^0.1.0-beta.21",
