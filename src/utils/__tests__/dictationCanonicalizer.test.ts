@@ -38,6 +38,8 @@ const CASES: CanonCase[] = [
   { name: "口语小数字默认保留", input: "今天来了两个人", expected: "今天来了两个人" },
   { name: "品牌词千问ASR保持原文", input: "千问ASR", expected: "千问ASR" },
   { name: "短数字连英文保持原文", input: "千万ASR", expected: "千万ASR" },
+  { name: "千问ASR误识别-长数字", input: "10000000个a s r", expected: "千问ASR" },
+  { name: "千问ASR误识别-千字变数字", input: "1000问ASR", expected: "千问ASR" },
   { name: "长串数字归一", input: "一二三四", expected: "1234" },
   { name: "短串数字默认保留", input: "一二", expected: "一二" },
   { name: "短串数字带通用量词默认保留", input: "一二个", expected: "一二个" },
