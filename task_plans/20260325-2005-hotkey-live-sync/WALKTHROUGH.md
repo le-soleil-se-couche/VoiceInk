@@ -11,10 +11,11 @@
 - [x] 定位 hotkey 显示与更新逻辑相关文件
 - [x] 实现 fallback 事件触发时的 store 实时同步
 - [x] 本地运行 typecheck/lint 验证无回归
-- [ ] 更新执行记录并整理提交说明
+- [x] 更新执行记录并整理提交说明
 
 # 执行记录（完成时间与结果）
 - 2026-03-25 20:05: 初始化任务计划文档。
 - 2026-03-25 20:07: 完成链路定位，确认 `App.jsx` tooltip 读取 store 中 `dictationKey`，而 fallback 事件仅写 localStorage 未同步 store，导致悬浮图标显示滞后。
 - 2026-03-25 20:09: 已在 `App.jsx` 的 `onHotkeyFallbackUsed` 回调中新增 fallback 快捷键的实时同步（localStorage + Zustand store）。
 - 2026-03-25 20:10: 运行 `npm run typecheck` 与 `npm run lint`，均通过；lint 仅有项目基线 warning，无新增 error。
+- 2026-03-25 20:11: 提交 `cd00f0b` 并推送到 `origin/codex/dual-machine-hardening`。
