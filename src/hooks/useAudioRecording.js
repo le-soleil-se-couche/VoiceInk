@@ -5,9 +5,14 @@ import logger from "../utils/logger";
 import { playStartCue, playStopCue } from "../utils/dictationCues";
 import { getSettings } from "../stores/settingsStore";
 import { getRecordingErrorTitle } from "../utils/recordingErrors";
+import { getCachedPlatform } from "../utils/platform";
 
 const STOP_CUE_UNMUTE_SETTLE_MS = 120;
+const CMD_CTRL_PASTE_PATTERN = /Cmd\+V\s*(?:\/|或|or)\s*Ctrl\+V/gi;
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const getManualPasteShortcut = () => (getCachedPlatform() === "darwin" ? "Cmd+V" : "Ctrl+V");
+const applyPlatformPasteShortcut = (message, shortcut) =>
+  typeof message === "string" ? message.replace(CMD_CTRL_PASTE_PATTERN, shortcut) : message;
 
 export const useAudioRecording = (toast, options = {}) => {
   const { t } = useTranslation();
@@ -126,13 +131,17 @@ export const useAudioRecording = (toast, options = {}) => {
             isStreaming ? { fromStreaming: true } : {}
           );
           const pasteMode = pasteResult?.mode || (pasteResult?.success ? "pasted" : "failed");
+          const manualPasteShortcut = getManualPasteShortcut();
 
           if (pasteMode === "copied") {
             window.electronAPI?.showDictationPanel?.();
             clearPasteFallbackToast();
             const stickyId = toast({
               title: t("hooks.audioRecording.pasteCopied.title"),
-              description: t("hooks.audioRecording.pasteCopied.description"),
+              description: applyPlatformPasteShortcut(
+                t("hooks.audioRecording.pasteCopied.description"),
+                manualPasteShortcut
+              ),
               duration: 0,
             });
             pasteFallbackToastIdRef.current = stickyId;
@@ -141,7 +150,12 @@ export const useAudioRecording = (toast, options = {}) => {
             window.electronAPI?.showDictationPanel?.();
             toast({
               title: t("hooks.clipboard.pasteFailed.title"),
-              description: pasteResult?.message || t("hooks.clipboard.pasteFailed.description"),
+              description:
+                pasteResult?.message ||
+                applyPlatformPasteShortcut(
+                  t("hooks.clipboard.pasteFailed.description"),
+                  manualPasteShortcut
+                ),
               variant: "destructive",
               duration: 8000,
             });
