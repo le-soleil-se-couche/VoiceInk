@@ -162,6 +162,14 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribeFallback = window.electronAPI?.onHotkeyFallbackUsed?.((data) => {
+      const fallbackHotkey = typeof data?.fallback === "string" ? data.fallback.trim() : "";
+      if (fallbackHotkey) {
+        localStorage.setItem("dictationKey", fallbackHotkey);
+        if (useSettingsStore.getState().dictationKey !== fallbackHotkey) {
+          useSettingsStore.setState({ dictationKey: fallbackHotkey });
+        }
+      }
+
       toast({
         title: t("app.toasts.hotkeyChanged.title"),
         description: data.message,
