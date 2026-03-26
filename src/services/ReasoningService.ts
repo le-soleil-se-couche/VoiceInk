@@ -152,6 +152,27 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .filter(Boolean);
   }
 
+  private normalizeQuestionPrefix(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize("NFKC")
+      .replace(/[?？!！.。,:;，、]+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  private hasQuestionPrefixWithAppendedTail(source: string, candidate: string): boolean {
+    const normalizedSource = this.normalizeQuestionPrefix(source);
+    const normalizedCandidate = this.normalizeQuestionPrefix(candidate);
+
+    if (!normalizedSource || !normalizedCandidate.startsWith(normalizedSource)) {
+      return false;
+    }
+
+    const tail = normalizedCandidate.slice(normalizedSource.length).trim();
+    return tail.length > 0;
+  }
+
   private calculateOverlapMetrics(source: string, candidate: string): {
     score: number;
     outputCoverage: number;
@@ -260,6 +281,18 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     if (this.isQuestionLikeText(source)) {
+      if (this.hasQuestionPrefixWithAppendedTail(source, candidate)) {
+        const fallback = this.localCleanupFallback(source);
+        logger.logReasoning("STRICT_MODE_QUESTION_TAIL_BLOCKED", {
+          provider,
+          model,
+          originalLength: source.length,
+          candidateLength: candidate.length,
+          fallbackLength: fallback.length,
+        });
+        return fallback;
+      }
+
       const segments = this.splitIntoSentenceLikeSegments(candidate);
       if (segments.length > 1 && segments.some((segment) => !this.isQuestionLikeText(segment))) {
         const fallback = this.localCleanupFallback(source);

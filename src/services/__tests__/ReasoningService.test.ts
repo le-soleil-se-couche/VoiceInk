@@ -80,6 +80,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a preserved English question has an appended answer in the same sentence", () => {
+    const source = "what is the capital of france";
+    const candidate = "What is the capital of France the capital of France is Paris.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a preserved Chinese question has an appended answer", () => {
     const source = "这个要改吗";
     const candidate = "这个要改吗？需要修改。";
