@@ -107,6 +107,37 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return patterns.some((re) => re.test(text));
   }
 
+  private getConfirmationLeadIn(text: string): string | null {
+    if (!text || !text.trim()) {
+      return null;
+    }
+
+    const trimmed = text.trim();
+    const patterns = [
+      /^(?:是的|不是|对(?:的)?|没错|当然|当然可以|当然会)(?=[\s，,。.!?？；;:])/,
+      /^(?:yes|no|yeah|nope|sure|absolutely|certainly|of\s+course)(?=[\s,.;:!?])/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = trimmed.match(pattern)?.[0];
+      if (match) {
+        return match.toLowerCase();
+      }
+    }
+
+    return null;
+  }
+
+  private hasUnexpectedConfirmationLeadIn(source: string, candidate: string): boolean {
+    const candidateLeadIn = this.getConfirmationLeadIn(candidate);
+    if (!candidateLeadIn) {
+      return false;
+    }
+
+    const sourceLeadIn = this.getConfirmationLeadIn(source);
+    return candidateLeadIn !== sourceLeadIn;
+  }
+
   private isQuestionLikeText(text: string): boolean {
     if (!text || !text.trim()) {
       return false;
@@ -205,12 +236,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return false;
     }
 
-    const confirmationLeadInRe =
-      /^(?:是的|不是|对(?:的)?|不对|没错|当然|当然可以|当然会)(?=[\s，,。.!?？；;:])/;
-    const candidateConfirmationLeadIn = trimmedCandidate.match(confirmationLeadInRe)?.[0] || null;
-    const sourceConfirmationLeadIn = source.trim().match(confirmationLeadInRe)?.[0] || null;
-
-    if (candidateConfirmationLeadIn && candidateConfirmationLeadIn !== sourceConfirmationLeadIn) {
+    if (this.hasUnexpectedConfirmationLeadIn(source, candidate)) {
       return true;
     }
 
@@ -342,6 +368,18 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     const strictMode = config.strictMode ?? config.contextClassification?.strictMode ?? false;
     if (!strictMode) {
       return candidate;
+    }
+
+    if (this.hasUnexpectedConfirmationLeadIn(source, candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_CONFIRMATION_LEADIN_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
     }
 
     if (this.isAnswerLikeOutput(candidate)) {

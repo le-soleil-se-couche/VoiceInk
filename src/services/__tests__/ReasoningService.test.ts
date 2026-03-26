@@ -277,4 +277,15 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when ordinary dictation is prefixed with an assistant-style confirmation lead-in", () => {
+    const source = "deploy the patch after lunch and monitor the logs";
+    const candidate = "Yes, deploy the patch after lunch and monitor the logs.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
