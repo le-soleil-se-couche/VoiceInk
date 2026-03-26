@@ -56,4 +56,26 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when a long Chinese A-not-A question is rewritten into a statement", () => {
+    const source = "我们这次发布前把监控只开核心告警稳不稳";
+    const candidate = "我们这次发布前把监控只开核心告警很稳。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a long repeated-phrase Chinese A-not-A question is rewritten into a statement", () => {
+    const source = "按照现在这个发布时间安排靠谱不靠谱";
+    const candidate = "按照现在这个发布时间安排很靠谱。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
