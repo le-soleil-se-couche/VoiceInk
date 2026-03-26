@@ -30,9 +30,17 @@ describe("answerGuard", () => {
     expect(shouldBlockQuestionAnswerization("5+5等于几", "10")).toBe(true);
     expect(shouldBlockQuestionAnswerization("你明天会来吗", "我明天会来")).toBe(true);
     expect(shouldBlockQuestionAnswerization("他明天来不来", "他明天来")).toBe(true);
+    expect(shouldBlockQuestionAnswerization("5+5等于几", "5 + 5 等于几？答案是 10。")).toBe(true);
+    expect(shouldBlockQuestionAnswerization("他明天来不来", "他明天来不来？他明天来。")).toBe(true);
     expect(shouldBlockQuestionAnswerization("we should ship this today or not", "We should ship this today.")).toBe(
       true
     );
+    expect(
+      shouldBlockQuestionAnswerization(
+        "What time is the deploy?",
+        "What time is the deploy? The deploy is at 5 PM."
+      )
+    ).toBe(true);
     expect(
       shouldBlockQuestionAnswerization("I wonder if this needs a migration", "This needs a migration.")
     ).toBe(true);

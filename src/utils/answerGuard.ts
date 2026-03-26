@@ -22,6 +22,7 @@ const ASSISTANT_FOLLOW_UP_QUESTION_RE =
   /(请问|你想知道|您想知道|你是想问|您是想问|需要我|要我|我来|我可以帮你|我帮你|要不要我)/i;
 const ASSISTANT_FOLLOW_UP_QUESTION_EN_RE =
   /\b(would you like|do you want me to|can i help|shall i|are you asking|would you like me to|do you want to know)\b/i;
+const SENTENCE_SPLIT_RE = /[。！？!?]+/;
 
 export function isAnswerLikeTranscriptionOutput(text: string | null | undefined): boolean {
   if (typeof text !== "string") return false;
@@ -90,6 +91,34 @@ function calculateQuestionIntentOverlap(inputText: string, outputText: string): 
   return overlapCount / inputTokens.length;
 }
 
+function splitIntoSentencesForQuestionIntentCheck(text: string): string[] {
+  return text
+    .split(SENTENCE_SPLIT_RE)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
+function containsMixedQuestionAndAnswerSentences(text: string): boolean {
+  const sentences = splitIntoSentencesForQuestionIntentCheck(text);
+  if (sentences.length < 2) {
+    return false;
+  }
+
+  let hasQuestionSentence = false;
+  let hasNonQuestionSentence = false;
+
+  for (const sentence of sentences) {
+    if (isQuestionLikeDictation(sentence)) {
+      hasQuestionSentence = true;
+      continue;
+    }
+
+    hasNonQuestionSentence = true;
+  }
+
+  return hasQuestionSentence && hasNonQuestionSentence;
+}
+
 export function shouldBlockQuestionAnswerization(
   inputText: string | null | undefined,
   outputText: string | null | undefined
@@ -107,6 +136,10 @@ export function shouldBlockQuestionAnswerization(
     ASSISTANT_FOLLOW_UP_QUESTION_RE.test(normalizedOutput) ||
     ASSISTANT_FOLLOW_UP_QUESTION_EN_RE.test(normalizedOutput)
   ) {
+    return true;
+  }
+
+  if (containsMixedQuestionAndAnswerSentences(normalizedOutput)) {
     return true;
   }
 
