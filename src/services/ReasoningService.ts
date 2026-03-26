@@ -144,6 +144,41 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
   }
 
+  private isQuestionAnswerRewrite(source: string, candidate: string): boolean {
+    if (!this.isQuestionLikeText(source)) {
+      return false;
+    }
+
+    const trimmedCandidate = candidate.trim();
+    if (!trimmedCandidate) {
+      return false;
+    }
+
+    const normalizedCandidate = trimmedCandidate.toLowerCase();
+    const normalizedSource = source.trim().toLowerCase();
+    if (normalizedCandidate === normalizedSource) {
+      return false;
+    }
+
+    const answerLeadInPatterns = [
+      /^(?:the\s+answer\s+is|answer\s*[:：-]|it(?:'s|\s+is)|this\s+is|that\s+is|there\s+(?:is|are)|yes[,.!?\s]|no[,.!?\s])/i,
+      /^(?:答案(?:是|为)?|答[:：-]|就是|应该是|可以|不可以|能|不能|会|不会|需要|不需要)/,
+      /(?:等于|答案(?:是|为)?|结果(?:是|为)?)[\s:：-]*[-+]?\d+(?:\.\d+)?/i,
+    ];
+
+    if (answerLeadInPatterns.some((re) => re.test(trimmedCandidate))) {
+      return true;
+    }
+
+    const startsWithDeclarativeClause =
+      /^(?!(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b)[a-z][\w'-]*(?:\s+[a-z][\w'-]*){0,5}\s+(?:is|are|was|were)\b/i;
+    if (startsWithDeclarativeClause.test(trimmedCandidate)) {
+      return true;
+    }
+
+    return false;
+  }
+
   private calculateOverlapMetrics(source: string, candidate: string): {
     score: number;
     outputCoverage: number;
@@ -230,6 +265,18 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     if (this.isAnswerLikeOutput(candidate)) {
       const fallback = this.localCleanupFallback(source);
       logger.logReasoning("STRICT_MODE_ANSWER_PATTERN_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
+    }
+
+    if (this.isQuestionAnswerRewrite(source, candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_QUESTION_ANSWER_REWRITE_BLOCKED", {
         provider,
         model,
         originalLength: source.length,
