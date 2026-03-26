@@ -11,7 +11,7 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
 const CHINESE_QUESTION_RE =
   /[？?]|(是不是|是否|会不会|能不能|可不可以|要不要|有没有|为什么|为何|怎么|怎样|如何|谁|什么|哪(个|里|儿)?|几|多少|吗|呢|么|嘛)/;
 const ENGLISH_QUESTION_RE =
-  /[?]|^\s*(?:what|why|how|when|where|who|which)\b|^\s*(?:can|could|would|should|is|are|am|was|were|do|does|did|will|won't|shall|have|has|had|may)\b/i;
+  /[?]|^\s*(?:what|why|how|when|where|who|which)(?:['’]s)?\b|^\s*(?:can|could|would|should|is|are|am|was|were|do|does|did|will|won't|shall|have|has|had|may)\b/i;
 const ENGLISH_QUESTION_END_RE = /\b(?:or\s+not|yes\s+or\s+no|right|correct|okay|ok)\s*$/i;
 const ENGLISH_TAG_QUESTION_RE =
   /,\s*(?:isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|doesn['’]?t|don['’]?t|didn['’]?t|hasn['’]?t|haven['’]?t|hadn['’]?t|won['’]?t|wouldn['’]?t|couldn['’]?t|shouldn['’]?t|can['’]?t|ain['’]?t)\s+(?:i|you|he|she|it|we|they|there|that|this)\s*$/i;
