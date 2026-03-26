@@ -8,6 +8,7 @@ import { isSecureEndpoint } from "../utils/urlUtils";
 import { withSessionRefresh } from "../lib/neonAuth";
 import { getSettings, isCloudReasoningMode } from "../stores/settingsStore";
 import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
+import { isAnswerLikeText } from "../utils/answerLikeDetection";
 
 class ReasoningService extends BaseReasoningService {
   private apiKeyCache: SecureCache<string>;
@@ -75,38 +76,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
   }
 
   private isAnswerLikeOutput(text: string): boolean {
-    if (!text || !text.trim()) {
-      return false;
-    }
-
-    if (text.trim().length < 6) {
-      return false;
-    }
-
-    const patterns = [
-      /(作为|身为).{0,10}(ai|语言模型|助手)/i,
-      /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
-      /^(?:我来|让我|我可以|我会|我能).{0,20}(?:处理|修改|整理|解释|说明|回答|发送|发给|重写|润色)/,
-      /^(?:我来|让我|我可以|我会|我能).{0,12}(?:帮你|替你|为你|给你).{0,20}/,
-      /(不用担心|别担心|我会尽力|我可以帮你|请告诉我|请问你|你想要).{0,40}/,
-      /(?:要不要|是否需要).{0,12}(?:我|帮你|我来)/,
-      /(?:需要|想要|希望).{0,6}(?:我|我来).{0,12}(?:帮你|处理|说明|解释|整理)/,
-      /(对不起|抱歉).{0,20}(我会|我将|让我|我们)/,
-      /你想要.{0,20}(什么|哪一个|哪两个|哪些)/,
-      /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
-      /\b(as an ai|as a language model)\b/i,
-      /\b(i\s*(can't|cannot|am unable|won't))\b/i,
-      /^\s*(?:let me|i(?:'ll| will| can))\b.{0,30}\b(?:help|handle|explain|answer|rewrite|fix|edit|send|summarize|polish|clean up)\b/i,
-      /\b(i can help|don't worry|please tell me|what can i)\b/i,
-      /\b(would you like me to|do you want me to|should i\b|can i help|how can i help|could you clarify|can you clarify)\b/i,
-      /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
-      /\b(you can try).{0,20}(sentence|example)\b/i,
-      /^\s*(?:sure|okay|ok|alright|certainly|absolutely|of course)[,，]?\s+(?:here(?:'s| is)|i(?:'ve| have)\s+(?:cleaned|polished|rewritten|revised|updated)|(?:this|that)\s+is)\b/i,
-      /^\s*(?:(?:sure|okay|ok|alright|certainly|absolutely|of course)[,，]?\s+)?(?:here(?:'s| is)|below is)\s+(?:the|your|a)\s+(?:polished|cleaned(?:-up)?|rewritten|revised|updated)\s+(?:version|question|text|message)\s*[:：-]/i,
-      /^\s*(?:好的|好呀|行|当然可以|没问题)[，,]?(?:这(?:是|里)|以下)\s*(?:是)?(?:润色后|修改后|整理后|重写后)的(?:版本|内容|问题|文本)\s*[:：]/,
-    ];
-
-    return patterns.some((re) => re.test(text));
+    return isAnswerLikeText(text, 6);
   }
 
   private isQuestionLikeText(text: string): boolean {

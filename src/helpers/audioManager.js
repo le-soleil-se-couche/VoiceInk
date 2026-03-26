@@ -7,6 +7,7 @@ import { isSecureEndpoint } from "../utils/urlUtils";
 import { withSessionRefresh } from "../lib/neonAuth";
 import { getBaseLanguageCode, validateLanguageForModel } from "../utils/languageSupport";
 import { classifyContext, getTargetAppInfo, DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
+import { isAnswerLikeText } from "../utils/answerLikeDetection";
 import { canonicalizeDictationText } from "../utils/dictationCanonicalizer";
 import {
   getSettings,
@@ -38,18 +39,6 @@ const isValidApiKey = (key, provider = "openai") => {
   return key !== placeholder;
 };
 
-const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
-  /(作为|身为).{0,10}(ai|语言模型|助手)/i,
-  /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
-  /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
-  /^\s*(?:sure|okay|ok|alright|certainly|absolutely|of course)[,，]?\s+(?:here(?:'s| is)|i(?:'ve| have)\s+(?:cleaned|polished|rewritten|revised|updated)|(?:this|that)\s+is)\b/i,
-  /^\s*(?:(?:sure|okay|ok|alright|certainly|absolutely|of course)[,，]?\s+)?(?:here(?:'s| is)|below is)\s+(?:the|your|a)\s+(?:polished|cleaned(?:-up)?|rewritten|revised|updated)\s+(?:version|question|text|message)\s*[:：-]/i,
-  /\b(as an ai|as a language model)\b/i,
-  /\b(i\s*(can't|cannot|am unable|won't))\b/i,
-  /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
-  /\b(you can try).{0,20}(sentence|example)\b/i,
-];
-
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
 const CHINESE_FILLER_WORD_RE =
@@ -66,9 +55,7 @@ const CHINESE_FUNCTION_WORD_STUTTER_RE =
 
 const isAnswerLikeTranscriptionOutput = (text) => {
   if (typeof text !== "string") return false;
-  const trimmed = text.trim();
-  if (trimmed.length < 20) return false;
-  return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
+  return isAnswerLikeText(text, 20);
 };
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
