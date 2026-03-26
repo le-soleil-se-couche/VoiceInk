@@ -160,6 +160,15 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return false;
     }
 
+    const confirmationLeadInRe =
+      /^(?:是的|不是|对(?:的)?|不对|没错|当然|当然可以|当然会)(?=[\s，,。.!?？；;:])/;
+    const candidateConfirmationLeadIn = trimmedCandidate.match(confirmationLeadInRe)?.[0] || null;
+    const sourceConfirmationLeadIn = source.trim().match(confirmationLeadInRe)?.[0] || null;
+
+    if (candidateConfirmationLeadIn && candidateConfirmationLeadIn !== sourceConfirmationLeadIn) {
+      return true;
+    }
+
     const answerLeadInPatterns = [
       /^(?:the\s+answer\s+is|answer\s*[:：-]|it(?:'s|\s+is)|this\s+is|that\s+is|there\s+(?:is|are)|yes[,.!?\s]|no[,.!?\s])/i,
       /^(?:答案(?:是|为)?|答[:：-]|就是|应该是|可以|不可以|能|不能|会|不会|需要|不需要)/,

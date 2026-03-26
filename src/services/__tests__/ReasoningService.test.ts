@@ -100,4 +100,15 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when a long Chinese question is rewritten with a confirmation lead-in", () => {
+    const source = "这个数据库迁移方案是不是应该今天晚上就开始执行";
+    const candidate = "是的，这个数据库迁移方案应该今天晚上开始执行吗？";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
