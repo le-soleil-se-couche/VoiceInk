@@ -35,6 +35,7 @@ const INDIRECT_QUESTION_REFRAMING_PREFIX_EN_RE =
 const IMPERATIVE_QUESTION_REFRAMING_PREFIX_EN_RE =
   /^\s*(?:please\s+)?(?:tell\s+me|let\s+me\s+know|check|confirm|explain|clarify|advise|verify|find\s+out)\s+(?:if|whether|why|how|what|when|where|who|which)\b/i;
 const SENTENCE_SPLIT_RE = /(?:[。！？!?]+|\n+)/;
+const CLAUSE_SPLIT_RE = /[，,;；:：]+/;
 
 export function isAnswerLikeTranscriptionOutput(text: string | null | undefined): boolean {
   if (typeof text !== "string") return false;
@@ -133,6 +134,36 @@ function containsMixedQuestionAndAnswerSentences(text: string): boolean {
   return hasQuestionSentence && hasNonQuestionSentence;
 }
 
+function containsQuestionThenAnswerClauses(text: string): boolean {
+  const clauses = text
+    .split(CLAUSE_SPLIT_RE)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  if (clauses.length < 2) {
+    return false;
+  }
+
+  for (let index = 0; index < clauses.length - 1; index += 1) {
+    if (!isQuestionLikeDictation(clauses[index])) {
+      continue;
+    }
+
+    for (let followIndex = index + 1; followIndex < clauses.length; followIndex += 1) {
+      const followClause = clauses[followIndex];
+      if (isQuestionLikeDictation(followClause)) {
+        continue;
+      }
+
+      if (tokenizeForQuestionIntentCompare(followClause).length >= 2) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function hasQuestionReframingPrefix(text: string): boolean {
   return (
     QUESTION_REFRAMING_PREFIX_RE.test(text) ||
@@ -163,6 +194,10 @@ export function shouldBlockQuestionAnswerization(
   }
 
   if (containsMixedQuestionAndAnswerSentences(normalizedOutput)) {
+    return true;
+  }
+
+  if (containsQuestionThenAnswerClauses(normalizedOutput)) {
     return true;
   }
 

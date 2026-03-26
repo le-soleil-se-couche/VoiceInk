@@ -59,6 +59,13 @@ describe("answerGuard", () => {
         "What time is the deploy?\nThe deploy is at 5 PM."
       )
     ).toBe(true);
+    expect(
+      shouldBlockQuestionAnswerization(
+        "What time is the deploy?",
+        "What time is the deploy, the deploy is at 5 PM."
+      )
+    ).toBe(true);
+    expect(shouldBlockQuestionAnswerization("5+5等于几", "5+5等于几，答案是10。")).toBe(true);
     expect(shouldBlockQuestionAnswerization("What's the deploy time", "The deploy is at 5 PM.")).toBe(
       true
     );
@@ -140,6 +147,12 @@ describe("answerGuard", () => {
       shouldBlockQuestionAnswerization(
         "please confirm whether the deploy finished",
         "Please confirm whether the deploy finished."
+      )
+    ).toBe(false);
+    expect(
+      shouldBlockQuestionAnswerization(
+        "What time is the deploy?",
+        "What time is the deploy, please?"
       )
     ).toBe(false);
     expect(
