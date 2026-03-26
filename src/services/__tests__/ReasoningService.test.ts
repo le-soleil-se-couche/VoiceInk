@@ -57,6 +57,18 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a generic Chinese A-not-A question is rewritten into a statement", () => {
+    const source = "现在去不去";
+    const candidate = "现在去吧。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a preserved English question has an appended answer", () => {
     const source = "what is the capital of france";
     const candidate = "What is the capital of France? The capital of France is Paris.";
