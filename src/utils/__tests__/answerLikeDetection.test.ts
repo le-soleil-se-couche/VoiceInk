@@ -14,6 +14,18 @@ describe("isAnswerLikeText", () => {
     expect(isAnswerLikeText(candidate, 20)).toBe(true);
   });
 
+  it("flags english assistant handoff output for question-like input", () => {
+    const candidate = "Sure, what's your question?";
+
+    expect(isAnswerLikeText(candidate, 6)).toBe(true);
+  });
+
+  it("flags chinese assistant handoff output for question-like input", () => {
+    const candidate = "好的，请告诉我你的问题。";
+
+    expect(isAnswerLikeText(candidate, 6)).toBe(true);
+  });
+
   it("does not flag normal question cleanup output", () => {
     const candidate = "What is the capital of France?";
 
