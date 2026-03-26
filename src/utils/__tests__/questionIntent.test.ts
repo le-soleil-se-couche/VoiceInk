@@ -47,6 +47,14 @@ describe("isQuestionLikeDictation", () => {
     expect(isQuestionLikeDictation("whats the capital of france")).toBe(true);
   });
 
+  it("treats indirect English wonder-if dictation as question-like", () => {
+    expect(isQuestionLikeDictation("i wonder if we should ship this today")).toBe(true);
+  });
+
+  it("treats indirect English uncertainty dictation as question-like", () => {
+    expect(isQuestionLikeDictation("not sure whether we should ship this today")).toBe(true);
+  });
+
   it("treats pronoun-led Chinese alternative choices as question-like", () => {
     expect(isQuestionLikeDictation("我们今天发还是明天发")).toBe(true);
   });

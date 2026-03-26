@@ -114,6 +114,11 @@ export function isQuestionLikeDictation(text?: string): boolean {
     return true;
   }
 
+  const enIndirectQuestion = /^(?:(?:i\s+)?wonder(?:ing)?\s+if|(?:i(?:'m| am)\s+)?not\s+sure\s+whether|unclear\s+whether)\b/;
+  if (enIndirectQuestion.test(normalized)) {
+    return true;
+  }
+
   if (/\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized)) {
     return true;
   }
