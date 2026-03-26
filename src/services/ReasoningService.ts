@@ -135,6 +135,33 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
   }
 
+  private splitIntoClauses(text: string): string[] {
+    return text
+      .split(/(?<=[?？.!。！？])\s+|[\n\r]+/u)
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+
+  private hasQuestionThenAnswerPattern(source: string, candidate: string): boolean {
+    if (!this.isQuestionLikeText(source)) {
+      return false;
+    }
+
+    const clauses = this.splitIntoClauses(candidate);
+    if (clauses.length < 2) {
+      return false;
+    }
+
+    const questionClauseIndex = clauses.findIndex((clause) => this.isQuestionLikeText(clause));
+    if (questionClauseIndex === -1 || questionClauseIndex === clauses.length - 1) {
+      return false;
+    }
+
+    return clauses
+      .slice(questionClauseIndex + 1)
+      .some((clause) => clause.length > 0 && !this.isQuestionLikeText(clause));
+  }
+
   private calculateOverlapMetrics(source: string, candidate: string): {
     score: number;
     outputCoverage: number;
@@ -233,6 +260,18 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     if (this.isQuestionLikeText(source) && !this.isQuestionLikeText(candidate)) {
       const fallback = this.localCleanupFallback(source);
       logger.logReasoning("STRICT_MODE_QUESTION_INTENT_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
+    }
+
+    if (this.hasQuestionThenAnswerPattern(source, candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_QUESTION_ANSWER_APPEND_BLOCKED", {
         provider,
         model,
         originalLength: source.length,
