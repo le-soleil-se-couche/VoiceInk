@@ -19,6 +19,14 @@ describe("prompt safety sanitization", () => {
     ).toBe(true);
   });
 
+  it("flags legacy prompts that answer direct questions", () => {
+    expect(
+      isUnsafeUnifiedPrompt(
+        'For direct questions ("what is 5+5?"), output just the answer — no preamble.'
+      )
+    ).toBe(true);
+  });
+
   it("keeps cleanup-only prompts unchanged", () => {
     expect(sanitizeUnifiedPrompt(CLEANUP_PROMPT)).toBe(CLEANUP_PROMPT);
   });
@@ -27,6 +35,14 @@ describe("prompt safety sanitization", () => {
     expect(
       sanitizeUnifiedPrompt(
         'You operate in two modes.\n\nMODE 2: AGENT\n\nAnswer questions directly.'
+      )
+    ).toBe(UNIFIED_SYSTEM_PROMPT);
+  });
+
+  it("resets prompts that instruct the model to answer direct questions", () => {
+    expect(
+      sanitizeUnifiedPrompt(
+        'Cleanup dictated text.\n\nFor direct questions ("what is 5+5?"), output just the answer.'
       )
     ).toBe(UNIFIED_SYSTEM_PROMPT);
   });

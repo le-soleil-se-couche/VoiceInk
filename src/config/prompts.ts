@@ -15,6 +15,8 @@ const LEGACY_AGENT_PROMPT_MARKERS = [
   /\byou operate in two modes\b/i,
   /\bactivated when the user directly addresses you by name\b/i,
   /\banswer questions directly\b/i,
+  /\bfor direct questions\b.{0,80}\boutput just the answer\b/i,
+  /\boutput just the answer\b.{0,40}\bdirect questions\b/i,
   /\bexecute it and remove the instruction from the output\b/i,
   /\bif i give you an instruction, execute it\b/i,
 ];
