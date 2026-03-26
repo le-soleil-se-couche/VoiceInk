@@ -8,6 +8,7 @@ import { isSecureEndpoint } from "../utils/urlUtils";
 import { withSessionRefresh } from "../lib/neonAuth";
 import { getSettings, isCloudReasoningMode } from "../stores/settingsStore";
 import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
+import { shouldBlockQuestionAnswerization } from "../utils/answerGuard";
 
 class ReasoningService extends BaseReasoningService {
   private apiKeyCache: SecureCache<string>;
@@ -230,6 +231,18 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     if (this.isAnswerLikeOutput(candidate)) {
       const fallback = this.localCleanupFallback(source);
       logger.logReasoning("STRICT_MODE_ANSWER_PATTERN_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
+    }
+
+    if (shouldBlockQuestionAnswerization(source, candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_QUESTION_ANSWERIZATION_BLOCKED", {
         provider,
         model,
         originalLength: source.length,

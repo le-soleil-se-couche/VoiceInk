@@ -89,4 +89,26 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when a question dictation is rewritten into an assistant follow-up question", () => {
+    const source = "what time is the deploy";
+    const candidate = "Would you like me to tell you what time the deploy is?";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a question dictation is rewritten into a different question", () => {
+    const source = "这个要改吗";
+    const candidate = "你想什么时候改？";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
