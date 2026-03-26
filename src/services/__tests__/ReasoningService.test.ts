@@ -90,4 +90,26 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(candidate);
   });
+
+  it("falls back when a contraction-led English question is rewritten into an answer", () => {
+    const source = "shouldn't we ship this today";
+    const candidate = "We should not ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps contraction-led English question cleanup when the question intent is preserved", () => {
+    const source = "shouldn't we ship this today";
+    const candidate = "Shouldn't we ship this today?";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
 });
