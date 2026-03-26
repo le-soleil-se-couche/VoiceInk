@@ -38,6 +38,10 @@ describe("isQuestionLikeDictation", () => {
     expect(isQuestionLikeDictation("shouldn't we ship this today")).toBe(true);
   });
 
+  it("treats contractionless English what's-questions as question-like", () => {
+    expect(isQuestionLikeDictation("whats the capital of france")).toBe(true);
+  });
+
   it("treats pronoun-led Chinese alternative choices as question-like", () => {
     expect(isQuestionLikeDictation("我们今天发还是明天发")).toBe(true);
   });
