@@ -122,4 +122,15 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when a negative-contraction English question is rewritten into a statement", () => {
+    const source = "isn't the staging deployment supposed to finish before we start migration";
+    const candidate = "The staging deployment is supposed to finish before we start migration.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
