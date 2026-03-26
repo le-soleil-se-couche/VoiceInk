@@ -85,6 +85,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const normalized = text.trim().toLowerCase();
+    const collapsedEnglishQuestionStart =
+      /^(?:whats|whos|wheres|whens|whys|hows)\b/;
+
     if (/[?？]$/.test(normalized)) {
       return true;
     }
@@ -103,7 +106,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const enQuestionStart =
       /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/;
-    if (enQuestionStart.test(normalized)) {
+    if (enQuestionStart.test(normalized) || collapsedEnglishQuestionStart.test(normalized)) {
       return true;
     }
 
@@ -112,7 +115,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
-    return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
+    return /\b(?:what|when|where|why|who|whom|whose|which|how|whats|whos|wheres|whens|whys|hows)\b/.test(
+      normalized
+    );
   }
 
   private calculateOverlapMetrics(source: string, candidate: string): {

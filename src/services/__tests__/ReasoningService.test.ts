@@ -24,6 +24,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(candidate);
   });
 
+  it("falls back when apostrophe-less English question dictation is rewritten into an answer", () => {
+    const source = "whats the capital of france";
+    const candidate = "The capital of France is Paris.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps apostrophe-less English question cleanup output when question intent is preserved", () => {
+    const source = "hows that migration plan looking to you right now";
+    const candidate = "How's that migration plan looking to you right now?";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
   it("falls back when a Chinese question is rewritten into a declarative answer", () => {
     const source = "这个要改吗";
     const candidate = "这个需要修改。";
