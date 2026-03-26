@@ -50,6 +50,12 @@ describe("isAnswerLikeText", () => {
     expect(isAnswerLikeText(candidate, 20)).toBe(true);
   });
 
+  it("flags english assistant wrappers that say more polished version", () => {
+    const candidate = "Sure, here's the more polished version: What is the capital of France?";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
   it("flags english clarification prompts that ask for text to polish", () => {
     const candidate = "Please provide the text you'd like me to polish.";
 
