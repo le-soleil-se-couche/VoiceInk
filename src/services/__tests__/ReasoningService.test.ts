@@ -35,6 +35,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a Chinese why-question is rewritten into a statement", () => {
+    const source = "为什么会这样";
+    const candidate = "这是系统延迟导致的。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when an inline Chinese what-question is rewritten into an explanation", () => {
+    const source = "这个是什么原因";
+    const candidate = "这是网络配置问题。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an English yes-no dictation ending with or not is rewritten into an answer", () => {
     const source = "we should ship this today or not";
     const candidate = "We should ship this today.";
