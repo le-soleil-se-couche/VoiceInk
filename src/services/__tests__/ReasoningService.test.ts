@@ -46,6 +46,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an indirect English question is rewritten into a direct answer", () => {
+    const source = "I wonder if this needs a migration";
+    const candidate = "This needs a migration.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps indirect English question dictation when cleanup preserves the question intent", () => {
+    const source = "can you tell me if this needs a migration";
+    const candidate = "Can you tell me if this needs a migration?";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
   it("falls back when a Chinese yes-no dictation ending is rewritten into a statement", () => {
     const source = "这个方案行不行";
     const candidate = "这个方案可行。";

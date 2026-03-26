@@ -132,6 +132,15 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
+    const indirectQuestionPatterns = [
+      /\b(?:i\s+(?:wonder|was\s+wondering|want\s+to\s+know|need\s+to\s+know|am\s+curious)|curious)\s+(?:if|whether)\b/,
+      /\b(?:can|could|would)\s+you\s+(?:tell|check|confirm|explain|clarify)\s+(?:me\s+)?(?:if|whether|why|how|what|when|where)\b/,
+      /\b(?:let\s+me\s+know|tell\s+me|check|confirm)\s+(?:if|whether)\b/,
+    ];
+    if (indirectQuestionPatterns.some((re) => re.test(normalized))) {
+      return true;
+    }
+
     return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
   }
 
