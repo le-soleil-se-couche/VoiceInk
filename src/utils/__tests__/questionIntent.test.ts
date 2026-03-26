@@ -59,6 +59,14 @@ describe("isQuestionLikeDictation", () => {
     expect(isQuestionLikeDictation("not sure whether we should ship this today")).toBe(true);
   });
 
+  it("treats let-me-know indirect English dictation as question-like", () => {
+    expect(isQuestionLikeDictation("let me know if we should ship this today")).toBe(true);
+  });
+
+  it("treats tell-me-whether indirect English dictation as question-like", () => {
+    expect(isQuestionLikeDictation("tell me whether we should ship this today")).toBe(true);
+  });
+
   it("treats pronoun-led Chinese alternative choices as question-like", () => {
     expect(isQuestionLikeDictation("我们今天发还是明天发")).toBe(true);
   });
