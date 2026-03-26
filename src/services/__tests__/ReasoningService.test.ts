@@ -200,4 +200,26 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when an English dictation is wrapped in a terse polished-text label", () => {
+    const source = "send the updated rollout note to the team after lunch";
+    const candidate = "Polished text: Send the updated rollout note to the team after lunch.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese dictation is wrapped in a terse polished-text label", () => {
+    const source = "把新的值班安排发到项目群";
+    const candidate = "润色后：把新的值班安排发到项目群。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
