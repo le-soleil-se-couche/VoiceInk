@@ -9,6 +9,10 @@ import { getBaseLanguageCode, validateLanguageForModel } from "../utils/language
 import { classifyContext, getTargetAppInfo, DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 import { canonicalizeDictationText } from "../utils/dictationCanonicalizer";
 import {
+  isAnswerLikeTranscriptionOutput,
+  shouldBlockQuestionAnswerization,
+} from "../utils/answerGuard";
+import {
   getSettings,
   getEffectiveReasoningModel,
   isCloudReasoningMode,
@@ -38,16 +42,6 @@ const isValidApiKey = (key, provider = "openai") => {
   return key !== placeholder;
 };
 
-const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
-  /(作为|身为).{0,10}(ai|语言模型|助手)/i,
-  /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
-  /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
-  /\b(as an ai|as a language model)\b/i,
-  /\b(i\s*(can't|cannot|am unable|won't))\b/i,
-  /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
-  /\b(you can try).{0,20}(sentence|example)\b/i,
-];
-
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
 const CHINESE_FILLER_WORD_RE =
@@ -61,13 +55,6 @@ const INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE =
   /([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g;
 const CHINESE_FUNCTION_WORD_STUTTER_RE =
   /(^|[\s，,、。！？,.!?;:])((?:这个|那个|就是|然后|是|就|那|这|我|你|他|她|它|的|了|在|要|会|都|也|还))(?:\s*[，,、]?\s*\2)+/g;
-
-const isAnswerLikeTranscriptionOutput = (text) => {
-  if (typeof text !== "string") return false;
-  const trimmed = text.trim();
-  if (trimmed.length < 20) return false;
-  return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
-};
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // Split by script family so mixed tokens like "readme在" become ["readme", "在"].
@@ -2003,6 +1990,14 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             beforeLength: result.length,
             afterLength: postProcessed.length,
           });
+        }
+        if (shouldBlockQuestionAnswerization(textForProcessing, postProcessed)) {
+          logger.logReasoning("REASONING_QUESTION_ANSWERIZATION_BLOCKED", {
+            source,
+            inputPreview: textForProcessing.substring(0, 120),
+            outputPreview: postProcessed.substring(0, 120),
+          });
+          return finalizeFallbackOutput();
         }
         return postProcessed;
       } catch (error) {
