@@ -100,4 +100,26 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when long imperative dictation is rewritten into a Chinese assistant promise", () => {
+    const source = "把这个段落整理清楚然后发给产品经理确认一下";
+    const candidate = "我来帮你整理这个段落，然后发给产品经理确认。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when long imperative dictation is rewritten into an English assistant promise", () => {
+    const source = "clean up this project update and send it to the product manager today";
+    const candidate = "I'll clean up this project update and send it to the product manager today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
