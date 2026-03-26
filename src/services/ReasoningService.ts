@@ -8,6 +8,7 @@ import { isSecureEndpoint } from "../utils/urlUtils";
 import { withSessionRefresh } from "../lib/neonAuth";
 import { getSettings, isCloudReasoningMode } from "../stores/settingsStore";
 import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
+import { hasUnresolvedAlternativeChoice, isQuestionLikeDictation } from "../utils/questionIntent";
 
 class ReasoningService extends BaseReasoningService {
   private apiKeyCache: SecureCache<string>;
@@ -98,44 +99,6 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     ];
 
     return patterns.some((re) => re.test(text));
-  }
-
-  private isQuestionLikeText(text: string): boolean {
-    if (!text || !text.trim()) {
-      return false;
-    }
-
-    const normalized = text.trim().toLowerCase();
-    if (/[?？]$/.test(normalized)) {
-      return true;
-    }
-
-    const zhQuestionPatterns = [
-      /[吗么呢吧]$/,
-      /(?:为什么|为何|怎么|怎样)(?=[\u4e00-\u9fffA-Za-z0-9])/,
-      /(?:什么|谁|多少|几时|几点|是否)(?=$|[\u4e00-\u9fffA-Za-z0-9])/,
-      /哪(?:里|儿|个|些|种|边|款|家|位)?(?=$|[\u4e00-\u9fffA-Za-z0-9])/,
-      /(?:是不是|能不能|可不可以|要不要|会不会|有没有)/,
-      /(?:行不行|对不对|好不好|可不可以|能不能|要不要|有没有|是不是)$/,
-      /([\u4e00-\u9fff]{1,4})不\1$/,
-    ];
-
-    if (zhQuestionPatterns.some((re) => re.test(normalized))) {
-      return true;
-    }
-
-    const enQuestionStart =
-      /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/;
-    if (enQuestionStart.test(normalized)) {
-      return true;
-    }
-
-    const enQuestionEnd = /\b(?:or\s+not|right|correct|okay|ok)\s*$/;
-    if (enQuestionEnd.test(normalized)) {
-      return true;
-    }
-
-    return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
   }
 
   private calculateOverlapMetrics(source: string, candidate: string): {
@@ -233,9 +196,21 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return fallback;
     }
 
-    if (this.isQuestionLikeText(source) && !this.isQuestionLikeText(candidate)) {
+    if (isQuestionLikeDictation(source) && !isQuestionLikeDictation(candidate)) {
       const fallback = this.localCleanupFallback(source);
       logger.logReasoning("STRICT_MODE_QUESTION_INTENT_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
+    }
+
+    if (hasUnresolvedAlternativeChoice(source) && !hasUnresolvedAlternativeChoice(candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_ALTERNATIVE_CHOICE_BLOCKED", {
         provider,
         model,
         originalLength: source.length,

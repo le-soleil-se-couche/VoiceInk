@@ -100,4 +100,15 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when a Chinese alternative-choice dictation is rewritten into a resolved statement", () => {
+    const source = "这个需求我们今天发还是明天发比较稳妥";
+    const candidate = "这个需求我们今天发比较稳妥。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
