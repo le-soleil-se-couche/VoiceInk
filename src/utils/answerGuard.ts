@@ -26,6 +26,10 @@ const ASSISTANT_FOLLOW_UP_QUESTION_RE =
   /(请问|你想知道|您想知道|你是想问|您是想问|需要我|要我|我来|我可以帮你|我帮你|要不要我)/i;
 const ASSISTANT_FOLLOW_UP_QUESTION_EN_RE =
   /\b(would you like|do you want me to|can i help|shall i|are you asking|would you like me to|do you want to know)\b/i;
+const QUESTION_REFRAMING_PREFIX_RE =
+  /^\s*(?:(?:please\s+)?(?:(?:can|could|would|will|do|did)\s+you\s+(?:tell|check|confirm|explain|clarify|advise|verify|let\s+me\s+know|share|know)\b)|(?:(?:please\s+)?(?:tell|let)\s+me\s+know\b)|(?:do|did)\s+you\s+know\b)/i;
+const QUESTION_REFRAMING_PREFIX_ZH_RE =
+  /^\s*(?:请问|你知道|您知道|你能告诉我|您能告诉我|你可以告诉我|您可以告诉我|请告诉我|麻烦告诉我|能不能告诉我|可不可以告诉我)/i;
 const SENTENCE_SPLIT_RE = /(?:[。！？!?]+|\n+)/;
 
 export function isAnswerLikeTranscriptionOutput(text: string | null | undefined): boolean {
@@ -125,6 +129,10 @@ function containsMixedQuestionAndAnswerSentences(text: string): boolean {
   return hasQuestionSentence && hasNonQuestionSentence;
 }
 
+function hasQuestionReframingPrefix(text: string): boolean {
+  return QUESTION_REFRAMING_PREFIX_RE.test(text) || QUESTION_REFRAMING_PREFIX_ZH_RE.test(text);
+}
+
 export function shouldBlockQuestionAnswerization(
   inputText: string | null | undefined,
   outputText: string | null | undefined
@@ -151,6 +159,13 @@ export function shouldBlockQuestionAnswerization(
 
   if (isQuestionLikeDictation(normalizedOutput)) {
     const normalizedInput = typeof inputText === "string" ? inputText.trim() : "";
+    if (
+      hasQuestionReframingPrefix(normalizedOutput) &&
+      !hasQuestionReframingPrefix(normalizedInput)
+    ) {
+      return true;
+    }
+
     if (
       normalizeForQuestionIntentCompare(normalizedInput) ===
       normalizeForQuestionIntentCompare(normalizedOutput)

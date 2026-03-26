@@ -142,5 +142,11 @@ describe("answerGuard", () => {
         "Would you like me to tell you what time the deploy is?"
       )
     ).toBe(true);
+    expect(
+      shouldBlockQuestionAnswerization(
+        "What time is the deploy?",
+        "Can you tell me what time the deploy is?"
+      )
+    ).toBe(true);
   });
 });
