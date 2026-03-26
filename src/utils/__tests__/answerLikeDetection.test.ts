@@ -44,6 +44,12 @@ describe("isAnswerLikeText", () => {
     expect(isAnswerLikeText(candidate, 20)).toBe(true);
   });
 
+  it("flags english cleaned up labels with a space-separated assistant wrapper", () => {
+    const candidate = "Sure, here's the cleaned up question: What is the capital of France?";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
   it("does not flag normal question cleanup output", () => {
     const candidate = "What is the capital of France?";
 
