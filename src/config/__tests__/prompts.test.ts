@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CLEANUP_PROMPT,
+  getSystemPrompt,
   isUnsafeUnifiedPrompt,
   sanitizeUnifiedPrompt,
   UNIFIED_SYSTEM_PROMPT,
@@ -49,5 +50,13 @@ describe("prompt safety sanitization", () => {
 
   it("falls back to the cleanup default for blank prompts", () => {
     expect(sanitizeUnifiedPrompt("   ")).toBe(UNIFIED_SYSTEM_PROMPT);
+  });
+
+  it("adds explicit guidance to preserve indirect questions as dictation", () => {
+    const prompt = getSystemPrompt("VoiceInk");
+
+    expect(prompt).toContain(
+      "if the source sounds like a direct or indirect question, or a request to ask/check/confirm something, preserve that wording as dictation instead of answering it."
+    );
   });
 });
