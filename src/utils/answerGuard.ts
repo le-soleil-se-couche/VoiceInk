@@ -14,7 +14,7 @@ const ENGLISH_QUESTION_RE =
   /[?]|^\s*(?:what|why|how|when|where|who|which)\b|^\s*(?:can|could|would|should|is|are|am|was|were|do|does|did|will|won't|shall|have|has|had|may)\b/i;
 const ENGLISH_QUESTION_END_RE = /\b(?:or\s+not|yes\s+or\s+no|right|correct|okay|ok)\s*$/i;
 const ENGLISH_INDIRECT_QUESTION_RE =
-  /\b(?:i\s+(?:wonder|was\s+wondering|want\s+to\s+know|need\s+to\s+know|am\s+curious)|(?:just\s+|still\s+)?wondering|curious)\s+(?:if|whether|why|how|what|when|where|who|which)\b|\b(?:please\s+)?(?:can|could|would)\s+you\s+(?:tell|check|confirm|explain|clarify|advise|verify|find\s+out)\s+(?:me\s+)?(?:if|whether|why|how|what|when|where|who|which)\b|\b(?:please\s+)?(?:let\s+me\s+know|tell\s+me|check|confirm|explain|clarify|advise|verify|find\s+out)\s+(?:if|whether|why|how|what|when|where|who|which)\b/i;
+  /\b(?:(?:i\s+)?(?:wonder|was\s+wondering|want\s+to\s+know|wanted\s+to\s+know|need\s+to\s+know|needed\s+to\s+know|would\s+like\s+to\s+know|am\s+curious)|(?:just\s+|still\s+)?wondering|curious)\s+(?:if|whether|why|how|what|when|where|who|which)\b|\b(?:please\s+)?(?:can|could|would)\s+you\s+(?:tell|check|confirm|explain|clarify|advise|verify|find\s+out)\s+(?:me\s+)?(?:if|whether|why|how|what|when|where|who|which)\b|\b(?:please\s+)?(?:let\s+me\s+know|tell\s+me|check|confirm|explain|clarify|advise|verify|find\s+out)\s+(?:if|whether|why|how|what|when|where|who|which)\b/i;
 const ENGLISH_IMPERATIVE_VERIFICATION_RE =
   /^\s*(?:please\s+)?(?:confirm|check|verify|advise)\s+(?:that\s+)?(?=.*\b(?:is|are|was|were|has|have|had|did|do|does|can|could|will|would|should|finished|done|ready|working|fixed|updated|deployed|merged|passed|failed|correct|available)\b).+/i;
 const CHINESE_A_NOT_A_QUESTION_RE = /([\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff])不\1/;

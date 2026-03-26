@@ -90,6 +90,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a subjectless indirect English question is rewritten into an answer", () => {
+    const source = "need to know if this needs a migration";
+    const candidate = "This needs a migration.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an imperative indirect English question is rewritten into an answer", () => {
     const source = "please confirm whether the deploy finished";
     const candidate = "The deploy has finished.";
