@@ -112,6 +112,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const zhQuestionEndingPatterns = [
       /[吗么呢吧]$/,
+      /(?:[\u4e00-\u9fff]{1,12}(?:了|过)?没(?:有)?[啊呀呢嘛]*)$/,
       /(?:是不是|能不能|可不可以|要不要|会不会|有没有)/,
       /(?:行不行|对不对|好不好|可不可以|能不能|要不要|有没有|是不是)$/,
     ];

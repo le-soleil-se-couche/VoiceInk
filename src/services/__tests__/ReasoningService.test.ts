@@ -79,6 +79,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a colloquial Chinese question ending with 没 is rewritten into a statement", () => {
+    const source = "这个接口有问题没";
+    const candidate = "这个接口有问题。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a question is rewritten into an answer-shaped sentence that still ends like a question", () => {
     const source = "what is the capital of france";
     const candidate = "The capital of France is Paris?";
