@@ -90,6 +90,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an imperative verification request is rewritten into an answer", () => {
+    const source = "please confirm the deploy finished";
+    const candidate = "The deploy has finished.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("keeps indirect English question dictation when cleanup preserves the question intent", () => {
     const source = "can you tell me if this needs a migration";
     const candidate = "Can you tell me if this needs a migration?";

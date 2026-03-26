@@ -25,7 +25,10 @@ describe("answerGuard", () => {
     expect(isQuestionLikeDictation("tell me if this needs a migration")).toBe(true);
     expect(isQuestionLikeDictation("please confirm whether the deploy finished")).toBe(true);
     expect(isQuestionLikeDictation("please advise whether the deploy finished")).toBe(true);
+    expect(isQuestionLikeDictation("please confirm the deploy finished")).toBe(true);
+    expect(isQuestionLikeDictation("check the build is ready")).toBe(true);
     expect(isQuestionLikeDictation("明天继续部署")).toBe(false);
+    expect(isQuestionLikeDictation("check the logs")).toBe(false);
   });
 
   it("blocks question dictation when reasoning turns it into an answer", () => {
@@ -70,6 +73,12 @@ describe("answerGuard", () => {
     expect(shouldBlockQuestionAnswerization("Has the deploy finished", "The deploy has finished.")).toBe(
       true
     );
+    expect(
+      shouldBlockQuestionAnswerization("please confirm the deploy finished", "The deploy has finished.")
+    ).toBe(true);
+    expect(shouldBlockQuestionAnswerization("check the build is ready", "The build is ready.")).toBe(
+      true
+    );
   });
 
   it("allows outputs that preserve the original question intent", () => {
@@ -91,6 +100,12 @@ describe("answerGuard", () => {
       shouldBlockQuestionAnswerization(
         "please advise whether the deploy finished",
         "Please advise whether the deploy finished."
+      )
+    ).toBe(false);
+    expect(
+      shouldBlockQuestionAnswerization(
+        "please confirm the deploy finished",
+        "Please confirm the deploy finished."
       )
     ).toBe(false);
     expect(shouldBlockQuestionAnswerization("明天继续部署", "明天继续部署。")).toBe(false);
