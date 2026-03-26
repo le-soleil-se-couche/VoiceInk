@@ -189,6 +189,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a direct question is reframed into an indirect wondering statement", () => {
+    const source = "what time is the deploy";
+    const candidate = "I want to know what time the deploy is.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a question dictation is rewritten into a question plus newline answer", () => {
     const source = "what time is the deploy";
     const candidate = "What time is the deploy?\nThe deploy is at 5 PM.";

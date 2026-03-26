@@ -90,6 +90,18 @@ describe("answerGuard", () => {
     expect(shouldBlockQuestionAnswerization("check the build is ready", "The build is ready.")).toBe(
       true
     );
+    expect(
+      shouldBlockQuestionAnswerization(
+        "What time is the deploy?",
+        "I want to know what time the deploy is."
+      )
+    ).toBe(true);
+    expect(
+      shouldBlockQuestionAnswerization(
+        "What time is the deploy?",
+        "Wondering what time the deploy is."
+      )
+    ).toBe(true);
   });
 
   it("allows outputs that preserve the original question intent", () => {
@@ -129,6 +141,12 @@ describe("answerGuard", () => {
       shouldBlockQuestionAnswerization(
         "please confirm the deploy finished",
         "Please confirm the deploy finished."
+      )
+    ).toBe(false);
+    expect(
+      shouldBlockQuestionAnswerization(
+        "I want to know what time the deploy is",
+        "I want to know what time the deploy is."
       )
     ).toBe(false);
     expect(shouldBlockQuestionAnswerization("明天继续部署", "明天继续部署。")).toBe(false);

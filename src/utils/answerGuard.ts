@@ -30,6 +30,8 @@ const QUESTION_REFRAMING_PREFIX_RE =
   /^\s*(?:(?:please\s+)?(?:(?:can|could|would|will|do|did)\s+you\s+(?:tell|check|confirm|explain|clarify|advise|verify|let\s+me\s+know|share|know)\b)|(?:(?:please\s+)?(?:tell|let)\s+me\s+know\b)|(?:do|did)\s+you\s+know\b)/i;
 const QUESTION_REFRAMING_PREFIX_ZH_RE =
   /^\s*(?:请问|你知道|您知道|你能告诉我|您能告诉我|你可以告诉我|您可以告诉我|请告诉我|麻烦告诉我|能不能告诉我|可不可以告诉我)/i;
+const INDIRECT_QUESTION_REFRAMING_PREFIX_EN_RE =
+  /^\s*(?:(?:i\s+)?(?:wonder|was\s+wondering|want\s+to\s+know|wanted\s+to\s+know|need\s+to\s+know|needed\s+to\s+know|would\s+like\s+to\s+know|am\s+curious)|(?:just\s+|still\s+)?wondering|curious)\s+(?:if|whether|why|how|what|when|where|who|which)\b/i;
 const SENTENCE_SPLIT_RE = /(?:[。！？!?]+|\n+)/;
 
 export function isAnswerLikeTranscriptionOutput(text: string | null | undefined): boolean {
@@ -130,7 +132,11 @@ function containsMixedQuestionAndAnswerSentences(text: string): boolean {
 }
 
 function hasQuestionReframingPrefix(text: string): boolean {
-  return QUESTION_REFRAMING_PREFIX_RE.test(text) || QUESTION_REFRAMING_PREFIX_ZH_RE.test(text);
+  return (
+    QUESTION_REFRAMING_PREFIX_RE.test(text) ||
+    QUESTION_REFRAMING_PREFIX_ZH_RE.test(text) ||
+    INDIRECT_QUESTION_REFRAMING_PREFIX_EN_RE.test(text)
+  );
 }
 
 export function shouldBlockQuestionAnswerization(
