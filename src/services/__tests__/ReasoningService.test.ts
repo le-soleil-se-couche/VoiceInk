@@ -219,6 +219,18 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a find-out-if dictation is rewritten into an answer", () => {
+    const source = "find out if we need to backfill the old records";
+    const candidate = "We need to backfill the old records.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a need-to-know whether dictation is rewritten into an answer", () => {
     const source = "i need to know whether we should ship this today";
     const candidate = "We should ship this today.";
