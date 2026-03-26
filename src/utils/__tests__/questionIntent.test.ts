@@ -41,4 +41,8 @@ describe("isQuestionLikeDictation", () => {
   it("treats pronoun-led Chinese alternative choices as question-like", () => {
     expect(isQuestionLikeDictation("我们今天发还是明天发")).toBe(true);
   });
+
+  it("treats Chinese duration questions as question-like", () => {
+    expect(isQuestionLikeDictation("这个多久能上线")).toBe(true);
+  });
 });

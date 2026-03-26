@@ -166,4 +166,15 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when a Chinese duration question is rewritten into a resolved answer", () => {
+    const source = "这个多久能上线";
+    const candidate = "这个明天能上线。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
