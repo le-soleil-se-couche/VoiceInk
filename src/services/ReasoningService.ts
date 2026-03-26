@@ -140,7 +140,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const enQuestionStart =
-      /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may|might|must)\b/;
+      /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|shall|will|have|has|had|may|might|must)\b/;
     const enNegativeQuestionStart =
       /^(?:isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|don['’]?t|doesn['’]?t|didn['’]?t|can['’]?t|couldn['’]?t|wouldn['’]?t|shouldn['’]?t|won['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t|mayn['’]?t|mightn['’]?t|mustn['’]?t)\b/;
     if (enQuestionStart.test(normalized)) {
@@ -223,7 +223,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     const normalizedCandidateWords = normalizedCandidate.replace(/[^\p{L}\p{N}'-]+/gu, " ").trim();
     const leadingQuestionAuxiliary =
       normalizedSourceWords.match(
-        /^(is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may|might|must)\b/
+        /^(is|are|am|was|were|do|does|did|can|could|would|should|shall|will|have|has|had|may|might|must)\b/
       )?.[1] || null;
     const subjectFirstModalRewrite =
       leadingQuestionAuxiliary &&

@@ -167,6 +167,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a shall-led English question is rewritten into a statement", () => {
+    const source = "shall we ship the hotfix tonight";
+    const candidate = "We shall ship the hotfix tonight.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an English trailing tag question is rewritten into a statement", () => {
     const source = "we already merged the fallback patch, didn't we";
     const candidate = "We already merged the fallback patch.";
