@@ -59,6 +59,10 @@ describe("isQuestionLikeDictation", () => {
     expect(isQuestionLikeDictation("not sure whether we should ship this today")).toBe(true);
   });
 
+  it("treats indirect English uncertainty-if dictation as question-like", () => {
+    expect(isQuestionLikeDictation("not sure if we should ship this today")).toBe(true);
+  });
+
   it("treats let-me-know indirect English dictation as question-like", () => {
     expect(isQuestionLikeDictation("let me know if we should ship this today")).toBe(true);
   });

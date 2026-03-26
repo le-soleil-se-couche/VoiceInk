@@ -115,7 +115,7 @@ export function isQuestionLikeDictation(text?: string): boolean {
   }
 
   const enIndirectQuestion =
-    /^(?:(?:(?:i\s+)?wonder(?:ing)?|i(?:'m| am)\s+wondering)\s+(?:if|whether)|(?:i(?:'m| am)\s+)?not\s+sure\s+whether|unclear\s+whether)\b/;
+    /^(?:(?:(?:i\s+)?wonder(?:ing)?|i(?:'m| am)\s+wondering)\s+(?:if|whether)|(?:i(?:'m| am)\s+)?not\s+sure\s+(?:if|whether)|unclear\s+(?:if|whether))\b/;
   if (enIndirectQuestion.test(normalized)) {
     return true;
   }

@@ -90,6 +90,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an indirect English uncertainty-if dictation is rewritten into a resolved statement", () => {
+    const source = "not sure if we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a let-me-know indirect English dictation is rewritten into a resolved statement", () => {
     const source = "let me know if we should ship this today";
     const candidate = "We should ship this today.";
