@@ -13,6 +13,8 @@ const CHINESE_QUESTION_RE =
 const ENGLISH_QUESTION_RE =
   /[?]|^\s*(?:what|why|how|when|where|who|which)\b|^\s*(?:can|could|would|should|is|are|am|was|were|do|does|did|will|won't|shall|have|has|had|may)\b/i;
 const ENGLISH_QUESTION_END_RE = /\b(?:or\s+not|yes\s+or\s+no|right|correct|okay|ok)\s*$/i;
+const ENGLISH_TAG_QUESTION_RE =
+  /,\s*(?:isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|doesn['’]?t|don['’]?t|didn['’]?t|hasn['’]?t|haven['’]?t|hadn['’]?t|won['’]?t|wouldn['’]?t|couldn['’]?t|shouldn['’]?t|can['’]?t|ain['’]?t)\s+(?:i|you|he|she|it|we|they|there|that|this)\s*$/i;
 const ENGLISH_INDIRECT_QUESTION_RE =
   /\b(?:(?:i\s+)?(?:wonder|was\s+wondering|want\s+to\s+know|wanted\s+to\s+know|need\s+to\s+know|needed\s+to\s+know|would\s+like\s+to\s+know|am\s+curious)|(?:just\s+|still\s+)?wondering|curious)\s+(?:if|whether|why|how|what|when|where|who|which)\b|\b(?:please\s+)?(?:can|could|would)\s+you\s+(?:tell|check|confirm|explain|clarify|advise|verify|find\s+out)\s+(?:me\s+)?(?:if|whether|why|how|what|when|where|who|which)\b|\b(?:please\s+)?(?:let\s+me\s+know|tell\s+me|check|confirm|explain|clarify|advise|verify|find\s+out)\s+(?:if|whether|why|how|what|when|where|who|which)\b/i;
 const ENGLISH_IMPERATIVE_VERIFICATION_RE =
@@ -42,6 +44,7 @@ export function isQuestionLikeDictation(text: string | null | undefined): boolea
     CHINESE_A_NOT_A_QUESTION_RE.test(trimmed) ||
     ENGLISH_QUESTION_RE.test(trimmed) ||
     ENGLISH_QUESTION_END_RE.test(trimmed) ||
+    ENGLISH_TAG_QUESTION_RE.test(trimmed) ||
     ENGLISH_INDIRECT_QUESTION_RE.test(trimmed) ||
     ENGLISH_IMPERATIVE_VERIFICATION_RE.test(trimmed)
   );

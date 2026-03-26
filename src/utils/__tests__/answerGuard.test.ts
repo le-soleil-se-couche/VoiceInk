@@ -21,6 +21,7 @@ describe("answerGuard", () => {
     expect(isQuestionLikeDictation("Has the deploy finished")).toBe(true);
     expect(isQuestionLikeDictation("we should ship this today or not")).toBe(true);
     expect(isQuestionLikeDictation("we should ship this today yes or no")).toBe(true);
+    expect(isQuestionLikeDictation("the deploy is ready, isn't it")).toBe(true);
     expect(isQuestionLikeDictation("I wonder if this needs a migration")).toBe(true);
     expect(isQuestionLikeDictation("need to know if this needs a migration")).toBe(true);
     expect(isQuestionLikeDictation("tell me if this needs a migration")).toBe(true);
@@ -38,6 +39,9 @@ describe("answerGuard", () => {
     expect(shouldBlockQuestionAnswerization("他明天来不来", "他明天来")).toBe(true);
     expect(shouldBlockQuestionAnswerization("5+5等于几", "5 + 5 等于几？答案是 10。")).toBe(true);
     expect(shouldBlockQuestionAnswerization("他明天来不来", "他明天来不来？他明天来。")).toBe(true);
+    expect(
+      shouldBlockQuestionAnswerization("the deploy is ready, isn't it", "The deploy is ready.")
+    ).toBe(true);
     expect(shouldBlockQuestionAnswerization("we should ship this today or not", "We should ship this today.")).toBe(
       true
     );
@@ -94,6 +98,12 @@ describe("answerGuard", () => {
     expect(shouldBlockQuestionAnswerization("What time is the deploy?", "What time is the deploy?")).toBe(
       false
     );
+    expect(
+      shouldBlockQuestionAnswerization(
+        "the deploy is ready, isn't it",
+        "The deploy is ready, isn't it?"
+      )
+    ).toBe(false);
     expect(shouldBlockQuestionAnswerization("we should ship this today or not", "Should we ship this today?")).toBe(
       false
     );

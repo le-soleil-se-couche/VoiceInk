@@ -68,6 +68,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an English tag question is rewritten into an answer", () => {
+    const source = "the deploy is ready, isn't it";
+    const candidate = "The deploy is ready.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an indirect English question is rewritten into a direct answer", () => {
     const source = "I wonder if this needs a migration";
     const candidate = "This needs a migration.";
