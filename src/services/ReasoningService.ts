@@ -101,6 +101,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /\b(would you like me to|do you want me to|should i\b|can i help|how can i help|could you clarify|can you clarify)\b/i,
       /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
       /\b(you can try).{0,20}(sentence|example)\b/i,
+      /^\s*(?:sure|okay|ok|alright|certainly)[,，]?\s+(?:here(?:'s| is)|i(?:'ve| have)\s+(?:cleaned|polished|rewritten)|(?:this|that)\s+is)\b/i,
+      /^\s*here(?:'s| is)\s+(?:the|your|a)\s+(?:polished|cleaned(?:-up)?|rewritten|revised|updated)\s+(?:version|question|text|message)\s*[:：-]/i,
+      /^\s*(?:好的|好呀|行|当然可以|没问题)[，,]?(?:这(?:是|里)|以下)\s*(?:是)?(?:润色后|修改后|整理后|重写后)的(?:版本|内容|问题|文本)\s*[:：]/,
     ];
 
     return patterns.some((re) => re.test(text));
