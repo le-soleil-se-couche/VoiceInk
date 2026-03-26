@@ -124,4 +124,16 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(candidate);
   });
+
+  it("falls back when a Chinese math question ending in 几 is rewritten into an answer", () => {
+    const source = "5+5等于几";
+    const candidate = "5+5等于10。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
 });
