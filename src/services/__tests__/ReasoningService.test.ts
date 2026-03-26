@@ -156,6 +156,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a question dictation is rewritten into an english clarification prompt", () => {
+    const source = "what is the capital of france";
+    const candidate = "Please provide the text you'd like me to polish.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a Chinese question dictation is rewritten into an assistant help offer", () => {
     const source = "这个要改吗";
     const candidate = "需要我帮你修改这个吗？";

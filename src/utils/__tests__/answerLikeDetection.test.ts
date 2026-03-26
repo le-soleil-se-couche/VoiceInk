@@ -50,6 +50,12 @@ describe("isAnswerLikeText", () => {
     expect(isAnswerLikeText(candidate, 20)).toBe(true);
   });
 
+  it("flags english clarification prompts that ask for text to polish", () => {
+    const candidate = "Please provide the text you'd like me to polish.";
+
+    expect(isAnswerLikeText(candidate, 6)).toBe(true);
+  });
+
   it("does not flag normal question cleanup output", () => {
     const candidate = "What is the capital of France?";
 
