@@ -19,7 +19,7 @@ import { useAgentName } from "../../utils/agentName";
 import ReasoningService from "../../services/ReasoningService";
 import { getModelProvider } from "../../models/ModelRegistry";
 import logger from "../../utils/logger";
-import { UNIFIED_SYSTEM_PROMPT } from "../../config/prompts";
+import { sanitizeUnifiedPrompt, UNIFIED_SYSTEM_PROMPT } from "../../config/prompts";
 import { useSettingsStore, selectIsCloudReasoningMode } from "../../stores/settingsStore";
 
 interface PromptStudioProps {
@@ -50,7 +50,7 @@ function getCurrentPrompt(): string {
   const customPrompt = localStorage.getItem("customUnifiedPrompt");
   if (customPrompt) {
     try {
-      return JSON.parse(customPrompt);
+      return sanitizeUnifiedPrompt(JSON.parse(customPrompt));
     } catch {
       return UNIFIED_SYSTEM_PROMPT;
     }
@@ -80,8 +80,9 @@ export default function PromptStudio({ className = "" }: PromptStudioProps) {
     if (legacyPrompts && !localStorage.getItem("customUnifiedPrompt")) {
       try {
         const parsed = JSON.parse(legacyPrompts);
-        if (parsed.agent) {
-          localStorage.setItem("customUnifiedPrompt", JSON.stringify(parsed.agent));
+        const migratedPrompt = sanitizeUnifiedPrompt(parsed.agent);
+        if (migratedPrompt) {
+          localStorage.setItem("customUnifiedPrompt", JSON.stringify(migratedPrompt));
           localStorage.removeItem("customPrompts");
         }
       } catch (e) {
@@ -92,7 +93,9 @@ export default function PromptStudio({ className = "" }: PromptStudioProps) {
     const customPrompt = localStorage.getItem("customUnifiedPrompt");
     if (customPrompt) {
       try {
-        setEditedPrompt(JSON.parse(customPrompt));
+        const sanitizedPrompt = sanitizeUnifiedPrompt(JSON.parse(customPrompt));
+        setEditedPrompt(sanitizedPrompt);
+        localStorage.setItem("customUnifiedPrompt", JSON.stringify(sanitizedPrompt));
       } catch (error) {
         logger.error("Failed to load custom prompt", { error }, "prompts");
       }
@@ -100,7 +103,9 @@ export default function PromptStudio({ className = "" }: PromptStudioProps) {
   }, []);
 
   const savePrompt = () => {
-    localStorage.setItem("customUnifiedPrompt", JSON.stringify(editedPrompt));
+    const sanitizedPrompt = sanitizeUnifiedPrompt(editedPrompt);
+    setEditedPrompt(sanitizedPrompt);
+    localStorage.setItem("customUnifiedPrompt", JSON.stringify(sanitizedPrompt));
     showAlertDialog({
       title: t("promptStudio.dialogs.saved.title"),
       description: t("promptStudio.dialogs.saved.description"),
@@ -182,7 +187,8 @@ export default function PromptStudio({ className = "" }: PromptStudioProps) {
       const modelToUse = isCloudMode ? effectiveModel || "auto" : reasoningModel;
 
       const currentCustomPrompt = localStorage.getItem("customUnifiedPrompt");
-      localStorage.setItem("customUnifiedPrompt", JSON.stringify(editedPrompt));
+      const sanitizedPrompt = sanitizeUnifiedPrompt(editedPrompt);
+      localStorage.setItem("customUnifiedPrompt", JSON.stringify(sanitizedPrompt));
 
       try {
         const result = await ReasoningService.processText(testText, modelToUse, agentName, {});

@@ -10,6 +10,15 @@ export const FULL_PROMPT = promptData.FULL_PROMPT;
 export const UNIFIED_SYSTEM_PROMPT = promptData.CLEANUP_PROMPT;
 export const LEGACY_PROMPTS = promptData.LEGACY_PROMPTS;
 
+const LEGACY_AGENT_PROMPT_MARKERS = [
+  /\bmode 2:\s*agent\b/i,
+  /\byou operate in two modes\b/i,
+  /\bactivated when the user directly addresses you by name\b/i,
+  /\banswer questions directly\b/i,
+  /\bexecute it and remove the instruction from the output\b/i,
+  /\bif i give you an instruction, execute it\b/i,
+];
+
 function getPromptBundle(uiLanguage?: string): PromptBundle {
   const locale = normalizeUiLanguage(uiLanguage || "en");
   const t = i18n.getFixedT(locale, "prompts");
@@ -19,6 +28,28 @@ function getPromptBundle(uiLanguage?: string): PromptBundle {
     fullPrompt: t("fullPrompt", { defaultValue: enPrompts.fullPrompt }),
     dictionarySuffix: t("dictionarySuffix", { defaultValue: enPrompts.dictionarySuffix }),
   };
+}
+
+export function isUnsafeUnifiedPrompt(prompt: string | null | undefined): boolean {
+  const normalizedPrompt = typeof prompt === "string" ? prompt.trim() : "";
+  if (!normalizedPrompt) {
+    return false;
+  }
+
+  return LEGACY_AGENT_PROMPT_MARKERS.some((pattern) => pattern.test(normalizedPrompt));
+}
+
+export function sanitizeUnifiedPrompt(prompt: string | null | undefined): string {
+  const normalizedPrompt = typeof prompt === "string" ? prompt.trim() : "";
+  if (!normalizedPrompt) {
+    return UNIFIED_SYSTEM_PROMPT;
+  }
+
+  if (isUnsafeUnifiedPrompt(normalizedPrompt)) {
+    return UNIFIED_SYSTEM_PROMPT;
+  }
+
+  return normalizedPrompt;
 }
 
 function getCleanupSafetyInstruction(): string {
