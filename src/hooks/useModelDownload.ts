@@ -5,6 +5,7 @@ import { useDialogs } from "./useDialogs";
 import { useToast } from "../components/ui/Toast";
 import type { WhisperDownloadProgressData } from "../types/electron";
 import "../types/electron";
+import logger from "../utils/logger";
 
 const PROGRESS_THROTTLE_MS = 100;
 
@@ -334,7 +335,7 @@ export function useModelDownload({
         description: t("hooks.modelDownload.downloadCancelled.description"),
       });
     } catch (error) {
-      console.error("Failed to cancel download:", error);
+      logger.error("Failed to cancel download", { error }, "models");
     } finally {
       setIsCancelling(false);
       isCancellingRef.current = false;

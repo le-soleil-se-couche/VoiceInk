@@ -8,6 +8,7 @@ import { useDialogs } from "../hooks/useDialogs";
 import { useModelDownload, type ModelType } from "../hooks/useModelDownload";
 import { MODEL_PICKER_COLORS, type ColorScheme } from "../utils/modelPickerStyles";
 import { getProviderIcon, isMonochromeProvider } from "../utils/providerIcons";
+import logger from "../utils/logger";
 
 export interface LocalModel {
   id: string;
@@ -89,7 +90,7 @@ export default function LocalModelPicker({
       setDownloadedModels(downloaded);
       return downloaded;
     } catch (error) {
-      console.error("Failed to load downloaded models:", error);
+      logger.error("Failed to load downloaded models", { error }, "models");
       return new Set<string>();
     }
   }, [modelType]);

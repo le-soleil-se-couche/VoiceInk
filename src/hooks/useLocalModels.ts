@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { ModelDefinition } from "../models/ModelRegistry";
 import "../types/electron";
+import logger from "../utils/logger";
 
 interface ModelWithStatus extends ModelDefinition {
   isDownloaded: boolean;
@@ -29,7 +30,7 @@ export function useLocalModels() {
       setModels(modelsData);
     } catch (err) {
       setError("Failed to load models");
-      console.error(err);
+      logger.error("Failed to load local models", { error: err }, "models");
     } finally {
       setIsLoading(false);
     }

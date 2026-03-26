@@ -8,6 +8,7 @@ import { useModelDownload } from "../hooks/useModelDownload";
 import { WHISPER_MODEL_INFO } from "../models/ModelRegistry";
 import { MODEL_PICKER_COLORS, type ColorScheme } from "../utils/modelPickerStyles";
 import { getProviderIcon } from "../utils/providerIcons";
+import logger from "../utils/logger";
 
 interface WhisperModel {
   model: string;
@@ -70,7 +71,7 @@ export default function LocalWhisperPicker({
         validateAndSelectModel(result.models);
       }
     } catch (error) {
-      console.error("[LocalWhisperPicker] Failed to load models:", error);
+      logger.error("Failed to load whisper models", { error }, "whisper");
       setModels([]);
     }
   }, [validateAndSelectModel]);

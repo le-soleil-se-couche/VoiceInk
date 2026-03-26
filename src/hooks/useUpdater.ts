@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import logger from "../utils/logger";
 
 /**
  * Centralized hook for managing app updates.
@@ -195,7 +196,7 @@ export function useUpdater() {
           }
         }
       } catch (error) {
-        console.error("Failed to initialize update status:", error);
+        logger.error("Failed to initialize update status", { error }, "updater");
       }
     };
 
@@ -286,7 +287,7 @@ export function useUpdater() {
       const result = await window.electronAPI.getAppVersion();
       return result.version;
     } catch (error) {
-      console.error("Failed to get app version:", error);
+      logger.error("Failed to get app version", { error }, "updater");
       return null;
     }
   }, []);

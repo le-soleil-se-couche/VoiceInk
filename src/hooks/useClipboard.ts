@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import logger from "../utils/logger";
 
 export interface UseClipboardReturn {
   pasteFromClipboard: (setter: (value: string) => void) => Promise<void>;
@@ -23,7 +24,7 @@ export const useClipboard = (
         throw new Error("Empty clipboard");
       }
     } catch (err) {
-      console.error("Clipboard read failed:", err);
+      logger.error("Clipboard read failed", { error: err }, "clipboard");
       throw err;
     }
   }, []);
@@ -38,7 +39,7 @@ export const useClipboard = (
           return;
         }
       } catch (err) {
-        console.warn("Electron clipboard failed, trying web API:", err);
+        logger.warn("Electron clipboard failed, trying web API", { error: err }, "clipboard");
       }
 
       try {
@@ -49,7 +50,7 @@ export const useClipboard = (
           return;
         }
       } catch (err) {
-        console.error("Web clipboard also failed:", err);
+        logger.error("Web clipboard also failed", { error: err }, "clipboard");
       }
 
       if (showAlertDialog) {

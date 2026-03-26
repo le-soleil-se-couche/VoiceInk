@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { WhisperCheckResult } from "../types/electron";
+import logger from "../utils/logger";
 
 export interface UseWhisperReturn {
   whisperInstalled: boolean;
@@ -17,7 +18,7 @@ export const useWhisper = (): UseWhisperReturn => {
       const result: WhisperCheckResult = await window.electronAPI.checkWhisperInstallation();
       setWhisperInstalled(result.installed && result.working);
     } catch (error) {
-      console.error("Error checking whisper.cpp installation:", error);
+      logger.error("Error checking whisper.cpp installation", { error }, "whisper");
       setWhisperInstalled(false);
     } finally {
       setCheckingWhisper(false);
