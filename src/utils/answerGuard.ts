@@ -12,6 +12,7 @@ const CHINESE_QUESTION_RE =
   /[？?]|(是不是|是否|会不会|能不能|可不可以|要不要|有没有|为什么|为何|怎么|怎样|如何|谁|什么|哪(个|里|儿)?|几|多少|吗|呢|么|嘛)/;
 const ENGLISH_QUESTION_RE =
   /[?]|^\s*(?:what|why|how|when|where|who|which)\b|^\s*(?:can|could|would|should|is|are|am|do|does|did|will|won't|shall)\b/i;
+const CHINESE_A_NOT_A_QUESTION_RE = /([\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff])不\1/;
 const TERMINAL_PUNCTUATION_RE = /[\s.,!?;:，。！？；：、】【""''()（）\[\]{}<>《》]+/g;
 const CJK_CHAR_RE = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
 const ASSISTANT_FOLLOW_UP_QUESTION_RE =
@@ -30,7 +31,11 @@ export function isQuestionLikeDictation(text: string | null | undefined): boolea
   if (typeof text !== "string") return false;
   const trimmed = text.trim();
   if (!trimmed) return false;
-  return CHINESE_QUESTION_RE.test(trimmed) || ENGLISH_QUESTION_RE.test(trimmed);
+  return (
+    CHINESE_QUESTION_RE.test(trimmed) ||
+    CHINESE_A_NOT_A_QUESTION_RE.test(trimmed) ||
+    ENGLISH_QUESTION_RE.test(trimmed)
+  );
 }
 
 function normalizeForQuestionIntentCompare(text: string): string {

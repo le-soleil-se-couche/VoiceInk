@@ -16,6 +16,7 @@ describe("answerGuard", () => {
   it("detects Chinese and English question-like dictation", () => {
     expect(isQuestionLikeDictation("5+5等于几")).toBe(true);
     expect(isQuestionLikeDictation("你明天会来吗")).toBe(true);
+    expect(isQuestionLikeDictation("他明天来不来")).toBe(true);
     expect(isQuestionLikeDictation("What time is the deploy?")).toBe(true);
     expect(isQuestionLikeDictation("明天继续部署")).toBe(false);
   });
@@ -23,6 +24,7 @@ describe("answerGuard", () => {
   it("blocks question dictation when reasoning turns it into an answer", () => {
     expect(shouldBlockQuestionAnswerization("5+5等于几", "10")).toBe(true);
     expect(shouldBlockQuestionAnswerization("你明天会来吗", "我明天会来")).toBe(true);
+    expect(shouldBlockQuestionAnswerization("他明天来不来", "他明天来")).toBe(true);
     expect(shouldBlockQuestionAnswerization("What time is the deploy?", "The deploy is at 5 PM.")).toBe(
       true
     );
@@ -30,6 +32,7 @@ describe("answerGuard", () => {
 
   it("allows outputs that preserve the original question intent", () => {
     expect(shouldBlockQuestionAnswerization("5+5等于几", "5 + 5 等于几？")).toBe(false);
+    expect(shouldBlockQuestionAnswerization("他明天来不来", "他明天来不来？")).toBe(false);
     expect(shouldBlockQuestionAnswerization("What time is the deploy?", "What time is the deploy?")).toBe(
       false
     );
