@@ -110,14 +110,23 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
-    const zhQuestionPatterns = [
+    const zhQuestionEndingPatterns = [
       /[吗么呢吧]$/,
-      /\b(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否)\b/,
       /(?:是不是|能不能|可不可以|要不要|会不会|有没有)/,
       /(?:行不行|对不对|好不好|可不可以|能不能|要不要|有没有|是不是)$/,
     ];
 
-    if (zhQuestionPatterns.some((re) => re.test(normalized))) {
+    if (zhQuestionEndingPatterns.some((re) => re.test(normalized))) {
+      return true;
+    }
+
+    const zhQuestionContentPatterns = [
+      /(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|是否|多少|几时|几点)/,
+      /(?:等于几|有几|第几|几月|几号|几天|几点|几分|几个|几位|几次|多少钱|多少人|多少个|多久|多远|多大|多高|多长)/,
+      /几$/,
+    ];
+
+    if (zhQuestionContentPatterns.some((re) => re.test(normalized))) {
       return true;
     }
 

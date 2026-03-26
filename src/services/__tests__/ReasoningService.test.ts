@@ -56,4 +56,26 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when a Chinese math question without punctuation is rewritten into an answer", () => {
+    const source = "5+5等于几";
+    const candidate = "5+5等于10。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese price question without punctuation is rewritten into a statement", () => {
+    const source = "这个多少钱";
+    const candidate = "这个价格是 99 元。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
