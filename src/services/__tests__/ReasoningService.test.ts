@@ -158,4 +158,16 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when an English lead-in clause question is rewritten into an answer", () => {
+    const source = "for this migration do we need to backfill the old records";
+    const candidate = "For this migration, we need to backfill the old records.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
 });

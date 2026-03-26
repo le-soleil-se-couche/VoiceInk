@@ -139,6 +139,12 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
+    const enLeadInQuestion =
+      /^(?:(?:for|in|on|with|without|after|before|if|when|while|given|regarding|about|from|under|during|around)\b(?:\s+[a-z0-9][\p{L}\p{N}'-]*){0,6}\s+)(?:do|does|did|is|are|am|was|were|can|could|would|should|will|have|has|had|may|isn't|aren't|wasn't|weren't|don't|doesn't|didn't|can't|couldn't|won't|wouldn't|shouldn't|haven't|hasn't|hadn't)\b/u;
+    if (enLeadInQuestion.test(normalized)) {
+      return true;
+    }
+
     const enQuestionEnd = /\b(?:or\s+not|right|correct|okay|ok)\s*$/;
     if (enQuestionEnd.test(normalized)) {
       return true;
