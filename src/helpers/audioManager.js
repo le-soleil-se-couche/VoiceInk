@@ -42,6 +42,8 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /(作为|身为).{0,10}(ai|语言模型|助手)/i,
   /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
   /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
+  /^\s*(?:sure|okay|ok|alright|certainly|absolutely|of course)[,，]?\s+(?:here(?:'s| is)|i(?:'ve| have)\s+(?:cleaned|polished|rewritten|revised|updated)|(?:this|that)\s+is)\b/i,
+  /^\s*(?:(?:sure|okay|ok|alright|certainly|absolutely|of course)[,，]?\s+)?(?:here(?:'s| is)|below is)\s+(?:the|your|a)\s+(?:polished|cleaned(?:-up)?|rewritten|revised|updated)\s+(?:version|question|text|message)\s*[:：-]/i,
   /\b(as an ai|as a language model)\b/i,
   /\b(i\s*(can't|cannot|am unable|won't))\b/i,
   /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
