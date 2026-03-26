@@ -13,6 +13,11 @@ const CHINESE_QUESTION_RE =
 const ENGLISH_QUESTION_RE =
   /[?]|^\s*(?:what|why|how|when|where|who|which)\b|^\s*(?:can|could|would|should|is|are|am|do|does|did|will|won't|shall)\b/i;
 const TERMINAL_PUNCTUATION_RE = /[\s.,!?;:，。！？；：、】【""''()（）\[\]{}<>《》]+/g;
+const CJK_CHAR_RE = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
+const ASSISTANT_FOLLOW_UP_QUESTION_RE =
+  /(请问|你想知道|您想知道|你是想问|您是想问|需要我|要我|我来|我可以帮你|我帮你|要不要我)/i;
+const ASSISTANT_FOLLOW_UP_QUESTION_EN_RE =
+  /\b(would you like|do you want me to|can i help|shall i|are you asking|would you like me to|do you want to know)\b/i;
 
 export function isAnswerLikeTranscriptionOutput(text: string | null | undefined): boolean {
   if (typeof text !== "string") return false;
@@ -32,6 +37,49 @@ function normalizeForQuestionIntentCompare(text: string): string {
   return text.replace(TERMINAL_PUNCTUATION_RE, "").toLowerCase();
 }
 
+function tokenizeForQuestionIntentCompare(text: string): string[] {
+  const normalized = text
+    .toLowerCase()
+    .normalize("NFKC")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+
+  if (!normalized) return [];
+
+  const rawTokens = normalized.split(/\s+/).filter(Boolean);
+  const tokens: string[] = [];
+  for (const token of rawTokens) {
+    if (CJK_CHAR_RE.test(token)) {
+      for (const char of token) {
+        if (CJK_CHAR_RE.test(char)) {
+          tokens.push(char);
+        }
+      }
+      continue;
+    }
+
+    tokens.push(token);
+  }
+
+  return tokens;
+}
+
+function calculateQuestionIntentOverlap(inputText: string, outputText: string): number {
+  const inputTokens = tokenizeForQuestionIntentCompare(inputText);
+  const outputTokens = tokenizeForQuestionIntentCompare(outputText);
+  if (!inputTokens.length || !outputTokens.length) return 0;
+
+  const outputTokenSet = new Set(outputTokens);
+  let overlapCount = 0;
+  for (const token of inputTokens) {
+    if (outputTokenSet.has(token)) {
+      overlapCount += 1;
+    }
+  }
+
+  return overlapCount / inputTokens.length;
+}
+
 export function shouldBlockQuestionAnswerization(
   inputText: string | null | undefined,
   outputText: string | null | undefined
@@ -45,8 +93,23 @@ export function shouldBlockQuestionAnswerization(
     return true;
   }
 
+  if (
+    ASSISTANT_FOLLOW_UP_QUESTION_RE.test(normalizedOutput) ||
+    ASSISTANT_FOLLOW_UP_QUESTION_EN_RE.test(normalizedOutput)
+  ) {
+    return true;
+  }
+
   if (isQuestionLikeDictation(normalizedOutput)) {
-    return false;
+    const normalizedInput = typeof inputText === "string" ? inputText.trim() : "";
+    if (
+      normalizeForQuestionIntentCompare(normalizedInput) ===
+      normalizeForQuestionIntentCompare(normalizedOutput)
+    ) {
+      return false;
+    }
+
+    return calculateQuestionIntentOverlap(normalizedInput, normalizedOutput) < 0.6;
   }
 
   const normalizedInput = typeof inputText === "string" ? inputText.trim() : "";

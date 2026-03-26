@@ -33,6 +33,19 @@ describe("answerGuard", () => {
     expect(shouldBlockQuestionAnswerization("What time is the deploy?", "What time is the deploy?")).toBe(
       false
     );
+    expect(shouldBlockQuestionAnswerization("we should ship this today or not", "Should we ship this today?")).toBe(
+      false
+    );
     expect(shouldBlockQuestionAnswerization("明天继续部署", "明天继续部署。")).toBe(false);
+  });
+
+  it("blocks assistant-style follow-up questions for question dictation", () => {
+    expect(shouldBlockQuestionAnswerization("5+5等于几", "你想知道五加五等于多少吗？")).toBe(true);
+    expect(
+      shouldBlockQuestionAnswerization(
+        "What time is the deploy?",
+        "Would you like me to tell you what time the deploy is?"
+      )
+    ).toBe(true);
   });
 });
