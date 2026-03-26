@@ -134,6 +134,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an indirect English question dictation is rewritten into an answer", () => {
+    const source = "I wonder if this needs to change";
+    const candidate = "This needs to change.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when an indirect Chinese question dictation is rewritten into an answer", () => {
+    const source = "我想知道这个要不要改";
+    const candidate = "这个需要修改。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a question dictation is wrapped in an English assistant preface", () => {
     const source = "what is the capital of france";
     const candidate = "Sure, here's the polished question: What is the capital of France?";

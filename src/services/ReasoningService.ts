@@ -87,6 +87,8 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     const normalized = text.trim().toLowerCase();
     const collapsedEnglishQuestionStart =
       /^(?:whats|whos|wheres|whens|whys|hows)\b/;
+    const enIndirectQuestionStart =
+      /^(?:i\s+wonder\s+(?:if|whether)|i(?:'m|\s+am)\s+wondering\s+(?:if|whether)|wondering\s+(?:if|whether)|i(?:'m|\s+am)\s+curious\s+(?:if|whether)|do\s+you\s+know\s+(?:if|whether)|can\s+you\s+tell\s+me\s+(?:if|whether))\b/;
 
     if (/[?？]$/.test(normalized)) {
       return true;
@@ -98,6 +100,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /(?:是不是|能不能|可不可以|要不要|会不会|有没有)/,
       /(?:行不行|对不对|好不好|可不可以|能不能|要不要|有没有|是不是)$/,
       /(?:等于几|几点|多少[钱个次岁天年月分秒]?|几月几号|几号|几天|几次|几岁)$/,
+      /^(?:我想知道|我想问|我在想|想知道|想问).{0,24}(?:是否|是不是|要不要|能不能|可不可以|会不会|有没有|为什么|为何|怎么|怎样|多少|几|谁|什么|哪(?:里|儿)?)/,
     ];
 
     if (zhQuestionPatterns.some((re) => re.test(normalized))) {
@@ -106,7 +109,11 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const enQuestionStart =
       /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/;
-    if (enQuestionStart.test(normalized) || collapsedEnglishQuestionStart.test(normalized)) {
+    if (
+      enQuestionStart.test(normalized) ||
+      collapsedEnglishQuestionStart.test(normalized) ||
+      enIndirectQuestionStart.test(normalized)
+    ) {
       return true;
     }
 
