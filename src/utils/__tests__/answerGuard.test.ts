@@ -24,6 +24,7 @@ describe("answerGuard", () => {
     expect(isQuestionLikeDictation("I wonder if this needs a migration")).toBe(true);
     expect(isQuestionLikeDictation("tell me if this needs a migration")).toBe(true);
     expect(isQuestionLikeDictation("please confirm whether the deploy finished")).toBe(true);
+    expect(isQuestionLikeDictation("please advise whether the deploy finished")).toBe(true);
     expect(isQuestionLikeDictation("明天继续部署")).toBe(false);
   });
 
@@ -57,6 +58,12 @@ describe("answerGuard", () => {
         "The deploy has finished."
       )
     ).toBe(true);
+    expect(
+      shouldBlockQuestionAnswerization(
+        "please advise whether the deploy finished",
+        "The deploy has finished."
+      )
+    ).toBe(true);
     expect(shouldBlockQuestionAnswerization("What time is the deploy?", "The deploy is at 5 PM.")).toBe(
       true
     );
@@ -78,6 +85,12 @@ describe("answerGuard", () => {
       shouldBlockQuestionAnswerization(
         "please confirm whether the deploy finished",
         "Please confirm whether the deploy finished."
+      )
+    ).toBe(false);
+    expect(
+      shouldBlockQuestionAnswerization(
+        "please advise whether the deploy finished",
+        "Please advise whether the deploy finished."
       )
     ).toBe(false);
     expect(shouldBlockQuestionAnswerization("明天继续部署", "明天继续部署。")).toBe(false);

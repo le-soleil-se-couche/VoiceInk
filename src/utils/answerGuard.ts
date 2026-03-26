@@ -14,7 +14,7 @@ const ENGLISH_QUESTION_RE =
   /[?]|^\s*(?:what|why|how|when|where|who|which)\b|^\s*(?:can|could|would|should|is|are|am|was|were|do|does|did|will|won't|shall|have|has|had|may)\b/i;
 const ENGLISH_QUESTION_END_RE = /\b(?:or\s+not|yes\s+or\s+no|right|correct|okay|ok)\s*$/i;
 const ENGLISH_INDIRECT_QUESTION_RE =
-  /\b(?:i\s+(?:wonder|was\s+wondering|want\s+to\s+know|need\s+to\s+know|am\s+curious)|curious)\s+(?:if|whether|why|how|what|when|where|who|which)\b|\b(?:please\s+)?(?:can|could|would)\s+you\s+(?:tell|check|confirm|explain|clarify)\s+(?:me\s+)?(?:if|whether|why|how|what|when|where|who|which)\b|\b(?:please\s+)?(?:let\s+me\s+know|tell\s+me|check|confirm|explain|clarify)\s+(?:if|whether|why|how|what|when|where|who|which)\b/i;
+  /\b(?:i\s+(?:wonder|was\s+wondering|want\s+to\s+know|need\s+to\s+know|am\s+curious)|curious)\s+(?:if|whether|why|how|what|when|where|who|which)\b|\b(?:please\s+)?(?:can|could|would)\s+you\s+(?:tell|check|confirm|explain|clarify|advise|verify|find\s+out)\s+(?:me\s+)?(?:if|whether|why|how|what|when|where|who|which)\b|\b(?:please\s+)?(?:let\s+me\s+know|tell\s+me|check|confirm|explain|clarify|advise|verify|find\s+out)\s+(?:if|whether|why|how|what|when|where|who|which)\b/i;
 const CHINESE_A_NOT_A_QUESTION_RE = /([\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff])不\1/;
 const TERMINAL_PUNCTUATION_RE = /[\s.,!?;:，。！？；：、】【""''()（）\[\]{}<>《》]+/g;
 const CJK_CHAR_RE = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
