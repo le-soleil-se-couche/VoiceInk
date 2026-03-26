@@ -25,4 +25,8 @@ describe("isQuestionLikeDictation", () => {
   it("treats unresolved English multi-option choices as question-like", () => {
     expect(isQuestionLikeDictation("should we ship this today or tomorrow or Monday")).toBe(true);
   });
+
+  it("treats English negative-contraction questions as question-like", () => {
+    expect(isQuestionLikeDictation("shouldn't we ship this today")).toBe(true);
+  });
 });

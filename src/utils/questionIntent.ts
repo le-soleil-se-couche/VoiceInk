@@ -102,7 +102,7 @@ export function isQuestionLikeDictation(text?: string): boolean {
   }
 
   const enQuestionStart =
-    /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/;
+    /^(?:(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b|(?:is|are|was|were|do|does|did|can|could|would|should|will|have|has|had|may)(?:n't|nt)\b)/;
   if (enQuestionStart.test(normalized)) {
     return true;
   }
