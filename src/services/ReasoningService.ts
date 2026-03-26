@@ -150,6 +150,16 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
+    const enFragmentQuestionStart =
+      /^(?:any|some|another|more)\s+[a-z0-9][\p{L}\p{N}'-]*(?:\s+[a-z0-9][\p{L}\p{N}'-]*){0,8}$/u;
+    if (enFragmentQuestionStart.test(normalized)) {
+      const finiteVerbOrModal =
+        /\b(?:is|are|am|was|were|be|been|being|do|does|did|have|has|had|can|could|would|should|will|may|might|must|shall|need|needs|needed)\b/u;
+      if (!finiteVerbOrModal.test(normalized)) {
+        return true;
+      }
+    }
+
     return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
   }
 
