@@ -198,8 +198,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return [];
     }
 
-    return text
-      .split(/(?<=[.?!。！？])\s+|\n+/u)
+    return (text.match(/[^.?!。！？\n]+[.?!。！？]?/gu) || [])
       .map((segment) => segment.trim())
       .filter(Boolean);
   }

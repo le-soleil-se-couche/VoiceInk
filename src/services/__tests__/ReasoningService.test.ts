@@ -113,6 +113,18 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a paraphrased Chinese question appends an answer without spaces", () => {
+    const source = "这个要改吗";
+    const candidate = "这个需要改吗？需要修改。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("keeps multiple question sentences when they all stay question-shaped", () => {
     const source = "what changed in the deployment flow and why did it happen";
     const candidate = "What changed in the deployment flow? Why did it happen?";
@@ -123,6 +135,18 @@ describe("ReasoningService strict mode", () => {
     });
 
     expect(result).toBe(candidate);
+  });
+
+  it("falls back when a paraphrased English question appends an answer without spaces", () => {
+    const source = "tell me if we need to backfill the old records";
+    const candidate = "Do we need to backfill the old records?We need to backfill the old records.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
   });
 
   it("falls back when a contraction-led English question is rewritten into an answer", () => {
