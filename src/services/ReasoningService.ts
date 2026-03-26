@@ -198,7 +198,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const enTagQuestionEnd =
-      /,\s*(?:isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|don['’]?t|doesn['’]?t|didn['’]?t|can['’]?t|couldn['’]?t|wouldn['’]?t|shouldn['’]?t|won['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t|mustn['’]?t|is|are|was|were|do|does|did|can|could|would|should|will|have|has|had|must)(?:n['’]?t)?\s+(?:i|you|we|he|she|it|they|there)\s*$/;
+      /(?:,\s*|\s+)(?:isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|don['’]?t|doesn['’]?t|didn['’]?t|can['’]?t|couldn['’]?t|wouldn['’]?t|shouldn['’]?t|won['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t|mustn['’]?t|is|are|was|were|do|does|did|can|could|would|should|will|have|has|had|must)(?:n['’]?t)?\s+(?:i|you|we|he|she|it|they|there)\s*$/;
     if (enTagQuestionEnd.test(normalized)) {
       return true;
     }
