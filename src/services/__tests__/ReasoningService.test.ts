@@ -144,4 +144,27 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when a long dictation is wrapped in an assistant-style polished-version preamble", () => {
+    const source = "please deploy the patch to staging after lunch and monitor the logs for errors";
+    const candidate =
+      "Sure, here's the polished version: Please deploy the patch to staging after lunch and monitor the logs for errors.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese dictation is wrapped in a polished-version preamble", () => {
+    const source = "请把今天的发布说明整理好然后发到测试群里";
+    const candidate = "好的，以下是润色后的版本：请把今天的发布说明整理好，然后发到测试群里。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
