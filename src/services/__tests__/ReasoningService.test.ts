@@ -156,6 +156,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an English wh-question is rewritten into a noun-phrase question", () => {
+    const source = "what is the capital of france";
+    const candidate = "The capital of France?";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese price question is rewritten into an answer-shaped question", () => {
+    const source = "这个多少钱";
+    const candidate = "这个价格是99元？";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a long dictation is wrapped in an assistant-style polished-version preamble", () => {
     const source = "please deploy the patch to staging after lunch and monitor the logs for errors";
     const candidate =

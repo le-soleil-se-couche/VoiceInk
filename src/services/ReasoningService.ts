@@ -160,6 +160,25 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
   }
 
+  private hasExplicitQuestionMarker(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    const normalized = text.trim().toLowerCase();
+    const zhExplicitQuestionPatterns = [
+      /(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|是否|多少|几时|几点)/,
+      /(?:等于几|有几|第几|几月|几号|几天|几点|几分|几个|几位|几次|多少钱|多少人|多少个|多久|多远|多大|多高|多长)/,
+      /几$/,
+    ];
+
+    if (zhExplicitQuestionPatterns.some((re) => re.test(normalized))) {
+      return true;
+    }
+
+    return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
+  }
+
   private isQuestionAnswerRewrite(source: string, candidate: string): boolean {
     if (!this.isQuestionLikeText(source)) {
       return false;
@@ -219,6 +238,13 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     const startsWithDeclarativeClause =
       /^(?!(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b)[a-z][\w'-]*(?:\s+[a-z][\w'-]*){0,5}\s+(?:is|are|was|were)\b/i;
     if (startsWithDeclarativeClause.test(trimmedCandidate)) {
+      return true;
+    }
+
+    if (
+      this.hasExplicitQuestionMarker(source) &&
+      !this.hasExplicitQuestionMarker(trimmedCandidate)
+    ) {
       return true;
     }
 
