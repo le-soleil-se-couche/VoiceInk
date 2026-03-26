@@ -121,7 +121,7 @@ export function isQuestionLikeDictation(text?: string): boolean {
   }
 
   const enIndirectQuestionRequest =
-    /^(?:(?:let\s+me\s+know|tell\s+me|check|confirm|see)\s+(?:if|whether))\b/;
+    /^(?:(?:please\s+|pls\s+|kindly\s+)?(?:let\s+me\s+know|tell\s+me|check|confirm|see)\s+(?:if|whether))\b/;
   if (enIndirectQuestionRequest.test(normalized)) {
     return true;
   }
