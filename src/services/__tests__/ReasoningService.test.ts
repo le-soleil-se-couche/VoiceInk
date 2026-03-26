@@ -123,6 +123,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a pronoun-led Chinese alternative choice is rewritten into a single option", () => {
+    const source = "我们今天发还是明天发";
+    const candidate = "我们今天发。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an English alternative-choice question is rewritten into a single option", () => {
     const source = "should we ship this today or tomorrow";
     const candidate = "Should we ship this today?";

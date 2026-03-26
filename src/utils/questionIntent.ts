@@ -10,8 +10,7 @@ export function hasUnresolvedAlternativeChoice(text?: string): boolean {
   const normalized = trimmed.replace(/\s+/g, "");
 
   if (normalized.includes("还是")) {
-    const ignorePrefixes =
-      /^(?:我|你|他|她|它|我们|你们|他们|她们|它们|后来|最后|最终|结果|其实|但|但是|不过)/;
+    const ignorePrefixes = /^(?:后来|最后|最终|结果|其实|但|但是|不过)/;
     if (ignorePrefixes.test(normalized)) {
       return false;
     }
@@ -26,7 +25,8 @@ export function hasUnresolvedAlternativeChoice(text?: string): boolean {
       return false;
     }
 
-    const likelyStillUsage = /^(?:觉得|认为|希望|可以|不行|行|稳|好|对|错|要|会|能|是|有|在)/;
+    const likelyStillUsage =
+      /^(?:觉得|认为|希望|可以|不行|行|稳|好|对|错|要|会|能|是|有|在|决定|选择|选|用了|用|改成|继续|保持|直接|已经)/;
     if (likelyStillUsage.test(after)) {
       return false;
     }

@@ -19,6 +19,14 @@ describe("hasUnresolvedAlternativeChoice", () => {
   it("detects unresolved Chinese multi-option choices", () => {
     expect(hasUnresolvedAlternativeChoice("这个需求今天发还是明天发还是周一发")).toBe(true);
   });
+
+  it("detects pronoun-led Chinese alternative choices", () => {
+    expect(hasUnresolvedAlternativeChoice("我们今天发还是明天发")).toBe(true);
+  });
+
+  it("ignores Chinese narrative still-usage phrases", () => {
+    expect(hasUnresolvedAlternativeChoice("我们后来还是决定今天发")).toBe(false);
+  });
 });
 
 describe("isQuestionLikeDictation", () => {
@@ -28,5 +36,9 @@ describe("isQuestionLikeDictation", () => {
 
   it("treats English negative-contraction questions as question-like", () => {
     expect(isQuestionLikeDictation("shouldn't we ship this today")).toBe(true);
+  });
+
+  it("treats pronoun-led Chinese alternative choices as question-like", () => {
+    expect(isQuestionLikeDictation("我们今天发还是明天发")).toBe(true);
   });
 });
