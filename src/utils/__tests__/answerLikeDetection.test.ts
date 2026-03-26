@@ -62,6 +62,24 @@ describe("isAnswerLikeText", () => {
     expect(isAnswerLikeText(candidate, 6)).toBe(true);
   });
 
+  it("flags question-shaped english assistant clarification prompts", () => {
+    const candidate = "What would you like to know?";
+
+    expect(isAnswerLikeText(candidate, 6)).toBe(true);
+  });
+
+  it("flags english assistant follow-up prompts that ask what to do next", () => {
+    const candidate = "Let me know what you'd like me to do.";
+
+    expect(isAnswerLikeText(candidate, 6)).toBe(true);
+  });
+
+  it("flags english assistant option prompts for a polished version", () => {
+    const candidate = "Would you like the polished version?";
+
+    expect(isAnswerLikeText(candidate, 6)).toBe(true);
+  });
+
   it("flags short arithmetic answers even when the minimum length is high", () => {
     const candidate = "5+5等于10。";
 
