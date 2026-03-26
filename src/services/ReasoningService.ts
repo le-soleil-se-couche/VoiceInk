@@ -110,6 +110,12 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
+    const enAlternativeQuestionEnd =
+      /\b[a-z0-9][\p{L}\p{N}'-]*(?:\s+[a-z0-9][\p{L}\p{N}'-]*){0,5}\s+or\s+[a-z0-9][\p{L}\p{N}'-]*(?:\s+[a-z0-9][\p{L}\p{N}'-]*){0,3}\s*$/u;
+    if (enAlternativeQuestionEnd.test(normalized)) {
+      return true;
+    }
+
     const chineseANotAQuestion = /([\u4e00-\u9fff])不\1(?:$|[\s，。！？、,.!?;:])/u;
     if (chineseANotAQuestion.test(normalized)) {
       return true;
