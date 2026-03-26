@@ -156,6 +156,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a question dictation is wrapped in a clearer version label", () => {
+    const source = "what is the capital of france";
+    const candidate = "Sure, here's a clearer version: What is the capital of France?";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a question dictation is wrapped in a bare english polished-question label", () => {
     const source = "what is the capital of france";
     const candidate = "Polished question: What is the capital of France?";
@@ -181,6 +192,17 @@ describe("ReasoningService strict mode", () => {
   it("falls back when a question dictation is wrapped in a bare Chinese polished-question label", () => {
     const source = "这个要改吗";
     const candidate = "润色后的问题：这个要改吗？";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese question dictation is wrapped in a more natural label", () => {
+    const source = "这个要改吗";
+    const candidate = "这是更自然的说法：这个要改吗？";
 
     const result = ReasoningService.enforceStrictMode(source, candidate, {
       strictMode: true,

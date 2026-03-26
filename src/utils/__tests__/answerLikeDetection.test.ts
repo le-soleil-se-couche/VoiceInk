@@ -56,6 +56,12 @@ describe("isAnswerLikeText", () => {
     expect(isAnswerLikeText(candidate, 20)).toBe(true);
   });
 
+  it("flags english assistant wrappers that present a clearer version", () => {
+    const candidate = "Sure, here's a clearer version: What is the capital of France?";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
   it("flags bare english polished-question labels without an assistant opener", () => {
     const candidate = "Polished question: What is the capital of France?";
 
@@ -100,6 +106,12 @@ describe("isAnswerLikeText", () => {
 
   it("flags bare chinese polished-question labels without an assistant opener", () => {
     const candidate = "润色后的问题：这个要改吗？";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
+  it("flags chinese assistant wrappers that present a more natural version", () => {
+    const candidate = "这是更自然的说法：这个要改吗？";
 
     expect(isAnswerLikeText(candidate, 20)).toBe(true);
   });
