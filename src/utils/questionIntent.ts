@@ -41,6 +41,8 @@ export function isQuestionLikeDictation(text?: string): boolean {
     return true;
   }
 
+  const zhQuantityQuestionPattern =
+    /(?:等于几|差几|第几|几个|几次|几天|几年|几月|几号|几点|几分|几秒|几页|几行|几种|几台|几层|几级|几块|几位|几项|几条|几句|几遍|几小时)(?=$|[\u4e00-\u9fffA-Za-z0-9])/;
   const zhQuestionPatterns = [
     /[吗么呢吧]$/,
     /(?:为什么|为何|怎么|怎样)(?=[\u4e00-\u9fffA-Za-z0-9])/,
@@ -49,6 +51,7 @@ export function isQuestionLikeDictation(text?: string): boolean {
     /(?:是不是|能不能|可不可以|要不要|会不会|有没有)/,
     /(?:行不行|对不对|好不好|可不可以|能不能|要不要|有没有|是不是)$/,
     /([\u4e00-\u9fff]{1,4})不\1$/,
+    zhQuantityQuestionPattern,
   ];
 
   if (zhQuestionPatterns.some((re) => re.test(normalized))) {

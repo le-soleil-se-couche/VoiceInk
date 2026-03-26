@@ -111,4 +111,15 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when a long Chinese quantity question using 几 is rewritten into a resolved answer", () => {
+    const source = "我们这个接口在正式发布之前一共要重试几次才比较稳妥";
+    const candidate = "我们这个接口在正式发布之前一共要重试三次才比较稳妥。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
