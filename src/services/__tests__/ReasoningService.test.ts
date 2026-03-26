@@ -145,6 +145,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an inverted English yes-no question is rewritten into a subject-first answer with a question mark", () => {
+    const source = "should we ship today";
+    const candidate = "We should ship today?";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a long dictation is wrapped in an assistant-style polished-version preamble", () => {
     const source = "please deploy the patch to staging after lunch and monitor the logs for errors";
     const candidate =

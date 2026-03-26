@@ -195,6 +195,27 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
+    const normalizedSourceWords = normalizedSource.replace(/[^\p{L}\p{N}'-]+/gu, " ").trim();
+    const normalizedCandidateWords = normalizedCandidate.replace(/[^\p{L}\p{N}'-]+/gu, " ").trim();
+    const leadingQuestionAuxiliary =
+      normalizedSourceWords.match(
+        /^(is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may|might|must)\b/
+      )?.[1] || null;
+    const subjectFirstModalRewrite =
+      leadingQuestionAuxiliary &&
+      new RegExp(
+        `^(?:i|you|we|they|he|she|it|there|this|that|the\\s+[a-z][\\w'-]*|[a-z][\\w'-]*)\\s+${leadingQuestionAuxiliary}\\b`,
+        "i"
+      );
+
+    if (
+      subjectFirstModalRewrite &&
+      /[?？]$/.test(trimmedCandidate) &&
+      subjectFirstModalRewrite.test(normalizedCandidateWords)
+    ) {
+      return true;
+    }
+
     const startsWithDeclarativeClause =
       /^(?!(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b)[a-z][\w'-]*(?:\s+[a-z][\w'-]*){0,5}\s+(?:is|are|was|were)\b/i;
     if (startsWithDeclarativeClause.test(trimmedCandidate)) {
