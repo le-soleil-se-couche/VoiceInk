@@ -56,4 +56,26 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when a Chinese arithmetic question is rewritten into an answer", () => {
+    const source = "5+5等于几";
+    const candidate = "5+5等于10。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese quantity question is rewritten into a statement", () => {
+    const source = "这个多少钱";
+    const candidate = "这个要 20 元。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
