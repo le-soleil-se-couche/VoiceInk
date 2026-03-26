@@ -1,5 +1,6 @@
 import React from "react";
 import i18n from "../i18n";
+import logger from "../utils/logger";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -21,7 +22,7 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("[ErrorBoundary] Uncaught error:", error, errorInfo);
+    logger.error("[ErrorBoundary] Uncaught error", { error, errorInfo });
   }
 
   handleReload = () => {

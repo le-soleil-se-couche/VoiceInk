@@ -59,6 +59,7 @@ import { useToast } from "./ui/Toast";
 import { useTheme } from "../hooks/useTheme";
 import type { LocalTranscriptionProvider } from "../types/electron";
 import logger from "../utils/logger";
+import { sanitizeHtml } from "../utils/sanitizeHtml";
 import { SettingsRow } from "./ui/SettingsSection";
 import { useUsage } from "../hooks/useUsage";
 import { cn } from "./lib/utils";
@@ -2513,7 +2514,7 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                       </p>
                       <div
                         className="text-xs text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:space-y-1 [&_li]:pl-1 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_a]:text-link [&_a]:underline"
-                        dangerouslySetInnerHTML={{ __html: updateInfo.releaseNotes }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(updateInfo.releaseNotes) }}
                       />
                     </div>
                   )}

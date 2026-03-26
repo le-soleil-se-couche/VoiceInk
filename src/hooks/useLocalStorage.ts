@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import logger from "../utils/logger";
 
 export function useLocalStorage<T>(
   key: string,
@@ -34,7 +35,7 @@ export function useLocalStorage<T>(
           localStorage.setItem(key, serialize(valueToStore));
           return valueToStore;
         } catch (error) {
-          console.error(`Error setting localStorage key "${key}":`, error);
+          logger.error(`Error setting localStorage key "${key}"`, { error }, "storage");
           return currentState;
         }
       });
@@ -47,7 +48,7 @@ export function useLocalStorage<T>(
       localStorage.removeItem(key);
       setState(defaultValue);
     } catch (error) {
-      console.error(`Error removing localStorage key "${key}":`, error);
+      logger.error(`Error removing localStorage key "${key}"`, { error }, "storage");
     }
   }, [key, defaultValue]);
 
