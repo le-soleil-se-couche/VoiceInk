@@ -100,6 +100,68 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return patterns.some((re) => re.test(text));
   }
 
+  private isQuestionLikeText(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    const normalized = text.trim().toLowerCase();
+    if (/[?？]$/.test(normalized)) {
+      return true;
+    }
+
+    const zhQuestionPatterns = [
+      /[吗么呢吧]$/,
+      /\b(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否)\b/,
+      /(?:是不是|能不能|可不可以|要不要|会不会|有没有)/,
+      /(?:行不行|对不对|好不好|可不可以|能不能|要不要|有没有|是不是)$/,
+    ];
+
+    if (zhQuestionPatterns.some((re) => re.test(normalized))) {
+      return true;
+    }
+
+    const enQuestionStart =
+      /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/;
+    if (enQuestionStart.test(normalized)) {
+      return true;
+    }
+
+    const enQuestionEnd = /\b(?:or\s+not|right|correct|okay|ok)\s*$/;
+    if (enQuestionEnd.test(normalized)) {
+      return true;
+    }
+
+    return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
+  }
+
+  private splitIntoClauses(text: string): string[] {
+    return text
+      .split(/(?<=[?？.!。！？])\s+|[\n\r]+/u)
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+
+  private hasQuestionThenAnswerPattern(source: string, candidate: string): boolean {
+    if (!this.isQuestionLikeText(source)) {
+      return false;
+    }
+
+    const clauses = this.splitIntoClauses(candidate);
+    if (clauses.length < 2) {
+      return false;
+    }
+
+    const questionClauseIndex = clauses.findIndex((clause) => this.isQuestionLikeText(clause));
+    if (questionClauseIndex === -1 || questionClauseIndex === clauses.length - 1) {
+      return false;
+    }
+
+    return clauses
+      .slice(questionClauseIndex + 1)
+      .some((clause) => clause.length > 0 && !this.isQuestionLikeText(clause));
+  }
+
   private calculateOverlapMetrics(source: string, candidate: string): {
     score: number;
     outputCoverage: number;
@@ -186,6 +248,30 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     if (this.isAnswerLikeOutput(candidate)) {
       const fallback = this.localCleanupFallback(source);
       logger.logReasoning("STRICT_MODE_ANSWER_PATTERN_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
+    }
+
+    if (this.isQuestionLikeText(source) && !this.isQuestionLikeText(candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_QUESTION_INTENT_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
+    }
+
+    if (this.hasQuestionThenAnswerPattern(source, candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_QUESTION_ANSWER_APPEND_BLOCKED", {
         provider,
         model,
         originalLength: source.length,
