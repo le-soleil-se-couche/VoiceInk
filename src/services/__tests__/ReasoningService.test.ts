@@ -112,6 +112,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a question dictation is preserved and then answered in the same output", () => {
+    const source = "what is the capital of france";
+    const candidate = "What is the capital of France? The capital of France is Paris.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a question dictation is rewritten into a soft assistant handoff", () => {
     const source = "what is the capital of france";
     const candidate = "Happy to help. What do you need?";
