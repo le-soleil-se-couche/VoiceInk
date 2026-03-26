@@ -114,15 +114,21 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /[吗么呢吧]$/,
       /\b(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否)\b/,
       /(?:是不是|能不能|可不可以|要不要|会不会|有没有)/,
+      /(?:行不行|对不对|好不好|可不可以|能不能|要不要|有没有|是不是)$/,
     ];
 
-    if (zhQuestionPatterns.some((re) => re.test(text.trim()))) {
+    if (zhQuestionPatterns.some((re) => re.test(normalized))) {
       return true;
     }
 
     const enQuestionStart =
       /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/;
     if (enQuestionStart.test(normalized)) {
+      return true;
+    }
+
+    const enQuestionEnd = /\b(?:or\s+not|right|correct|okay|ok)\s*$/;
+    if (enQuestionEnd.test(normalized)) {
       return true;
     }
 
