@@ -144,6 +144,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const normalized = text.trim().toLowerCase();
+    const enBareWhContractionStart = /^(?:whats|whos|wheres|whens|whys|hows)\b/;
     if (/[?？]$/.test(normalized)) {
       return true;
     }
@@ -178,6 +179,10 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
+    if (enBareWhContractionStart.test(normalized)) {
+      return true;
+    }
+
     if (enNegativeQuestionStart.test(normalized)) {
       return true;
     }
@@ -207,6 +212,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const normalized = text.trim().toLowerCase();
+    const enBareWhContractionStart = /^(?:whats|whos|wheres|whens|whys|hows)\b/;
     const zhExplicitQuestionPatterns = [
       /(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|是否|多少|几时|几点)/,
       /(?:等于几|有几|第几|几月|几号|几天|几点|几分|几个|几位|几次|多少钱|多少人|多少个|多久|多远|多大|多高|多长)/,
@@ -214,6 +220,10 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     ];
 
     if (zhExplicitQuestionPatterns.some((re) => re.test(normalized))) {
+      return true;
+    }
+
+    if (enBareWhContractionStart.test(normalized)) {
       return true;
     }
 

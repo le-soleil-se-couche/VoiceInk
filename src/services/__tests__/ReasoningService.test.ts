@@ -101,6 +101,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an apostrophe-stripped English wh-question is rewritten into an answer", () => {
+    const source = "whats the capital of france";
+    const candidate = "The capital of France is Paris.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps apostrophe-stripped English wh-questions when cleanup preserves the question", () => {
+    const source = "whats the capital of france";
+    const candidate = "Whats the capital of France?";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
   it("falls back when a Chinese math question is rewritten into a numeric answer with a question mark", () => {
     const source = "5+5等于几";
     const candidate = "答案是10？";
