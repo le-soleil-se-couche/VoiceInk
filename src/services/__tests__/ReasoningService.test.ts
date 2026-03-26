@@ -195,6 +195,18 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a need-to-know whether dictation is rewritten into an answer", () => {
+    const source = "i need to know whether we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an English negative tag question is rewritten into an answer", () => {
     const source = "we should ship this today shouldn't we";
     const candidate = "We should ship this today.";

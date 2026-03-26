@@ -111,7 +111,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const enIndirectQuestionStart =
-      /^(?:i\s+wonder|i(?:'m| am)\s+wondering|not\s+sure|unsure|unclear)\s+(?:if|whether)\b/;
+      /^(?:(?:i\s+wonder|i(?:'m| am)\s+wondering|not\s+sure|unsure|unclear)\s+(?:if|whether)|(?:(?:i|we|they)\s+)?(?:need|needs|needed|want|wants|wanted)\s+to\s+know\s+(?:if|whether))\b/;
     if (enIndirectQuestionStart.test(normalized)) {
       return true;
     }
