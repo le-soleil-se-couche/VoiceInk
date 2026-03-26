@@ -78,6 +78,11 @@ describe("isQuestionLikeDictation", () => {
     );
   });
 
+  it("treats advise-style indirect English request dictation as question-like", () => {
+    expect(isQuestionLikeDictation("please advise whether we should ship this today")).toBe(true);
+    expect(isQuestionLikeDictation("advise me if we should ship this today")).toBe(true);
+  });
+
   it("treats pronoun-led Chinese alternative choices as question-like", () => {
     expect(isQuestionLikeDictation("我们今天发还是明天发")).toBe(true);
   });
