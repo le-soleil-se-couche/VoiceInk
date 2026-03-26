@@ -116,6 +116,12 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
+    const enBareConditionalQuestionFragment =
+      /^(?:if|whether)\s+(?:[a-z0-9][\p{L}\p{N}'-]*)(?:\s+[a-z0-9][\p{L}\p{N}'-]*){2,14}$/u;
+    if (enBareConditionalQuestionFragment.test(normalized) && !/[,.!?;:]/.test(normalized)) {
+      return true;
+    }
+
     const enAlternativeQuestionEnd =
       /\b[a-z0-9][\p{L}\p{N}'-]*(?:\s+[a-z0-9][\p{L}\p{N}'-]*){0,5}\s+or\s+[a-z0-9][\p{L}\p{N}'-]*(?:\s+[a-z0-9][\p{L}\p{N}'-]*){0,3}\s*$/u;
     if (enAlternativeQuestionEnd.test(normalized)) {

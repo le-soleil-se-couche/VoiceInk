@@ -195,6 +195,18 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a bare whether-clause dictation is rewritten into an answer", () => {
+    const source = "whether we need to backfill the old records";
+    const candidate = "We need to backfill the old records.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an indirect Chinese question is rewritten into an answer", () => {
     const source = "我想知道这个要不要改";
     const candidate = "这个需要修改。";
