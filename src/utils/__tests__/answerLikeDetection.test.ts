@@ -56,6 +56,18 @@ describe("isAnswerLikeText", () => {
     expect(isAnswerLikeText(candidate, 6)).toBe(true);
   });
 
+  it("flags short arithmetic answers even when the minimum length is high", () => {
+    const candidate = "5+5等于10。";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
+  it("flags short english answer labels even when the minimum length is high", () => {
+    const candidate = "Answer is 10.";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
   it("does not flag normal question cleanup output", () => {
     const candidate = "What is the capital of France?";
 

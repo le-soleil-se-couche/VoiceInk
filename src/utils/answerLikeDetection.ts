@@ -27,6 +27,12 @@ const ANSWER_LIKE_PATTERNS = [
   /^\s*(?:好的|好呀|行|当然可以|没问题)[，,]?(?:这(?:是|里)|以下)\s*(?:是)?(?:润色后|修改后|整理后|重写后)的(?:版本|内容|问题|文本)\s*[:：]/,
 ];
 
+const HIGH_CONFIDENCE_ANSWER_LIKE_PATTERNS = [
+  /(?:^|\b)(?:answer\s+is|the\s+answer\s+is)\b/i,
+  /(?:答案|结果)(?:是|为)[:：]?\s*[-+]?\d+(?:\.\d+)?(?:[。.!！？?]|$)/,
+  /^\s*[-+]?\d+(?:\.\d+)?(?:\s*[+\-*/x×÷]\s*[-+]?\d+(?:\.\d+)?)+(?:\s*(?:=|等于)\s*)[-+]?\d+(?:\.\d+)?(?:[。.!！？?]|$)/,
+];
+
 const HAN_CHAR_RE = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
 
 function getWeightedTextLength(text: string): number {
@@ -45,6 +51,10 @@ export function isAnswerLikeText(text: string, minimumLength = 6): boolean {
   }
 
   const trimmed = text.trim();
+  if (HIGH_CONFIDENCE_ANSWER_LIKE_PATTERNS.some((pattern) => pattern.test(trimmed))) {
+    return true;
+  }
+
   if (getWeightedTextLength(trimmed) < minimumLength) {
     return false;
   }
@@ -52,4 +62,4 @@ export function isAnswerLikeText(text: string, minimumLength = 6): boolean {
   return ANSWER_LIKE_PATTERNS.some((pattern) => pattern.test(trimmed));
 }
 
-export { ANSWER_LIKE_PATTERNS };
+export { ANSWER_LIKE_PATTERNS, HIGH_CONFIDENCE_ANSWER_LIKE_PATTERNS };
