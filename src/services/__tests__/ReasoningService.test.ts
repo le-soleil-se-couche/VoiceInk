@@ -244,9 +244,31 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a question dictation is rewritten with a bare english acknowledgement prefix", () => {
+    const source = "what is the capital of france";
+    const candidate = "Sure. What is the capital of France?";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a Chinese question dictation is rewritten into an assistant help offer", () => {
     const source = "这个要改吗";
     const candidate = "需要我帮你修改这个吗？";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese question dictation is rewritten with a bare acknowledgement prefix", () => {
+    const source = "这个要改吗";
+    const candidate = "好的，这个要改吗？";
 
     const result = ReasoningService.enforceStrictMode(source, candidate, {
       strictMode: true,

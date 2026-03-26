@@ -92,6 +92,12 @@ describe("isAnswerLikeText", () => {
     expect(isAnswerLikeText(candidate, 6)).toBe(true);
   });
 
+  it("flags english acknowledgement wrappers before a direct rewritten question", () => {
+    const candidate = "Sure. What is the capital of France?";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
   it("flags short arithmetic answers even when the minimum length is high", () => {
     const candidate = "5+5等于10。";
 
@@ -114,6 +120,12 @@ describe("isAnswerLikeText", () => {
     const candidate = "这是更自然的说法：这个要改吗？";
 
     expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
+  it("flags chinese acknowledgement wrappers before a direct rewritten question", () => {
+    const candidate = "好的，这个要改吗？";
+
+    expect(isAnswerLikeText(candidate, 6)).toBe(true);
   });
 
   it("does not flag normal question cleanup output", () => {
