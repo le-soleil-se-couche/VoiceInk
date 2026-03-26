@@ -38,6 +38,11 @@ describe("isQuestionLikeDictation", () => {
     expect(isQuestionLikeDictation("shouldn't we ship this today")).toBe(true);
   });
 
+  it("treats irregular English negative-contraction questions as question-like", () => {
+    expect(isQuestionLikeDictation("can't we ship this today")).toBe(true);
+    expect(isQuestionLikeDictation("wont this break production")).toBe(true);
+  });
+
   it("treats contractionless English what's-questions as question-like", () => {
     expect(isQuestionLikeDictation("whats the capital of france")).toBe(true);
   });

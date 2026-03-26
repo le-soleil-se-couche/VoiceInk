@@ -19,6 +19,13 @@ describe("getSystemPrompt question-intent safety", () => {
     expect(prompt).toContain("preserve the question form and punctuation when cleaning.");
   });
 
+  it("adds question preservation guidance for irregular English negative contractions", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "can't we ship this today", "en");
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form and punctuation when cleaning.");
+  });
+
   it("adds question preservation guidance for contractionless English what's dictation", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "en", "whats the capital of france", "en");
 

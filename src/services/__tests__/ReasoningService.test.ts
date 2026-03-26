@@ -35,6 +35,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an irregular English negative-contraction question is rewritten into a statement", () => {
+    const source = "can't we ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a contractionless English what's-question is rewritten into an answer", () => {
     const source = "whats the capital of france";
     const candidate = "The capital of France is Paris.";
