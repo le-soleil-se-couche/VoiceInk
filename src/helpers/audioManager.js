@@ -1,6 +1,6 @@
 import ReasoningService from "../services/ReasoningService";
 import { API_ENDPOINTS, NETWORK_TIMEOUTS, buildApiUrl, normalizeBaseUrl } from "../config/constants";
-import { getSystemPrompt } from "../config/prompts";
+import { getAnswerLikeRetryPrompt, getSystemPrompt } from "../config/prompts";
 import logger from "../utils/logger";
 import { isBuiltInMicrophone } from "../utils/audioDeviceUtils";
 import { isSecureEndpoint } from "../utils/urlUtils";
@@ -735,6 +735,15 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const dictionaryPrompt = this.getCustomDictionaryPrompt();
     if (dictionaryPrompt) opts.prompt = dictionaryPrompt;
 
+    return opts;
+  }
+
+  buildAnswerLikeRetryTranscribeOptions(settings = getSettings()) {
+    const opts = this.buildOpenWhisprCloudTranscribeOptions(settings);
+    opts.prompt = getAnswerLikeRetryPrompt(
+      settings.customDictionary,
+      settings.uiLanguage || "en"
+    );
     return opts;
   }
 
@@ -2233,7 +2242,10 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     processedText = await this.guardMacAsrAnswerLikeOutput(processedText, {
       source: "openwhispr-cloud",
       retryOnce: async () => {
-        result = await runCloudTranscriptionAttempt();
+        const retryOpts = this.buildAnswerLikeRetryTranscribeOptions(settings);
+        const transcriptionStart = performance.now();
+        result = await this.requestOpenWhisprCloudTranscription(arrayBuffer, retryOpts);
+        transcriptionProcessingDurationMs += Math.round(performance.now() - transcriptionStart);
         return result?.text || "";
       },
     });
@@ -3500,7 +3512,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           return finalText;
         }
         const retryBuffer = await fallbackBlob.arrayBuffer();
-        const retryOpts = this.buildOpenWhisprCloudTranscribeOptions(stSettings);
+        const retryOpts = this.buildAnswerLikeRetryTranscribeOptions(stSettings);
         const retryResult = await this.requestOpenWhisprCloudTranscription(retryBuffer, retryOpts);
         return retryResult?.text || "";
       },

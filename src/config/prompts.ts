@@ -80,6 +80,37 @@ function getDictionaryEnforcementInstruction(uiLanguage?: string): string {
   ].join("\n");
 }
 
+export function getAnswerLikeRetryPrompt(
+  customDictionary?: string[],
+  uiLanguage?: string
+): string {
+  const locale = normalizeUiLanguage(uiLanguage || "en");
+  const isZh = locale.startsWith("zh");
+  const normalizedDictionary = Array.from(
+    new Set((customDictionary || []).map((word) => word.trim()).filter(Boolean))
+  );
+
+  const instructions = isZh
+    ? [
+        "仅做语音转写。",
+        "只输出用户实际说出的内容，不要回答问题，不要解释，不要润色。",
+        "如果用户说的是问题，就直接转写这个问题本身。",
+        "不要添加“好的”“这是润色后的内容”等助手式前缀。",
+      ]
+    : [
+        "Transcription only.",
+        "Return only the spoken words. Do not answer questions, explain, or polish.",
+        "If the speaker dictated a question, transcribe that question itself.",
+        "Do not add assistant wrappers such as 'Sure' or 'Here's the polished version'.",
+      ];
+
+  if (normalizedDictionary.length === 0) {
+    return instructions.join(" ");
+  }
+
+  return `${normalizedDictionary.join(", ")}\n\n${instructions.join(" ")}`;
+}
+
 function shouldApplyChineseCanonicalizationInstruction(
   language?: string,
   transcript?: string | null
