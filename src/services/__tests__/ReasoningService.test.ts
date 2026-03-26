@@ -56,4 +56,38 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when a preserved English question has an appended answer", () => {
+    const source = "what is the capital of france";
+    const candidate = "What is the capital of France? The capital of France is Paris.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a preserved Chinese question has an appended answer", () => {
+    const source = "这个要改吗";
+    const candidate = "这个要改吗？需要修改。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps multiple question sentences when they all stay question-shaped", () => {
+    const source = "what changed in the deployment flow and why did it happen";
+    const candidate = "What changed in the deployment flow? Why did it happen?";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
 });

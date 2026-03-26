@@ -135,6 +135,17 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
   }
 
+  private splitIntoSentenceLikeSegments(text: string): string[] {
+    if (!text || !text.trim()) {
+      return [];
+    }
+
+    return text
+      .split(/(?<=[.?!。！？])\s+|\n+/u)
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+  }
+
   private calculateOverlapMetrics(source: string, candidate: string): {
     score: number;
     outputCoverage: number;
@@ -240,6 +251,22 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         fallbackLength: fallback.length,
       });
       return fallback;
+    }
+
+    if (this.isQuestionLikeText(source)) {
+      const segments = this.splitIntoSentenceLikeSegments(candidate);
+      if (segments.length > 1 && segments.some((segment) => !this.isQuestionLikeText(segment))) {
+        const fallback = this.localCleanupFallback(source);
+        logger.logReasoning("STRICT_MODE_QUESTION_APPEND_BLOCKED", {
+          provider,
+          model,
+          originalLength: source.length,
+          candidateLength: candidate.length,
+          segmentCount: segments.length,
+          fallbackLength: fallback.length,
+        });
+        return fallback;
+      }
     }
 
     const defaultShortInputThreshold = 24;
