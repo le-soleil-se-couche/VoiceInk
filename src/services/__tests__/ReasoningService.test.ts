@@ -133,4 +133,15 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("falls back when an English trailing tag question is rewritten into a statement", () => {
+    const source = "we already merged the fallback patch, didn't we";
+    const candidate = "We already merged the fallback patch.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
