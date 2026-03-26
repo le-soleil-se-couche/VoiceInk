@@ -11,7 +11,7 @@ export const UNIFIED_SYSTEM_PROMPT = promptData.CLEANUP_PROMPT;
 export const LEGACY_PROMPTS = promptData.LEGACY_PROMPTS;
 
 const LEGACY_AGENT_PROMPT_MARKERS = [
-  /\bmode 2:\s*agent\b/i,
+  /\bmode\s*2\s*[:：]\s*agent\b/i,
   /\byou operate in two modes\b/i,
   /\bactivated when the user directly addresses you by name\b/i,
   /\banswer questions directly\b/i,

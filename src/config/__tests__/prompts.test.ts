@@ -28,6 +28,14 @@ describe("prompt safety sanitization", () => {
     ).toBe(true);
   });
 
+  it("flags localized legacy full prompts that still enable agent behavior", () => {
+    expect(
+      isUnsafeUnifiedPrompt(
+        "Tu fonctionnes en deux modes.\n\nMODE 2 : AGENT\n\nRepondre directement a des questions."
+      )
+    ).toBe(true);
+  });
+
   it("keeps cleanup-only prompts unchanged", () => {
     expect(sanitizeUnifiedPrompt(CLEANUP_PROMPT)).toBe(CLEANUP_PROMPT);
   });
@@ -36,6 +44,14 @@ describe("prompt safety sanitization", () => {
     expect(
       sanitizeUnifiedPrompt(
         'You operate in two modes.\n\nMODE 2: AGENT\n\nAnswer questions directly.'
+      )
+    ).toBe(UNIFIED_SYSTEM_PROMPT);
+  });
+
+  it("resets localized unsafe unified prompts back to the cleanup default", () => {
+    expect(
+      sanitizeUnifiedPrompt(
+        "Tu fonctionnes en deux modes.\n\nMODE 2 : AGENT\n\nRepondre directement a des questions."
       )
     ).toBe(UNIFIED_SYSTEM_PROMPT);
   });
