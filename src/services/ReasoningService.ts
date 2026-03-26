@@ -156,6 +156,11 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
+    const enColloquialConfirmationTail = /(?:^|[\s,])(?:yeah|eh|huh)\s*$/;
+    if (enColloquialConfirmationTail.test(normalized)) {
+      return true;
+    }
+
     const enTagQuestionEnd =
       /,\s*(?:isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|don['’]?t|doesn['’]?t|didn['’]?t|can['’]?t|couldn['’]?t|wouldn['’]?t|shouldn['’]?t|won['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t|mustn['’]?t|is|are|was|were|do|does|did|can|could|would|should|will|have|has|had|must)(?:n['’]?t)?\s+(?:i|you|we|he|she|it|they|there)\s*$/;
     if (enTagQuestionEnd.test(normalized)) {

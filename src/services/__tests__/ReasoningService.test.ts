@@ -189,6 +189,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a colloquial English confirmation-tail question is rewritten into a statement", () => {
+    const source = "we should ship today yeah";
+    const candidate = "We should ship today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an inverted English yes-no question is rewritten into a subject-first answer with a question mark", () => {
     const source = "should we ship today";
     const candidate = "We should ship today?";
