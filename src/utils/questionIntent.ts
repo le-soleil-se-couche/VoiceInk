@@ -3,6 +3,9 @@ export function hasUnresolvedAlternativeChoice(text?: string): boolean {
     return false;
   }
 
+  const hasMeaningfulChoiceToken = (value: string): boolean =>
+    /[\u4e00-\u9fffA-Za-z0-9]/.test(value);
+
   const trimmed = text.trim().toLowerCase();
   const normalized = trimmed.replace(/\s+/g, "");
 
@@ -14,7 +17,7 @@ export function hasUnresolvedAlternativeChoice(text?: string): boolean {
     }
 
     const parts = normalized.split("还是");
-    if (parts.length !== 2) {
+    if (parts.length < 2 || parts.some((part) => part.length < 1)) {
       return false;
     }
 
@@ -28,7 +31,7 @@ export function hasUnresolvedAlternativeChoice(text?: string): boolean {
       return false;
     }
 
-    return /[\u4e00-\u9fffA-Za-z0-9]/.test(before) && /[\u4e00-\u9fffA-Za-z0-9]/.test(after);
+    return parts.every((part) => hasMeaningfulChoiceToken(part));
   }
 
   if (!/\bor\b/.test(trimmed)) {
@@ -37,24 +40,24 @@ export function hasUnresolvedAlternativeChoice(text?: string): boolean {
 
   const sanitized = trimmed.replace(/[?!.;,:'"()[\]{}]/g, " ");
   const parts = sanitized.split(/\s+or\s+/);
-  if (parts.length !== 2) {
+  if (parts.length < 2 || parts.some((part) => !part.trim())) {
     return false;
   }
 
-  const [before, after] = parts.map((part) => part.trim());
-  if (!before || !after) {
+  const normalizedParts = parts.map((part) => part.trim());
+  if (normalizedParts.some((part) => !part)) {
     return false;
   }
 
   const hasMeaningfulToken = (value: string): boolean =>
     /[a-z0-9]/.test(value) && /\b[a-z0-9][a-z0-9'-]*\b/.test(value);
 
-  if (!hasMeaningfulToken(before) || !hasMeaningfulToken(after)) {
+  if (!normalizedParts.every((part) => hasMeaningfulToken(part))) {
     return false;
   }
 
   const ignoredAfter = /^(?:not|so|something|someone|somebody|anything|anyone|anybody|whatever)\b/;
-  if (ignoredAfter.test(after)) {
+  if (normalizedParts.slice(1).some((part) => ignoredAfter.test(part))) {
     return false;
   }
 

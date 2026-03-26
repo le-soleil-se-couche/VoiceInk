@@ -31,6 +31,19 @@ describe("getSystemPrompt question-intent safety", () => {
     expect(prompt).toContain("preserve the question form, unresolved alternatives, and punctuation");
   });
 
+  it("adds unresolved-choice guidance for English multi-option dictation", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en",
+      "should we ship this today or tomorrow or Monday",
+      "en"
+    );
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form, unresolved alternatives, and punctuation");
+  });
+
   it("adds question preservation guidance for Chinese quantity questions using 几", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "zh-CN", "5+5等于几", "zh-CN");
 
