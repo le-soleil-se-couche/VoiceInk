@@ -13,6 +13,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an English auxiliary-led question is rewritten into an answer", () => {
+    const source = "has the deploy finished";
+    const candidate = "The deploy has finished.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("keeps question-shaped cleanup output when the question intent is preserved", () => {
     const source = "what is the capital of france";
     const candidate = "What is the capital of France?";

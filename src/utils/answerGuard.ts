@@ -11,7 +11,7 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
 const CHINESE_QUESTION_RE =
   /[？?]|(是不是|是否|会不会|能不能|可不可以|要不要|有没有|为什么|为何|怎么|怎样|如何|谁|什么|哪(个|里|儿)?|几|多少|吗|呢|么|嘛)/;
 const ENGLISH_QUESTION_RE =
-  /[?]|^\s*(?:what|why|how|when|where|who|which)\b|^\s*(?:can|could|would|should|is|are|am|do|does|did|will|won't|shall)\b/i;
+  /[?]|^\s*(?:what|why|how|when|where|who|which)\b|^\s*(?:can|could|would|should|is|are|am|was|were|do|does|did|will|won't|shall|have|has|had|may)\b/i;
 const ENGLISH_QUESTION_END_RE = /\b(?:or\s+not|yes\s+or\s+no|right|correct|okay|ok)\s*$/i;
 const ENGLISH_INDIRECT_QUESTION_RE =
   /\b(?:i\s+(?:wonder|was\s+wondering|want\s+to\s+know|need\s+to\s+know|am\s+curious)|curious)\s+(?:if|whether)\b|\b(?:can|could|would)\s+you\s+(?:tell|check|confirm|explain|clarify)\s+(?:me\s+)?(?:if|whether|why|how|what|when|where)\b|\b(?:let\s+me\s+know|tell\s+me|check|confirm)\s+(?:if|whether)\b/i;
