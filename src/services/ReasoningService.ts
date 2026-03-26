@@ -114,8 +114,8 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const trimmed = text.trim();
     const patterns = [
-      /^(?:是的|不是|对(?:的)?|没错|当然|当然可以|当然会)(?=[\s，,。.!?？；;:])/,
-      /^(?:yes|no|yeah|nope|sure|absolutely|certainly|of\s+course)(?=[\s,.;:!?])/i,
+      /^(?:是的|不是|对(?:的)?|没错|当然|当然可以|当然会|好的|好吧)(?=[\s，,。.!?？；;:])/,
+      /^(?:yes|no|yeah|nope|sure|absolutely|certainly|of\s+course|ok(?:ay)?)(?=[\s,.;:!?])/i,
     ];
 
     for (const pattern of patterns) {
