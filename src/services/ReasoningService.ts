@@ -117,7 +117,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const enImperativeQuestionLeadIn =
-      /^(?:(?:please\s+)?(?:tell\s+me|let\s+me\s+know|find\s+out)\s+(?:if|whether)|(?:please\s+)?(?:check|confirm|verify|see)\s+(?:if|whether))\b/;
+      /^(?:(?:please\s+)?(?:tell\s+me|let\s+me\s+know|find\s+out|advise(?:\s+me)?|share)\s+(?:if|whether)|(?:please\s+)?(?:check|confirm|verify|see)\s+(?:if|whether))\b/;
     if (enImperativeQuestionLeadIn.test(normalized)) {
       return true;
     }
