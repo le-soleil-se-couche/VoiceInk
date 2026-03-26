@@ -195,6 +195,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an English negative tag question is rewritten into an answer", () => {
+    const source = "we should ship this today shouldn't we";
+    const candidate = "We should ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps English tag question cleanup when the question intent is preserved", () => {
+    const source = "the migration is ready is it";
+    const candidate = "The migration is ready, is it?";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
   it("falls back when a bare whether-clause dictation is rewritten into an answer", () => {
     const source = "whether we need to backfill the old records";
     const candidate = "We need to backfill the old records.";

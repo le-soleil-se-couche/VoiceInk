@@ -168,6 +168,12 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
+    const enTagQuestionEnd =
+      /(?:^|[\s,])(?:isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|don['’]?t|doesn['’]?t|didn['’]?t|can['’]?t|couldn['’]?t|won['’]?t|wouldn['’]?t|shouldn['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t|is|are|was|were|do|does|did|can|could|would|should|will|have|has|had)\s+(?:i|you|we|they|he|she|it|there)\s*$/;
+    if (enTagQuestionEnd.test(normalized)) {
+      return true;
+    }
+
     const enFragmentQuestionStart =
       /^(?:any|some|another|more)\s+[a-z0-9][\p{L}\p{N}'-]*(?:\s+[a-z0-9][\p{L}\p{N}'-]*){0,8}$/u;
     if (enFragmentQuestionStart.test(normalized)) {
