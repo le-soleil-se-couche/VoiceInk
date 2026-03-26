@@ -183,6 +183,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an indirect English question is rewritten into an answer", () => {
+    const source = "i wonder if we need to backfill the old records";
+    const candidate = "We need to backfill the old records.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when an indirect Chinese question is rewritten into an answer", () => {
+    const source = "我想知道这个要不要改";
+    const candidate = "这个需要修改。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("keeps English fragment question cleanup when the question intent is preserved", () => {
     const source = "any blockers with the migration rollout today";
     const candidate = "Any blockers with the migration rollout today?";

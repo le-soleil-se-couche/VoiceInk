@@ -110,6 +110,12 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
+    const enIndirectQuestionStart =
+      /^(?:i\s+wonder|i(?:'m| am)\s+wondering|not\s+sure|unsure|unclear)\s+(?:if|whether)\b/;
+    if (enIndirectQuestionStart.test(normalized)) {
+      return true;
+    }
+
     const enAlternativeQuestionEnd =
       /\b[a-z0-9][\p{L}\p{N}'-]*(?:\s+[a-z0-9][\p{L}\p{N}'-]*){0,5}\s+or\s+[a-z0-9][\p{L}\p{N}'-]*(?:\s+[a-z0-9][\p{L}\p{N}'-]*){0,3}\s*$/u;
     if (enAlternativeQuestionEnd.test(normalized)) {
@@ -118,6 +124,12 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const chineseANotAQuestion = /([\u4e00-\u9fff])不\1(?:$|[\s，。！？、,.!?;:])/u;
     if (chineseANotAQuestion.test(normalized)) {
+      return true;
+    }
+
+    const zhIndirectQuestion =
+      /^(?:我想知道|我想问|想知道|想问).{0,24}(?:是否|是不是|能不能|可不可以|要不要|会不会|有没有|什么|谁|哪(?:里|儿)?|多少|几)/u;
+    if (zhIndirectQuestion.test(normalized)) {
       return true;
     }
 
