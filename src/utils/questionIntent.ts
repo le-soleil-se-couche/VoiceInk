@@ -3,32 +3,72 @@ export function hasUnresolvedAlternativeChoice(text?: string): boolean {
     return false;
   }
 
-  const normalized = text.trim().toLowerCase().replace(/\s+/g, "");
-  if (!normalized.includes("还是")) {
+  const trimmed = text.trim().toLowerCase();
+  const normalized = trimmed.replace(/\s+/g, "");
+
+  if (normalized.includes("还是")) {
+    const ignorePrefixes =
+      /^(?:我|你|他|她|它|我们|你们|他们|她们|它们|后来|最后|最终|结果|其实|但|但是|不过)/;
+    if (ignorePrefixes.test(normalized)) {
+      return false;
+    }
+
+    const parts = normalized.split("还是");
+    if (parts.length !== 2) {
+      return false;
+    }
+
+    const [before, after] = parts;
+    if (before.length < 2 || after.length < 1) {
+      return false;
+    }
+
+    const likelyStillUsage = /^(?:觉得|认为|希望|可以|不行|行|稳|好|对|错|要|会|能|是|有|在)/;
+    if (likelyStillUsage.test(after)) {
+      return false;
+    }
+
+    return /[\u4e00-\u9fffA-Za-z0-9]/.test(before) && /[\u4e00-\u9fffA-Za-z0-9]/.test(after);
+  }
+
+  if (!/\bor\b/.test(trimmed)) {
     return false;
   }
 
-  const ignorePrefixes = /^(?:我|你|他|她|它|我们|你们|他们|她们|它们|后来|最后|最终|结果|其实|但|但是|不过)/;
-  if (ignorePrefixes.test(normalized)) {
-    return false;
-  }
-
-  const parts = normalized.split("还是");
+  const sanitized = trimmed.replace(/[?!.;,:'"()[\]{}]/g, " ");
+  const parts = sanitized.split(/\s+or\s+/);
   if (parts.length !== 2) {
     return false;
   }
 
-  const [before, after] = parts;
-  if (before.length < 2 || after.length < 1) {
+  const [before, after] = parts.map((part) => part.trim());
+  if (!before || !after) {
     return false;
   }
 
-  const likelyStillUsage = /^(?:觉得|认为|希望|可以|不行|行|稳|好|对|错|要|会|能|是|有|在)/;
-  if (likelyStillUsage.test(after)) {
+  const hasMeaningfulToken = (value: string): boolean =>
+    /[a-z0-9]/.test(value) && /\b[a-z0-9][a-z0-9'-]*\b/.test(value);
+
+  if (!hasMeaningfulToken(before) || !hasMeaningfulToken(after)) {
     return false;
   }
 
-  return /[\u4e00-\u9fffA-Za-z0-9]/.test(before) && /[\u4e00-\u9fffA-Za-z0-9]/.test(after);
+  const ignoredAfter = /^(?:not|so|something|someone|somebody|anything|anyone|anybody|whatever)\b/;
+  if (ignoredAfter.test(after)) {
+    return false;
+  }
+
+  const ignoredWholePhrases = [
+    /\bmore\s+or\s+less\b/,
+    /\bnow\s+or\s+never\b/,
+    /\bsooner\s+or\s+later\b/,
+    /\bblack\s+or\s+white\b/,
+  ];
+  if (ignoredWholePhrases.some((pattern) => pattern.test(trimmed))) {
+    return false;
+  }
+
+  return true;
 }
 
 export function isQuestionLikeDictation(text?: string): boolean {
