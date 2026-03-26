@@ -156,6 +156,16 @@ OPENAI_BASE_URL=https://api.cerebras.ai/v1
 # MERCURY_MODEL=mercury-2
 ```
 
+### 本机 Secrets（推荐）
+
+- 应用会自动读取：`~/.voiceink-secrets/qwen.env`（可用 `VOICEINK_SECRETS_FILE` 覆盖）。
+- 建议把 `CUSTOM_TRANSCRIPTION_API_KEY` / `CUSTOM_REASONING_API_KEY` 放到该文件，不放仓库。
+- 需要给终端/脚本注入同一套变量时：
+
+```bash
+eval "$(/Users/ewin/Dev/voiceink-active/scripts/print-voiceink-secrets-exports.sh)"
+```
+
 ---
 
 ## Windows 启动方式
