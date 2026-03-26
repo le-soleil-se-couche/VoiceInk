@@ -26,8 +26,10 @@ const ANSWER_LIKE_PATTERNS = [
   /^\s*(?:sure|okay|ok|alright|certainly|absolutely|of course)[,，]?\s+(?:here(?:'s| is)|i(?:'ve| have)\s+(?:cleaned(?:[- ]up)?|polished|rewritten|revised|updated)|(?:this|that)\s+is)\b/i,
   /^\s*(?:(?:sure|okay|ok|alright|certainly|absolutely|of course)[,，]?\s+)?(?:here(?:'s| is)|below is)\s+(?:the|your|a)\s+(?:(?:more|slightly)\s+)?(?:polished|cleaned(?:[- ]up)?|rewritten|revised|updated)\s+(?:version|question|text|message)\s*[:：-]/i,
   /^\s*the\s+(?:(?:more|slightly)\s+)?(?:polished|cleaned(?:[- ]up)?|rewritten|revised|updated)\s+(?:version|question|text|message)\s+is\s*[:：-]/i,
+  /^\s*(?:(?:more|slightly)\s+)?(?:polished|cleaned(?:[- ]up)?|rewritten|revised|updated)\s+(?:version|question|text|message)\s*[:：-]/i,
   /^\s*(?:好的|好呀|行|当然可以|没问题)[，,]?(?:请说|请讲|请告诉我|你可以说|我来帮你|我可以帮你)(?:吧|呀|呢)?/,
   /^\s*(?:好的|好呀|行|当然可以|没问题)[，,]?(?:这(?:是|里)|以下)\s*(?:是)?(?:润色后|修改后|整理后|重写后)的(?:版本|内容|问题|文本)\s*[:：]/,
+  /^\s*(?:润色后|修改后|整理后|重写后)的(?:版本|内容|问题|文本)\s*[:：]/,
 ];
 
 const HIGH_CONFIDENCE_ANSWER_LIKE_PATTERNS = [

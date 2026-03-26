@@ -56,6 +56,12 @@ describe("isAnswerLikeText", () => {
     expect(isAnswerLikeText(candidate, 20)).toBe(true);
   });
 
+  it("flags bare english polished-question labels without an assistant opener", () => {
+    const candidate = "Polished question: What is the capital of France?";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
   it("flags english clarification prompts that ask for text to polish", () => {
     const candidate = "Please provide the text you'd like me to polish.";
 
@@ -88,6 +94,12 @@ describe("isAnswerLikeText", () => {
 
   it("flags short english answer labels even when the minimum length is high", () => {
     const candidate = "Answer is 10.";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
+  it("flags bare chinese polished-question labels without an assistant opener", () => {
+    const candidate = "润色后的问题：这个要改吗？";
 
     expect(isAnswerLikeText(candidate, 20)).toBe(true);
   });
