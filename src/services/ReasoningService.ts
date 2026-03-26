@@ -101,6 +101,34 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return patterns.some((re) => re.test(text));
   }
 
+  private hasTrailingAnswerAfterQuestion(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    const trimmed = text.trim();
+    const lastQuestionIndex = Math.max(trimmed.lastIndexOf("?"), trimmed.lastIndexOf("？"));
+    if (lastQuestionIndex < 0) {
+      return false;
+    }
+
+    const trailing = trimmed.slice(lastQuestionIndex + 1).trim();
+    if (!trailing) {
+      return false;
+    }
+
+    const normalizedTrailing = trailing.replace(/^[)\]"'”’」』】>\s\-–—:;,，。！？、]+/, "").trim();
+    if (!normalizedTrailing) {
+      return false;
+    }
+
+    if (!/[\u4e00-\u9fffA-Za-z0-9]/.test(normalizedTrailing)) {
+      return false;
+    }
+
+    return !isQuestionLikeDictation(normalizedTrailing);
+  }
+
   private calculateOverlapMetrics(source: string, candidate: string): {
     score: number;
     outputCoverage: number;
@@ -199,6 +227,18 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     if (isQuestionLikeDictation(source) && !isQuestionLikeDictation(candidate)) {
       const fallback = this.localCleanupFallback(source);
       logger.logReasoning("STRICT_MODE_QUESTION_INTENT_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
+    }
+
+    if (isQuestionLikeDictation(source) && this.hasTrailingAnswerAfterQuestion(candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_TRAILING_ANSWER_BLOCKED", {
         provider,
         model,
         originalLength: source.length,

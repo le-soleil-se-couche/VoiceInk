@@ -24,6 +24,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(candidate);
   });
 
+  it("falls back when a cleaned English question appends a resolved answer", () => {
+    const source = "what is the capital of france";
+    const candidate = "What is the capital of France? Paris.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an English negative-contraction question is rewritten into a statement", () => {
     const source = "shouldn't we ship this today";
     const candidate = "We should ship this today.";
@@ -82,6 +93,17 @@ describe("ReasoningService strict mode", () => {
   it("falls back when a Chinese question is rewritten into a declarative answer", () => {
     const source = "这个要改吗";
     const candidate = "这个需要修改。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a cleaned Chinese question appends a resolved answer", () => {
+    const source = "这个要改吗";
+    const candidate = "这个要改吗？要改。";
 
     const result = ReasoningService.enforceStrictMode(source, candidate, {
       strictMode: true,
