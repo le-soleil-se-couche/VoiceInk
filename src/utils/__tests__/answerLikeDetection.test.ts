@@ -32,6 +32,12 @@ describe("isAnswerLikeText", () => {
     expect(isAnswerLikeText(candidate, 6)).toBe(true);
   });
 
+  it("flags chinese assistant help-offer questions without an acknowledgement prefix", () => {
+    const candidate = "请问有什么可以帮您的吗？";
+
+    expect(isAnswerLikeText(candidate, 6)).toBe(true);
+  });
+
   it("flags soft english assistant promise output", () => {
     const candidate = "I'd be happy to rewrite this for you.";
 
