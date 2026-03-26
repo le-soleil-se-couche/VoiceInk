@@ -123,6 +123,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a long colloquial Chinese bare-不 question is rewritten into a statement", () => {
+    const source = "这个数据库迁移方案今天晚上开始执行不";
+    const candidate = "这个数据库迁移方案今天晚上开始执行。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a negative-contraction English question is rewritten into a statement", () => {
     const source = "isn't the staging deployment supposed to finish before we start migration";
     const candidate = "The staging deployment is supposed to finish before we start migration.";
