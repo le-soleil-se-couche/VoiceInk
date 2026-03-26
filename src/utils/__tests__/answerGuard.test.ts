@@ -43,6 +43,12 @@ describe("answerGuard", () => {
       )
     ).toBe(true);
     expect(
+      shouldBlockQuestionAnswerization(
+        "What time is the deploy?",
+        "What time is the deploy?\nThe deploy is at 5 PM."
+      )
+    ).toBe(true);
+    expect(
       shouldBlockQuestionAnswerization("I wonder if this needs a migration", "This needs a migration.")
     ).toBe(true);
     expect(

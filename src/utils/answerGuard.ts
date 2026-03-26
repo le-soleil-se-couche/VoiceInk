@@ -22,7 +22,7 @@ const ASSISTANT_FOLLOW_UP_QUESTION_RE =
   /(请问|你想知道|您想知道|你是想问|您是想问|需要我|要我|我来|我可以帮你|我帮你|要不要我)/i;
 const ASSISTANT_FOLLOW_UP_QUESTION_EN_RE =
   /\b(would you like|do you want me to|can i help|shall i|are you asking|would you like me to|do you want to know)\b/i;
-const SENTENCE_SPLIT_RE = /[。！？!?]+/;
+const SENTENCE_SPLIT_RE = /(?:[。！？!?]+|\n+)/;
 
 export function isAnswerLikeTranscriptionOutput(text: string | null | undefined): boolean {
   if (typeof text !== "string") return false;
