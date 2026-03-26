@@ -19,3 +19,4 @@
 - 2026-03-26 17:18: 创建统一 secrets 目录 `/Users/ewin/.voiceink-secrets`（700）与 `qwen.env`（600），并迁移现有 CUSTOM API keys。
 - 2026-03-26 17:20: 增加 `scripts/print-voiceink-secrets-exports.sh`，并在 README 增加本机 secrets 统一路径与注入命令。
 - 2026-03-26 17:22: 验证通过：secrets 注入脚本可导出 `CUSTOM_TRANSCRIPTION_API_KEY` / `CUSTOM_REASONING_API_KEY`；`npm run typecheck` 通过，`npm run lint` 无新增 error（仅基线 warnings）。
+- 2026-03-26 17:23: 提交并推送 `7a49ce8` 到 `codex/dual-machine-hardening`。
