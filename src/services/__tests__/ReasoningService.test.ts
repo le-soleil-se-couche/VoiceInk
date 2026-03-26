@@ -207,6 +207,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an imperative tell-me-if dictation is rewritten into an answer", () => {
+    const source = "tell me if we need to backfill the old records";
+    const candidate = "We need to backfill the old records.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps imperative tell-me-if cleanup when the question intent is preserved", () => {
+    const source = "tell me if we need to backfill the old records";
+    const candidate = "Tell me if we need to backfill the old records.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
   it("falls back when an English negative tag question is rewritten into an answer", () => {
     const source = "we should ship this today shouldn't we";
     const candidate = "We should ship this today.";

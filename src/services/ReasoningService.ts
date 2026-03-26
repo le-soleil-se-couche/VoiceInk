@@ -116,6 +116,12 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
+    const enImperativeQuestionLeadIn =
+      /^(?:(?:please\s+)?(?:tell\s+me|let\s+me\s+know)\s+(?:if|whether)|(?:please\s+)?(?:check|confirm|verify|see)\s+(?:if|whether))\b/;
+    if (enImperativeQuestionLeadIn.test(normalized)) {
+      return true;
+    }
+
     const enBareConditionalQuestionFragment =
       /^(?:if|whether)\s+(?:[a-z0-9][\p{L}\p{N}'-]*)(?:\s+[a-z0-9][\p{L}\p{N}'-]*){2,14}$/u;
     if (enBareConditionalQuestionFragment.test(normalized) && !/[,.!?;:]/.test(normalized)) {
