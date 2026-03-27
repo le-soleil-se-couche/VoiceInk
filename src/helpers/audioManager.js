@@ -2497,27 +2497,51 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           throw new Error("Custom transcription endpoint is empty. Please configure it in Settings.");
         }
 
-        const audioBuffer = await optimizedAudio.arrayBuffer();
-        const proxyData = {
-          audioBuffer,
-          endpoint,
-          model,
-          language,
-          mimeType,
-          isQwenAsr,
-        };
-        if (!isQwenAsr && dictionaryPrompt) {
-          proxyData.prompt = dictionaryPrompt;
-        }
-
-        logger.debug(
-          "Proxying custom transcription through main process",
-          { endpoint, model, isQwenAsr, hasPrompt: !!proxyData.prompt },
-          "transcription"
+        const sourceSettings = getSettings();
+        const retryPrompt = getAnswerLikeRetryPrompt(
+          sourceSettings.customDictionary,
+          sourceSettings.uiLanguage || "en"
         );
+        const sourceTag = isQwenAsr ? "custom-qwen" : "custom";
+        const baseAudioBuffer = await optimizedAudio.arrayBuffer();
+        const runCustomProxyAttempt = async (promptOverride = null) => {
+          const proxyData = {
+            audioBuffer: baseAudioBuffer.slice(0),
+            endpoint,
+            model,
+            language,
+            mimeType,
+            isQwenAsr,
+          };
+          if (!isQwenAsr) {
+            const promptToUse =
+              typeof promptOverride === "string" ? promptOverride : dictionaryPrompt;
+            if (promptToUse) {
+              proxyData.prompt = promptToUse;
+            }
+          }
 
-        const result = await window.electronAPI.proxyCustomTranscription(proxyData);
-        const proxyText = isQwenAsr ? extractChatCompletionText(result) : result?.text;
+          logger.debug(
+            "Proxying custom transcription through main process",
+            {
+              endpoint,
+              model,
+              isQwenAsr,
+              hasPrompt: !!proxyData.prompt,
+              isRetryAttempt: typeof promptOverride === "string",
+            },
+            "transcription"
+          );
+
+          const result = await window.electronAPI.proxyCustomTranscription(proxyData);
+          return isQwenAsr ? extractChatCompletionText(result) : result?.text;
+        };
+
+        let proxyText = await runCustomProxyAttempt();
+        proxyText = await this.guardMacAsrAnswerLikeOutput(proxyText, {
+          source: sourceTag,
+          retryOnce: async () => runCustomProxyAttempt(isQwenAsr ? null : retryPrompt),
+        });
 
         if (proxyText && proxyText.trim().length > 0) {
           timings.transcriptionProcessingDurationMs = Math.round(performance.now() - apiCallStart);
