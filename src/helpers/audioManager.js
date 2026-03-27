@@ -253,6 +253,14 @@ const buildTargetedCanonicalAliasKeys = (normalizedKey) => {
   const aliases = new Set();
   if (!normalizedKey) return aliases;
 
+  if (normalizedKey.includes("qwen")) {
+    aliases.add(normalizedKey.replace(/qwen/g, "1000问"));
+    aliases.add(normalizedKey.replace(/qwen/g, "千问"));
+    aliases.add(normalizedKey.replace(/qwen/g, "请问"));
+    aliases.add(normalizedKey.replace(/qwen/g, "前问"));
+    aliases.add(normalizedKey.replace(/qwen/g, "青问"));
+  }
+
   if (normalizedKey.includes("moltbot")) {
     aliases.add(normalizedKey.replace(/moltbot/g, "modeboat"));
     aliases.add(normalizedKey.replace(/moltbot/g, "modebot"));
@@ -273,6 +281,16 @@ const buildTargetedCanonicalAliasKeys = (normalizedKey) => {
       aliases.add(normalizedKey.replace(/^wewe/, "we"));
       aliases.add(normalizedKey.replace(/^wewe/, "v"));
     }
+  }
+
+  // "千问" is normalized to "1000问" by number canonicalization.
+  // Add common ASR confusions so dictionary normalization can still recover it.
+  if (normalizedKey.includes("1000问")) {
+    aliases.add(normalizedKey.replace(/1000问/g, "qwen"));
+    aliases.add(normalizedKey.replace(/1000问/g, "请问"));
+    aliases.add(normalizedKey.replace(/1000问/g, "前问"));
+    aliases.add(normalizedKey.replace(/1000问/g, "青问"));
+    aliases.add(normalizedKey.replace(/1000问/g, "1000文"));
   }
 
   return aliases;
