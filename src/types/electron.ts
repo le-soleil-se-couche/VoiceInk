@@ -7,6 +7,11 @@ export interface TranscriptionItem {
   created_at: string;
 }
 
+export interface TranscriptionPageRequest {
+  limit?: number;
+  beforeId?: number | null;
+}
+
 export interface NoteItem {
   id: number;
   title: string;
@@ -325,6 +330,9 @@ declare global {
       // Database operations
       saveTranscription: (text: string) => Promise<{ id: number; success: boolean }>;
       getTranscriptions: (limit?: number) => Promise<TranscriptionItem[]>;
+      getTranscriptionsPage?: (
+        options?: TranscriptionPageRequest
+      ) => Promise<TranscriptionItem[]>;
       clearTranscriptions: () => Promise<{ cleared: number; success: boolean }>;
       deleteTranscription: (id: number) => Promise<{ success: boolean }>;
 

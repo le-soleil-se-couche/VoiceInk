@@ -19,7 +19,7 @@ import { useAgentName } from "../../utils/agentName";
 import ReasoningService from "../../services/ReasoningService";
 import { getModelProvider } from "../../models/ModelRegistry";
 import logger from "../../utils/logger";
-import { UNIFIED_SYSTEM_PROMPT } from "../../config/prompts";
+import { UNIFIED_SYSTEM_PROMPT, getStoredCustomUnifiedPrompt } from "../../config/prompts";
 import { useSettingsStore, selectIsCloudReasoningMode } from "../../stores/settingsStore";
 
 interface PromptStudioProps {
@@ -47,15 +47,7 @@ const PROVIDER_CONFIG: Record<string, ProviderConfig> = {
 };
 
 function getCurrentPrompt(): string {
-  const customPrompt = localStorage.getItem("customUnifiedPrompt");
-  if (customPrompt) {
-    try {
-      return JSON.parse(customPrompt);
-    } catch {
-      return UNIFIED_SYSTEM_PROMPT;
-    }
-  }
-  return UNIFIED_SYSTEM_PROMPT;
+  return getStoredCustomUnifiedPrompt() || UNIFIED_SYSTEM_PROMPT;
 }
 
 export default function PromptStudio({ className = "" }: PromptStudioProps) {

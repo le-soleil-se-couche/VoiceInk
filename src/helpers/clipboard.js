@@ -163,6 +163,30 @@ class ClipboardManager {
     this.winFastPasteChecked = false;
     this.linuxFastPastePath = null;
     this.linuxFastPasteChecked = false;
+    this.pendingRestoreTimers = new Set();
+  }
+
+  _cancelPendingClipboardRestores() {
+    if (!this.pendingRestoreTimers || this.pendingRestoreTimers.size === 0) return;
+    for (const timer of this.pendingRestoreTimers) {
+      clearTimeout(timer);
+    }
+    this.pendingRestoreTimers.clear();
+    this.safeLog("🧹 Cleared pending clipboard restore timers");
+  }
+
+  _scheduleClipboardRestore(originalClipboard, delayMs, restoreFn) {
+    const timer = setTimeout(() => {
+      this.pendingRestoreTimers.delete(timer);
+      try {
+        restoreFn();
+      } catch (error) {
+        this.safeLog("⚠️ Clipboard restore failed", error?.message || error);
+      }
+    }, delayMs);
+
+    this.pendingRestoreTimers.add(timer);
+    return timer;
   }
 
   _isWayland() {
@@ -673,6 +697,7 @@ class ClipboardManager {
     let clipboardWritten = false;
 
     try {
+      this._cancelPendingClipboardRestores();
       const originalClipboard = clipboard.readText();
       this.safeLog(
         "💾 Saved original clipboard content:",
@@ -867,9 +892,9 @@ class ClipboardManager {
 
           if (code === 0) {
             this.safeLog(`Text pasted successfully via ${useFastPaste ? "CGEvent" : "osascript"}`);
-            setTimeout(() => {
+            this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.darwin, () => {
               clipboard.writeText(originalClipboard);
-            }, RESTORE_DELAYS.darwin);
+            });
             resolve();
           } else if (useFastPaste) {
             this.safeLog(
@@ -931,9 +956,9 @@ class ClipboardManager {
 
         if (code === 0) {
           this.safeLog("Text pasted successfully via osascript fallback");
-          setTimeout(() => {
+          this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.darwin, () => {
             clipboard.writeText(originalClipboard);
-          }, RESTORE_DELAYS.darwin);
+          });
           resolve();
         } else {
           this.accessibilityCache = { value: null, expiresAt: 0 };
@@ -1009,10 +1034,10 @@ class ClipboardManager {
               elapsedMs: elapsed,
               output,
             });
-            setTimeout(() => {
+            this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.win32_nircmd, () => {
               clipboard.writeText(originalClipboard);
               this.safeLog("🔄 Clipboard restored");
-            }, RESTORE_DELAYS.win32_nircmd);
+            });
             resolve();
           } else {
             this.safeLog(
@@ -1085,10 +1110,10 @@ class ClipboardManager {
               restoredClipboard: shouldRestoreClipboard,
             });
             if (shouldRestoreClipboard) {
-              setTimeout(() => {
+              this._scheduleClipboardRestore(originalClipboard, restoreDelay, () => {
                 clipboard.writeText(originalClipboard);
                 this.safeLog("🔄 Clipboard restored");
-              }, restoreDelay);
+              });
             } else {
               this.safeLog("📋 Clipboard preserved for manual paste fallback");
             }
@@ -1167,10 +1192,10 @@ class ClipboardManager {
               restoredClipboard: shouldRestoreClipboard,
             });
             if (shouldRestoreClipboard) {
-              setTimeout(() => {
+              this._scheduleClipboardRestore(originalClipboard, restoreDelay, () => {
                 clipboard.writeText(originalClipboard);
                 this.safeLog("🔄 Clipboard restored");
-              }, restoreDelay);
+              });
             } else {
               this.safeLog("📋 Clipboard preserved for manual paste fallback");
             }
@@ -1252,13 +1277,13 @@ class ClipboardManager {
     );
 
     const restoreClipboard = () => {
-      setTimeout(() => {
+      this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.linux, () => {
         if (isWayland) {
           this._writeClipboardWayland(originalClipboard, webContents);
         } else {
           clipboard.writeText(originalClipboard);
         }
-      }, RESTORE_DELAYS.linux);
+      });
     };
 
     const terminalClasses = [

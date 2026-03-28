@@ -14,7 +14,10 @@ import { useUsage } from "../hooks/useUsage";
 import {
   useTranscriptions,
   initializeTranscriptions,
+  loadMoreTranscriptions,
   removeTranscription as removeFromStore,
+  useHasMoreTranscriptions,
+  useIsLoadingMoreTranscriptions,
 } from "../stores/transcriptionStore";
 import ControlPanelSidebar, { type ControlPanelView } from "./ControlPanelSidebar";
 import WindowControls from "./WindowControls";
@@ -33,6 +36,8 @@ const UploadAudioView = React.lazy(() => import("./notes/UploadAudioView"));
 export default function ControlPanel() {
   const { t } = useTranslation();
   const history = useTranscriptions();
+  const hasMoreHistory = useHasMoreTranscriptions();
+  const isLoadingMoreHistory = useIsLoadingMoreTranscriptions();
   const [isLoading, setIsLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
@@ -83,10 +88,6 @@ export default function ControlPanel() {
     hideConfirmDialog,
     hideAlertDialog,
   } = useDialogs();
-
-  useEffect(() => {
-    loadTranscriptions();
-  }, []);
 
   useEffect(() => {
     if (updateStatus.updateDownloaded && !isDownloading) {
@@ -179,7 +180,7 @@ export default function ControlPanel() {
     detect();
   }, [useLocalWhisper, localTranscriptionProvider, useReasoningModel, gpuBannerDismissed]);
 
-  const loadTranscriptions = async () => {
+  const loadTranscriptions = useCallback(async () => {
     try {
       setIsLoading(true);
       await initializeTranscriptions();
@@ -191,7 +192,22 @@ export default function ControlPanel() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showAlertDialog, t]);
+
+  useEffect(() => {
+    loadTranscriptions();
+  }, [loadTranscriptions]);
+
+  const handleLoadMore = useCallback(async () => {
+    try {
+      await loadMoreTranscriptions();
+    } catch (error) {
+      showAlertDialog({
+        title: t("controlPanel.history.couldNotLoadTitle"),
+        description: t("controlPanel.history.couldNotLoadDescription"),
+      });
+    }
+  }, [showAlertDialog, t]);
 
   const copyToClipboard = useCallback(
     async (text: string) => {
@@ -484,22 +500,25 @@ export default function ControlPanel() {
                 </div>
               )}
             {activeView === "home" && (
-              <HistoryView
-                history={history}
-                isLoading={isLoading}
-                hotkey={hotkey}
-                showCloudMigrationBanner={showCloudMigrationBanner}
-                setShowCloudMigrationBanner={setShowCloudMigrationBanner}
+                <HistoryView
+                  history={history}
+                  isLoading={isLoading}
+                  hasMore={hasMoreHistory}
+                  isLoadingMore={isLoadingMoreHistory}
+                  onLoadMore={handleLoadMore}
+                  hotkey={hotkey}
+                  showCloudMigrationBanner={showCloudMigrationBanner}
+                  setShowCloudMigrationBanner={setShowCloudMigrationBanner}
                 aiCTADismissed={aiCTADismissed}
                 setAiCTADismissed={setAiCTADismissed}
                 useReasoningModel={useReasoningModel}
                 copyToClipboard={copyToClipboard}
-                deleteTranscription={deleteTranscription}
-                onOpenSettings={(section) => {
-                  setSettingsSection(section);
-                  setShowSettings(true);
-                }}
-              />
+                  deleteTranscription={deleteTranscription}
+                  onOpenSettings={(section) => {
+                    setSettingsSection(section);
+                    setShowSettings(true);
+                  }}
+                />
             )}
             {activeView === "personal-notes" && (
               <Suspense fallback={null}>

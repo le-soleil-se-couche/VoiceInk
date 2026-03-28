@@ -1,6 +1,6 @@
 import ReasoningService from "../services/ReasoningService";
 import { API_ENDPOINTS, NETWORK_TIMEOUTS, buildApiUrl, normalizeBaseUrl } from "../config/constants";
-import { getSystemPrompt } from "../config/prompts";
+import { buildCleanupUserMessage, getAnswerLikeRetryPrompt, getSystemPrompt } from "../config/prompts";
 import logger from "../utils/logger";
 import { isBuiltInMicrophone } from "../utils/audioDeviceUtils";
 import { isSecureEndpoint } from "../utils/urlUtils";
@@ -40,10 +40,15 @@ const isValidApiKey = (key, provider = "openai") => {
 
 const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /(作为|身为).{0,10}(ai|语言模型|助手)/i,
+  /\b(as\s+(?:an?|your)\s+(?:ai\s+)?(?:assistant|language\s+model))\b/i,
   /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
   /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
+  /(不用担心|别担心|我会尽力|我可以帮你|请告诉我|请问你|[你您]想要).{0,40}/,
+  /^(?:好的|好|是的|对|對|嗯)[，,、]\s*.+(?:吗|麼|么|[?？])$/u,
   /\b(as an ai|as a language model)\b/i,
+  /\b(i(?:'m| am)\s+here\s+to\s+help(?:\s+with\s+that)?)\b/i,
   /\b(i\s*(can't|cannot|am unable|won't))\b/i,
+  /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
   /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
   /\b(you can try).{0,20}(sentence|example)\b/i,
 ];
@@ -61,6 +66,8 @@ const INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE =
   /([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g;
 const CHINESE_FUNCTION_WORD_STUTTER_RE =
   /(^|[\s，,、。！？,.!?;:])((?:这个|那个|就是|然后|是|就|那|这|我|你|他|她|它|的|了|在|要|会|都|也|还))(?:\s*[，,、]?\s*\2)+/g;
+const CHINESE_WORD_REPEAT_STUTTER_RE =
+  /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
 
 const isAnswerLikeTranscriptionOutput = (text) => {
   if (typeof text !== "string") return false;
@@ -253,6 +260,14 @@ const buildTargetedCanonicalAliasKeys = (normalizedKey) => {
   const aliases = new Set();
   if (!normalizedKey) return aliases;
 
+  if (normalizedKey.includes("qwen")) {
+    aliases.add(normalizedKey.replace(/qwen/g, "1000问"));
+    aliases.add(normalizedKey.replace(/qwen/g, "千问"));
+    aliases.add(normalizedKey.replace(/qwen/g, "请问"));
+    aliases.add(normalizedKey.replace(/qwen/g, "前问"));
+    aliases.add(normalizedKey.replace(/qwen/g, "青问"));
+  }
+
   if (normalizedKey.includes("moltbot")) {
     aliases.add(normalizedKey.replace(/moltbot/g, "modeboat"));
     aliases.add(normalizedKey.replace(/moltbot/g, "modebot"));
@@ -273,6 +288,16 @@ const buildTargetedCanonicalAliasKeys = (normalizedKey) => {
       aliases.add(normalizedKey.replace(/^wewe/, "we"));
       aliases.add(normalizedKey.replace(/^wewe/, "v"));
     }
+  }
+
+  // "千问" is normalized to "1000问" by number canonicalization.
+  // Add common ASR confusions so dictionary normalization can still recover it.
+  if (normalizedKey.includes("1000问")) {
+    aliases.add(normalizedKey.replace(/1000问/g, "qwen"));
+    aliases.add(normalizedKey.replace(/1000问/g, "请问"));
+    aliases.add(normalizedKey.replace(/1000问/g, "前问"));
+    aliases.add(normalizedKey.replace(/1000问/g, "青问"));
+    aliases.add(normalizedKey.replace(/1000问/g, "1000文"));
   }
 
   return aliases;
@@ -735,6 +760,15 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const dictionaryPrompt = this.getCustomDictionaryPrompt();
     if (dictionaryPrompt) opts.prompt = dictionaryPrompt;
 
+    return opts;
+  }
+
+  buildAnswerLikeRetryTranscribeOptions(settings = getSettings()) {
+    const opts = this.buildOpenWhisprCloudTranscribeOptions(settings);
+    opts.prompt = getAnswerLikeRetryPrompt(
+      settings.customDictionary,
+      settings.uiLanguage || "en"
+    );
     return opts;
   }
 
@@ -1624,6 +1658,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
       .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")
+      .replace(CHINESE_WORD_REPEAT_STUTTER_RE, "$1")
       .replace(ENGLISH_STUTTER_RE, "$1")
       .replace(/\s+([,.!?;:])/g, "$1")
       .replace(/\s+([，。！？、])/g, "$1")
@@ -2233,7 +2268,10 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     processedText = await this.guardMacAsrAnswerLikeOutput(processedText, {
       source: "openwhispr-cloud",
       retryOnce: async () => {
-        result = await runCloudTranscriptionAttempt();
+        const retryOpts = this.buildAnswerLikeRetryTranscribeOptions(settings);
+        const transcriptionStart = performance.now();
+        result = await this.requestOpenWhisprCloudTranscription(arrayBuffer, retryOpts);
+        transcriptionProcessingDurationMs += Math.round(performance.now() - transcriptionStart);
         return result?.text || "";
       },
     });
@@ -2277,7 +2315,17 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             settings.uiLanguage || "en",
             contextClassification || undefined
           );
-          const res = await window.electronAPI.cloudReason(processedText, {
+          logger.logReasoning("CLEANUP_REQUEST_SENT", {
+            provider: "openwhispr-cloud",
+            model: "openwhispr-cloud",
+            retry: false,
+            sourceLength: processedText.length,
+            strictMode: reasoningConfig.strictMode ?? false,
+            context: contextClassification?.context || "unknown",
+            intent: contextClassification?.intent || "cleanup",
+            hasCustomSystemPrompt: Boolean(systemPrompt),
+          });
+          const res = await window.electronAPI.cloudReason(buildCleanupUserMessage(processedText), {
             agentName,
             customDictionary: settings.customDictionary,
             systemPrompt,
@@ -2301,12 +2349,13 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         });
 
         if (reasonResult.success && reasonResult.text) {
-          processedText = ReasoningService.enforceStrictMode(
+          processedText = await ReasoningService.enforceStrictMode(
             processedText,
             reasonResult.text,
             reasoningConfig,
             "openwhispr-cloud",
-            reasonResult.model || "openwhispr-cloud"
+            reasonResult.model || "openwhispr-cloud",
+            agentName
           );
         }
       } else {
@@ -2467,27 +2516,51 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           throw new Error("Custom transcription endpoint is empty. Please configure it in Settings.");
         }
 
-        const audioBuffer = await optimizedAudio.arrayBuffer();
-        const proxyData = {
-          audioBuffer,
-          endpoint,
-          model,
-          language,
-          mimeType,
-          isQwenAsr,
-        };
-        if (!isQwenAsr && dictionaryPrompt) {
-          proxyData.prompt = dictionaryPrompt;
-        }
-
-        logger.debug(
-          "Proxying custom transcription through main process",
-          { endpoint, model, isQwenAsr, hasPrompt: !!proxyData.prompt },
-          "transcription"
+        const sourceSettings = getSettings();
+        const retryPrompt = getAnswerLikeRetryPrompt(
+          sourceSettings.customDictionary,
+          sourceSettings.uiLanguage || "en"
         );
+        const sourceTag = isQwenAsr ? "custom-qwen" : "custom";
+        const baseAudioBuffer = await optimizedAudio.arrayBuffer();
+        const runCustomProxyAttempt = async (promptOverride = null) => {
+          const proxyData = {
+            audioBuffer: baseAudioBuffer.slice(0),
+            endpoint,
+            model,
+            language,
+            mimeType,
+            isQwenAsr,
+          };
+          if (!isQwenAsr) {
+            const promptToUse =
+              typeof promptOverride === "string" ? promptOverride : dictionaryPrompt;
+            if (promptToUse) {
+              proxyData.prompt = promptToUse;
+            }
+          }
 
-        const result = await window.electronAPI.proxyCustomTranscription(proxyData);
-        const proxyText = isQwenAsr ? extractChatCompletionText(result) : result?.text;
+          logger.debug(
+            "Proxying custom transcription through main process",
+            {
+              endpoint,
+              model,
+              isQwenAsr,
+              hasPrompt: !!proxyData.prompt,
+              isRetryAttempt: typeof promptOverride === "string",
+            },
+            "transcription"
+          );
+
+          const result = await window.electronAPI.proxyCustomTranscription(proxyData);
+          return isQwenAsr ? extractChatCompletionText(result) : result?.text;
+        };
+
+        let proxyText = await runCustomProxyAttempt();
+        proxyText = await this.guardMacAsrAnswerLikeOutput(proxyText, {
+          source: sourceTag,
+          retryOnce: async () => runCustomProxyAttempt(isQwenAsr ? null : retryPrompt),
+        });
 
         if (proxyText && proxyText.trim().length > 0) {
           timings.transcriptionProcessingDurationMs = Math.round(performance.now() - apiCallStart);
@@ -3500,7 +3573,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           return finalText;
         }
         const retryBuffer = await fallbackBlob.arrayBuffer();
-        const retryOpts = this.buildOpenWhisprCloudTranscribeOptions(stSettings);
+        const retryOpts = this.buildAnswerLikeRetryTranscribeOptions(stSettings);
         const retryResult = await this.requestOpenWhisprCloudTranscription(retryBuffer, retryOpts);
         return retryResult?.text || "";
       },
@@ -3546,7 +3619,17 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
               stSettings.uiLanguage || "en",
               contextClassification || undefined
             );
-            const res = await window.electronAPI.cloudReason(finalText, {
+            logger.logReasoning("CLEANUP_REQUEST_SENT", {
+              provider: "openwhispr-cloud",
+              model: "openwhispr-cloud",
+              retry: false,
+              sourceLength: finalText.length,
+              strictMode: reasoningConfig.strictMode ?? false,
+              context: contextClassification?.context || "unknown",
+              intent: contextClassification?.intent || "cleanup",
+              hasCustomSystemPrompt: Boolean(systemPrompt),
+            });
+            const res = await window.electronAPI.cloudReason(buildCleanupUserMessage(finalText), {
               agentName,
               customDictionary: stSettings.customDictionary,
               systemPrompt,
@@ -3570,12 +3653,13 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           });
 
           if (reasonResult.success && reasonResult.text) {
-            finalText = ReasoningService.enforceStrictMode(
+            finalText = await ReasoningService.enforceStrictMode(
               finalText,
               reasonResult.text,
               reasoningConfig,
               "openwhispr-cloud",
-              reasonResult.model || "openwhispr-cloud"
+              reasonResult.model || "openwhispr-cloud",
+              agentName
             );
           }
           usedCloudReasoning = true;

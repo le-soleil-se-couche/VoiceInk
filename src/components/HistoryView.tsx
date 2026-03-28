@@ -10,6 +10,9 @@ import { formatDateGroup } from "../utils/dateFormatting";
 interface HistoryViewProps {
   history: TranscriptionItemType[];
   isLoading: boolean;
+  hasMore: boolean;
+  isLoadingMore: boolean;
+  onLoadMore: () => void;
   hotkey: string;
   showCloudMigrationBanner: boolean;
   setShowCloudMigrationBanner: (show: boolean) => void;
@@ -24,6 +27,9 @@ interface HistoryViewProps {
 export default function HistoryView({
   history,
   isLoading,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
   hotkey,
   showCloudMigrationBanner,
   setShowCloudMigrationBanner,
@@ -262,6 +268,15 @@ export default function HistoryView({
                 </div>
               </div>
             ))}
+            {hasMore && (
+              <div className="mt-4 flex justify-center">
+                <Button variant="outline" size="sm" onClick={onLoadMore} disabled={isLoadingMore}>
+                  {isLoadingMore
+                    ? t("controlPanel.history.loadingMore", { defaultValue: "Loading..." })
+                    : t("controlPanel.history.loadMore", { defaultValue: "Load more" })}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

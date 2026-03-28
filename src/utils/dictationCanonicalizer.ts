@@ -32,6 +32,7 @@ const DEFAULT_LANGUAGE = "auto";
 const DEFAULT_SOURCE = "unknown";
 const HAN_CHAR_RE = /[\u4e00-\u9fff]/g;
 const HAN_CHAR_SINGLE_RE = /[\u4e00-\u9fff]/;
+const LATIN_CHAR_RE = /[A-Za-z]/;
 
 const CHINESE_DIGIT_VALUES: Record<string, number> = {
   零: 0,
@@ -57,15 +58,19 @@ const CHINESE_UNIT_VALUES: Record<string, number> = {
 };
 
 const CHINESE_NUMBER_SEQUENCE_RE = /[零〇一二两三四五六七八九十百千万萬]+/g;
-const CHINESE_SIMPLE_DIGIT_SEQUENCE_RE = /[零〇一二两三四五六七八九\d]+/g;
-const CHINESE_QUANTIFIER_SUFFIX_RE =
-  /[年月日号点分秒元块币￥¥度℃公里米厘米毫米千克公斤克%％版章节页级]/;
 const CHINESE_NUMBER_UNIT_CHAR_RE = /[十百千万萬]/;
+const CHINESE_SPOKEN_NUMBER_RE = /^[零〇一二两三四五六七八九十百千万萬\d]+/;
+const CHINESE_QUANTIFIER_SUFFIX_RE =
+  /(?:个|位|名|条|项|份|台|次|句|行|段|年|月|周|天|日|号|点|分|秒|时|钟|元|块|币|￥|¥|度|℃|公里|里|米|厘米|毫米|千克|公斤|克|%|％|版|章|节|页|级|本|件|篇|集|层|届|期|套|辆)/;
 const SENTENCE_END_PUNCT_WORD_RE = /(句号|逗号|问号|感叹号|冒号|分号|顿号)(?=(?:\s|$|\n))/g;
 const DECIMAL_SPOKEN_RE = /([零〇一二两三四五六七八九\d]+)点([零〇一二两三四五六七八九\d]+)/g;
 const DOT_TLD_RE = /点(com|cn|net|org|io|ai|dev|app|co|gov|edu)\b/gi;
 const SAFE_FORWARD_SLASH_RE = /([A-Za-z0-9._~-])(斜杠|杠)([A-Za-z0-9._~-])/g;
 const SAFE_BACK_SLASH_RE = /([A-Za-z0-9._~-])反斜杠([A-Za-z0-9._~-])/g;
+const QWEN_ASR_CONFUSION_PATTERNS: RegExp[] = [
+  /(?:10000000|1\s*0\s*0\s*0\s*0\s*0\s*0\s*0)\s*(?:个|问)?\s*a\s*\.?\s*s\s*\.?\s*r/gi,
+  /(?:1000|1\s*0\s*0\s*0)\s*问\s*a\s*\.?\s*s\s*\.?\s*r/gi,
+];
 
 const PUNCTUATION_WORD_TO_SYMBOL: Record<string, string> = {
   句号: "。",
@@ -122,6 +127,9 @@ const IDIOM_PROTECTIONS = [
   "千真万确",
   "万无一失",
 ];
+const ORAL_ONE_NEXT_RE = /^[下些样起直会]/;
+const ORAL_ONE_PREV_RE = /[这那哪每另前后上下同某]/;
+const TIME_CONTEXT_PREV_RE = /[上下早晚晨午夜今明昨零〇一二两三四五六七八九十百千万萬\d]/;
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -228,15 +236,31 @@ const shouldSkipShortNumberSegment = ({
   segment,
   previousChar,
   nextChar,
+  sourceText,
+  offset,
 }: {
   segment: string;
   previousChar: string;
   nextChar: string;
+  sourceText: string;
+  offset: number;
 }) => {
   if (segment.length > 2) return false;
-  if (CHINESE_NUMBER_UNIT_CHAR_RE.test(segment)) return false;
-  if (previousChar === "第") return false;
+  if (segment === "一" && ORAL_ONE_NEXT_RE.test(nextChar || "")) return true;
+  if (segment === "一" && ORAL_ONE_PREV_RE.test(previousChar || "")) return true;
+  if (segment === "一" && nextChar === "点") {
+    const tail = sourceText.slice(offset + segment.length + 1).trim();
+    if (TIME_CONTEXT_PREV_RE.test(previousChar || "")) return false;
+    if (/^[零〇一二两三四五六七八九十百千万萬\d]+(?:分|时|秒|鐘|钟)/.test(tail)) return false;
+    if (CHINESE_SPOKEN_NUMBER_RE.test(tail)) return false;
+    return true;
+  }
+  if (previousChar === "第") return true;
   if (nextChar === ".") return false;
+  if (nextChar === "/") return false;
+  if (nextChar === "个" && !CHINESE_NUMBER_UNIT_CHAR_RE.test(segment)) return true;
+  if (LATIN_CHAR_RE.test(previousChar) || LATIN_CHAR_RE.test(nextChar)) return true;
+  if (sourceText.slice(Math.max(0, offset - 3), offset).endsWith("分之")) return false;
   return !CHINESE_QUANTIFIER_SUFFIX_RE.test(nextChar || "");
 };
 
@@ -246,13 +270,14 @@ const normalizeSpokenChineseNumbersWithContext = (value: string, stats: Dictatio
     if (!parsed) return segment;
     if (segment === parsed) return segment;
 
-    const previousChar = offset > 0 ? sourceText[offset - 1] : "";
-    const nextChar = sourceText[offset + segment.length] || "";
-    const nextTwoChars = sourceText.slice(offset + segment.length, offset + segment.length + 2);
+    const safeOffset = typeof offset === "number" ? offset : 0;
+    const previousChar = safeOffset > 0 ? sourceText[safeOffset - 1] : "";
+    const nextChar = sourceText[safeOffset + segment.length] || "";
+    const nextTwoChars = sourceText.slice(safeOffset + segment.length, safeOffset + segment.length + 2);
     if ((segment === "百" || segment === "千" || segment === "万" || segment === "萬") && nextTwoChars === "分之") {
       return segment;
     }
-    if (shouldSkipShortNumberSegment({ segment, previousChar, nextChar })) {
+    if (shouldSkipShortNumberSegment({ segment, previousChar, nextChar, sourceText, offset: safeOffset })) {
       return segment;
     }
 
@@ -357,12 +382,34 @@ const applyLowAmbiguityPunctuationRules = (
     return `.${tld.toLowerCase()}`;
   });
 
+  next = next.replace(
+    /([零〇一二两三四五六七八九十百千万萬]{1,3})\s*点\s*([零〇一二两三四五六七八九十百千万萬]{1,3})\s*分/g,
+    (_match, hourText, minuteText) => {
+      stats.numberReplacements += 1;
+      return `${toArabicNumeral(hourText)}点${toArabicNumeral(minuteText)}分`;
+    }
+  );
+
+  return normalizeResidualChineseDecimals(next, stats);
+};
+
+const normalizeResidualChineseDecimals = (
+  value: string,
+  stats: DictationCanonicalizerStats
+): string => {
+  let next = value;
   let replacedDecimal = true;
   let decimalPass = 0;
+
   while (replacedDecimal && decimalPass < 4) {
     replacedDecimal = false;
     decimalPass += 1;
-    next = next.replace(DECIMAL_SPOKEN_RE, (match, left, right) => {
+    next = next.replace(DECIMAL_SPOKEN_RE, (match, left, right, offset, sourceText) => {
+      const safeOffset = typeof offset === "number" ? offset : 0;
+      const charAfter = sourceText[safeOffset + match.length] || "";
+      if (charAfter && "分时秒钟".includes(charAfter)) {
+        return match;
+      }
       const leftArabic = /\d/.test(left) ? left : parseChineseNumberWords(left);
       const rightArabic = /\d/.test(right) ? right : parseChineseNumberWords(right);
       if (!leftArabic || !rightArabic) return match;
@@ -373,6 +420,14 @@ const applyLowAmbiguityPunctuationRules = (
     });
   }
 
+  return next;
+};
+
+const normalizeKnownAsrBrandConfusions = (value: string): string => {
+  let next = value;
+  for (const pattern of QWEN_ASR_CONFUSION_PATTERNS) {
+    next = next.replace(pattern, "千问ASR");
+  }
   return next;
 };
 
@@ -421,6 +476,8 @@ export const canonicalizeDictationText = (
     next = applyLowAmbiguityPunctuationRules(next, stats);
   }
 
+  next = normalizeKnownAsrBrandConfusions(next);
+
   if (stats.numberEnabled) {
     const beforeDate = next;
     next = normalizeChineseDateExpressions(next);
@@ -428,6 +485,7 @@ export const canonicalizeDictationText = (
       stats.numberReplacements += 1;
     }
     next = normalizeSpokenChineseNumbersWithContext(next, stats);
+    next = normalizeResidualChineseDecimals(next, stats);
   }
 
   next = restorePlaceholders(next, placeholders);

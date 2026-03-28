@@ -497,6 +497,15 @@ class IPCHandlers {
       return this.databaseManager.getTranscriptions(limit);
     });
 
+    ipcMain.handle("db-get-transcriptions-page", async (event, options = {}) => {
+      const limit = Number(options?.limit) || 50;
+      const beforeId =
+        options?.beforeId == null || options.beforeId === ""
+          ? null
+          : Number(options.beforeId) || null;
+      return this.databaseManager.getTranscriptionsPage(limit, beforeId);
+    });
+
     ipcMain.handle("db-clear-transcriptions", async (event) => {
       const result = this.databaseManager.clearTranscriptions();
       if (result?.success) {
