@@ -3,11 +3,53 @@ import { BaseReasoningService, ReasoningConfig } from "./BaseReasoningService";
 import { SecureCache } from "../utils/SecureCache";
 import { withRetry, createApiRetryStrategy } from "../utils/retry";
 import { API_ENDPOINTS, TOKEN_LIMITS, buildApiUrl, normalizeBaseUrl } from "../config/constants";
+import { buildCleanupUserMessage, getCleanupOnlyRetryPrompt } from "../config/prompts";
 import logger from "../utils/logger";
 import { isSecureEndpoint } from "../utils/urlUtils";
 import { withSessionRefresh } from "../lib/neonAuth";
 import { getSettings, isCloudReasoningMode } from "../stores/settingsStore";
 import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
+
+const CHINESE_WORD_REPEAT_STUTTER_RE =
+  /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
+const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
+const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
+  "的",
+  "了",
+  "在",
+  "是",
+  "我",
+  "你",
+  "他",
+  "她",
+  "它",
+  "这",
+  "那",
+  "个",
+  "就",
+  "很",
+  "也",
+  "都",
+  "还",
+  "而",
+  "又",
+  "把",
+  "被",
+  "其",
+  "实",
+  "大",
+  "概",
+  "基",
+  "本",
+  "吗",
+  "呢",
+  "吧",
+  "呀",
+  "啊",
+  "嗯",
+  "呃",
+  "额",
+]);
 
 class ReasoningService extends BaseReasoningService {
   private apiKeyCache: SecureCache<string>;
@@ -221,6 +263,151 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return this.calculateOverlapMetrics(source, candidate).score;
   }
 
+  private isCleanupOnlyOutput(source: string, candidate: string): boolean {
+    const normalizedCandidate = candidate.trim();
+    if (!normalizedCandidate || normalizedCandidate.length > source.trim().length) {
+      return false;
+    }
+
+    const sourceTokens = this.tokenizeForOverlap(source);
+    const candidateTokens = this.tokenizeForOverlap(candidate);
+    if (sourceTokens.length === 0 || candidateTokens.length === 0) {
+      return false;
+    }
+
+    let sourceIndex = 0;
+    let unmatched = 0;
+
+    for (const token of candidateTokens) {
+      while (sourceIndex < sourceTokens.length && sourceTokens[sourceIndex] !== token) {
+        sourceIndex += 1;
+      }
+
+      if (sourceIndex >= sourceTokens.length) {
+        unmatched += 1;
+        if (unmatched / candidateTokens.length > CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO) {
+          return false;
+        }
+        continue;
+      }
+
+      sourceIndex += 1;
+    }
+
+    return true;
+  }
+
+  private isLikelyChineseText(text: string): boolean {
+    const compact = text.replace(/\s+/g, "");
+    if (!compact) return false;
+    const hanCount = (compact.match(/[\u4e00-\u9fff]/g) || []).length;
+    return hanCount / Math.max(1, compact.length) > 0.35;
+  }
+
+  private deletesNovelChineseContent(source: string, candidate: string): boolean {
+    const normalizedSource = source.trim();
+    const normalizedCandidate = candidate.trim();
+    if (
+      !normalizedSource ||
+      !normalizedCandidate ||
+      normalizedCandidate.length >= normalizedSource.length ||
+      !this.isLikelyChineseText(normalizedSource)
+    ) {
+      return false;
+    }
+
+    const candidateChars = Array.from(normalizedCandidate);
+    const candidateHanSet = new Set(candidateChars.filter((char) => /[\u4e00-\u9fff]/.test(char)));
+    const sourceChars = Array.from(normalizedSource);
+
+    let candidateIndex = 0;
+    let novelDeletedHanCount = 0;
+
+    for (const char of sourceChars) {
+      if (candidateIndex < candidateChars.length && char === candidateChars[candidateIndex]) {
+        candidateIndex += 1;
+        continue;
+      }
+
+      if (!/[\u4e00-\u9fff]/.test(char)) {
+        continue;
+      }
+
+      if (candidateHanSet.has(char) || NOVEL_HAN_DELETION_STOP_CHARS.has(char)) {
+        continue;
+      }
+
+      novelDeletedHanCount += 1;
+      if (novelDeletedHanCount >= 2) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private logCleanupRequest(
+    provider: string,
+    model: string,
+    text: string,
+    config: ReasoningConfig,
+    retry = false
+  ): void {
+    logger.logReasoning("CLEANUP_REQUEST_SENT", {
+      provider,
+      model,
+      retry,
+      sourceLength: text.length,
+      strictMode: config.strictMode ?? config.contextClassification?.strictMode ?? false,
+      context: config.contextClassification?.context || "unknown",
+      intent: config.contextClassification?.intent || "cleanup",
+      hasCustomSystemPrompt: Boolean(config.systemPrompt),
+    });
+  }
+
+  private async retryWithCleanupOnlyPrompt(
+    source: string,
+    config: ReasoningConfig,
+    provider: string,
+    model: string,
+    agentName: string | null
+  ): Promise<string | null> {
+    const retryConfig: ReasoningConfig = {
+      ...config,
+      strictMode: false,
+      temperature: 0,
+      systemPrompt: getCleanupOnlyRetryPrompt(this.getCustomDictionary(), this.getUiLanguage()),
+    };
+
+    try {
+      switch (provider) {
+        case "openai":
+        case "custom":
+          return await this.processWithOpenAI(source, model, agentName, retryConfig);
+        case "anthropic":
+          return await this.processWithAnthropic(source, model, agentName, retryConfig);
+        case "local":
+          return await this.processWithLocal(source, model, agentName, retryConfig);
+        case "gemini":
+          return await this.processWithGemini(source, model, agentName, retryConfig);
+        case "groq":
+          return await this.processWithGroq(source, model, agentName, retryConfig);
+        case "openwhispr":
+        case "openwhispr-cloud":
+          return await this.processWithVoiceInk(source, model, agentName, retryConfig);
+        default:
+          return null;
+      }
+    } catch (error) {
+      logger.logReasoning("STRICT_MODE_RETRY_ERROR", {
+        provider,
+        model,
+        error: (error as Error).message,
+      });
+      return null;
+    }
+  }
+
   private localCleanupFallback(text: string): string {
     return text
       .replace(
@@ -235,6 +422,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         /(^|[\s，,、。！？,.!?;:])((?:这个|那个|就是|然后|是|就|那|这|我|你|他|她|它|的|了|在|要|会|都|也|还))(?:\s*[，,、]?\s*\2)+/g,
         "$1$2"
       )
+      .replace(CHINESE_WORD_REPEAT_STUTTER_RE, "$1")
       .replace(/\b(i|we|you|he|she|they|it|the|a|an|to|and|but)\b(?:\s+\1\b)+/gi, "$1")
       .replace(/\s+([,.!?;:])/g, "$1")
       .replace(/\s+([，。！？、])/g, "$1")
@@ -245,52 +433,149 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .trim();
   }
 
-  private applyStrictModeGuard(
+  private async applyStrictModeGuard(
     source: string,
     candidate: string,
     config: ReasoningConfig,
     provider: string,
-    model: string
-  ): string {
+    model: string,
+    agentName: string | null = null,
+    hasRetried = false
+  ): Promise<string> {
     const strictMode = config.strictMode ?? config.contextClassification?.strictMode ?? false;
     if (!strictMode) {
       return candidate;
     }
 
-    if (this.isAnswerLikeOutput(candidate)) {
+    const finalizeFallback = (reason: string, details: Record<string, unknown> = {}) => {
       const fallback = this.localCleanupFallback(source);
-      logger.logReasoning("STRICT_MODE_ANSWER_PATTERN_BLOCKED", {
+      logger.logReasoning("STRICT_MODE_FINAL_FALLBACK", {
         provider,
         model,
+        reason,
+        retried: hasRetried,
         originalLength: source.length,
         candidateLength: candidate.length,
         fallbackLength: fallback.length,
+        ...details,
       });
       return fallback;
+    };
+
+    if (this.isAnswerLikeOutput(candidate)) {
+      if (!hasRetried) {
+        logger.logReasoning("STRICT_MODE_ANSWER_LIKE_RETRY", {
+          provider,
+          model,
+          originalLength: source.length,
+          candidateLength: candidate.length,
+        });
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          const guardedRetry = await this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+          if (guardedRetry !== this.localCleanupFallback(source)) {
+            logger.logReasoning("STRICT_MODE_ANSWER_LIKE_RETRY_RECOVERED", {
+              provider,
+              model,
+              originalLength: source.length,
+              candidateLength: candidate.length,
+              retryLength: retryResult.length,
+            });
+            return guardedRetry;
+          }
+        }
+      }
+      return finalizeFallback("answer_like");
     }
 
     if (this.isQuestionLikeText(source) && !this.isQuestionLikeText(candidate)) {
-      const fallback = this.localCleanupFallback(source);
-      logger.logReasoning("STRICT_MODE_QUESTION_INTENT_BLOCKED", {
-        provider,
-        model,
-        originalLength: source.length,
-        candidateLength: candidate.length,
-        fallbackLength: fallback.length,
-      });
-      return fallback;
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+      return finalizeFallback("question_intent");
     }
 
     if (this.hasQuestionThenAnswerPattern(source, candidate)) {
-      const fallback = this.localCleanupFallback(source);
-      logger.logReasoning("STRICT_MODE_QUESTION_ANSWER_APPEND_BLOCKED", {
-        provider,
-        model,
-        originalLength: source.length,
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+      return finalizeFallback("question_answer_append");
+    }
+
+    if (this.deletesNovelChineseContent(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+
+      return finalizeFallback("novel_content_deletion", {
+        sourceLength: source.length,
         candidateLength: candidate.length,
-        fallbackLength: fallback.length,
       });
-      return fallback;
     }
 
     const defaultShortInputThreshold = 24;
@@ -330,7 +615,6 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         });
       }
 
-      const fallback = this.localCleanupFallback(source);
       logger.logReasoning("STRICT_MODE_SHORT_INPUT_LOCAL_CLEANUP", {
         provider,
         model,
@@ -338,9 +622,12 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         threshold: shortInputThreshold,
         allowSafeShortPolish,
         candidateLength: candidate.length,
-        fallbackLength: fallback.length,
       });
-      return fallback;
+      return finalizeFallback("short_input", {
+        sourceLength,
+        threshold: shortInputThreshold,
+        allowSafeShortPolish,
+      });
     }
 
     const configuredMaxExpansionRatio = Number(config.strictMaxExpansionRatio);
@@ -352,7 +639,6 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     ) {
       const expansionRatio = Number((candidateLength / sourceLength).toFixed(3));
       if (expansionRatio > configuredMaxExpansionRatio) {
-        const fallback = this.localCleanupFallback(source);
         logger.logReasoning("STRICT_MODE_EXPANSION_BLOCKED", {
           provider,
           model,
@@ -360,9 +646,13 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
           candidateLength,
           expansionRatio,
           maxExpansionRatio: configuredMaxExpansionRatio,
-          fallbackLength: fallback.length,
         });
-        return fallback;
+        return finalizeFallback("expansion", {
+          sourceLength,
+          candidateLength,
+          expansionRatio,
+          maxExpansionRatio: configuredMaxExpansionRatio,
+        });
       }
     }
 
@@ -388,6 +678,19 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       intent: config.contextClassification?.intent || "cleanup",
     });
 
+    if (this.isCleanupOnlyOutput(source, candidate)) {
+      logger.logReasoning("STRICT_MODE_CLEANUP_ONLY_PASSTHROUGH", {
+        provider,
+        model,
+        sourceLength,
+        candidateLength,
+        overlap,
+        outputCoverage: overlapMetrics.outputCoverage,
+        sourceCoverage: overlapMetrics.sourceCoverage,
+      });
+      return candidate;
+    }
+
     if (
       overlap >= threshold &&
       (!hasMinOutputCoverage || overlapMetrics.outputCoverage >= configuredMinOutputCoverage)
@@ -409,28 +712,45 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       });
     }
 
-    const fallback = this.localCleanupFallback(source);
-    logger.logReasoning("STRICT_MODE_FALLBACK_TRIGGERED", {
-      provider,
-      model,
+    if (!hasRetried) {
+      const retryResult = await this.retryWithCleanupOnlyPrompt(
+        source,
+        config,
+        provider,
+        model,
+        agentName
+      );
+      if (retryResult !== null) {
+        return this.applyStrictModeGuard(
+          source,
+          retryResult,
+          config,
+          provider,
+          model,
+          agentName,
+          true
+        );
+      }
+    }
+
+    return finalizeFallback("overlap", {
       overlap,
       threshold,
-      originalLength: source.length,
-      candidateLength: candidate.length,
-      fallbackLength: fallback.length,
+      outputCoverage: overlapMetrics.outputCoverage,
+      sourceCoverage: overlapMetrics.sourceCoverage,
+      minOutputCoverage: hasMinOutputCoverage ? configuredMinOutputCoverage : null,
     });
-
-    return fallback;
   }
 
-  public enforceStrictMode(
+  public async enforceStrictMode(
     source: string,
     candidate: string,
     config: ReasoningConfig = {},
     provider = "external",
-    model = "external"
-  ): string {
-    return this.applyStrictModeGuard(source, candidate, config, provider, model);
+    model = "external",
+    agentName: string | null = null
+  ): Promise<string> {
+    return this.applyStrictModeGuard(source, candidate, config, provider, model, agentName);
   }
 
   private getConfiguredOpenAIBase(): string {
@@ -669,7 +989,8 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     providerName: string
   ): Promise<string> {
     const systemPrompt = this.resolveSystemPrompt(agentName, text, config);
-    const userPrompt = text;
+    const userPrompt = buildCleanupUserMessage(text);
+    this.logCleanupRequest(providerName.toLowerCase(), model, text, config);
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -865,12 +1186,13 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       }
 
       const processingTime = Date.now() - startTime;
-      const guardedResult = this.applyStrictModeGuard(
+      const guardedResult = await this.applyStrictModeGuard(
         text,
         result,
         config,
         provider,
-        trimmedModel || model
+        trimmedModel || model,
+        agentName
       );
 
       logger.logReasoning("PROVIDER_SUCCESS", {
@@ -925,7 +1247,8 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     try {
       const systemPrompt = this.resolveSystemPrompt(agentName, text, config);
-      const userPrompt = text;
+      const userPrompt = buildCleanupUserMessage(text);
+      this.logCleanupRequest(isCustomProvider ? "custom" : "openai", model, text, config);
 
       const messages = [
         { role: "system", content: systemPrompt },
@@ -1141,10 +1464,17 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       });
 
       const systemPrompt = this.resolveSystemPrompt(agentName, text, config);
-      const result = await window.electronAPI.processAnthropicReasoning(text, model, agentName, {
+      this.logCleanupRequest("anthropic", model, text, config);
+      const userPrompt = buildCleanupUserMessage(text);
+      const result = await window.electronAPI.processAnthropicReasoning(
+        userPrompt,
+        model,
+        agentName,
+        {
         ...config,
         systemPrompt,
-      });
+        }
+      );
 
       const processingTime = Date.now() - startTime;
 
@@ -1192,7 +1522,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       });
 
       const systemPrompt = this.resolveSystemPrompt(agentName, text, config);
-      const result = await window.electronAPI.processLocalReasoning(text, model, agentName, {
+      this.logCleanupRequest("local", model, text, config);
+      const userPrompt = buildCleanupUserMessage(text);
+      const result = await window.electronAPI.processLocalReasoning(userPrompt, model, agentName, {
         ...config,
         systemPrompt,
       });
@@ -1249,7 +1581,8 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     try {
       const systemPrompt = this.resolveSystemPrompt(agentName, text, config);
-      const userPrompt = text;
+      const userPrompt = buildCleanupUserMessage(text);
+      this.logCleanupRequest("gemini", model, text, config);
 
       const requestBody = {
         contents: [
@@ -1461,9 +1794,11 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       const language = this.getPreferredLanguage();
       const locale = this.getUiLanguage();
       const systemPrompt = this.resolveSystemPrompt(agentName, text, config);
+      const userPrompt = buildCleanupUserMessage(text);
+      this.logCleanupRequest("openwhispr", model, text, config);
 
       const result = await withSessionRefresh(async () => {
-        const res = await (window as any).electronAPI.cloudReason(text, {
+        const res = await (window as any).electronAPI.cloudReason(userPrompt, {
           agentName,
           customDictionary,
           systemPrompt,

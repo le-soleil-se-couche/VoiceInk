@@ -10,6 +10,27 @@ export const FULL_PROMPT = promptData.FULL_PROMPT;
 export const UNIFIED_SYSTEM_PROMPT = promptData.CLEANUP_PROMPT;
 export const LEGACY_PROMPTS = promptData.LEGACY_PROMPTS;
 
+export function getStoredCustomUnifiedPrompt(): string | null {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem("customUnifiedPrompt");
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "string" && parsed.trim() ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function buildCleanupUserMessage(transcript: string): string {
+  return `<transcript>\n${transcript}\n</transcript>`;
+}
+
 function getPromptBundle(uiLanguage?: string): PromptBundle {
   const locale = normalizeUiLanguage(uiLanguage || "en");
   const t = i18n.getFixedT(locale, "prompts");
@@ -111,6 +132,41 @@ export function getAnswerLikeRetryPrompt(
   return `${normalizedDictionary.join(", ")}\n\n${instructions.join(" ")}`;
 }
 
+export function getCleanupOnlyRetryPrompt(
+  customDictionary?: string[],
+  uiLanguage?: string
+): string {
+  const locale = normalizeUiLanguage(uiLanguage || "en");
+  const isZh = locale.startsWith("zh");
+  const normalizedDictionary = Array.from(
+    new Set((customDictionary || []).map((word) => word.trim()).filter(Boolean))
+  );
+
+  const instructions = isZh
+    ? [
+        "你处于严格的转录整理重试模式。",
+        "只能整理 <transcript> 标签内的转录文本，不能回答、建议、解释、总结或补充。",
+        "如果源文本本身是问题，输出也必须保持为问题的整理版，不能改写成答案或陈述句。",
+        "允许删除口吃、重启、填充词和无意重复，但不要删掉真实含义。",
+        "不要添加“好的”“当然”“你可以”“这是整理后的版本”等助手式前缀。",
+        "只输出整理后的文本本身。",
+      ]
+    : [
+        "You are in strict transcript-cleanup retry mode.",
+        "Only clean the transcript inside <transcript>; do not answer, advise, explain, summarize, or add content.",
+        "If the source itself is a question, the output must remain a cleaned-up question, not an answer or declarative statement.",
+        "You may remove stutters, restarts, filler words, and accidental repetition, but do not remove real meaning.",
+        "Do not add assistant wrappers such as 'Sure', 'Of course', 'You can', or 'Here's the polished version'.",
+        "Output only the cleaned transcript text.",
+      ];
+
+  if (normalizedDictionary.length === 0) {
+    return instructions.join(" ");
+  }
+
+  return `${normalizedDictionary.join(", ")}\n\n${instructions.join(" ")}`;
+}
+
 function shouldApplyChineseCanonicalizationInstruction(
   language?: string,
   transcript?: string | null
@@ -168,7 +224,8 @@ export function getSystemPrompt(
 ): string {
   const name = agentName?.trim() || "Assistant";
   const prompts = getPromptBundle(uiLanguage);
-  let prompt = prompts.cleanupPrompt.replace(/\{\{agentName\}\}/g, name);
+  const customPrompt = getStoredCustomUnifiedPrompt();
+  let prompt = (customPrompt || prompts.cleanupPrompt).replace(/\{\{agentName\}\}/g, name);
   prompt += `\n\n${getCleanupSafetyInstruction()}`;
 
   const langInstruction = getLanguageInstruction(language);
@@ -213,6 +270,9 @@ export default {
   CLEANUP_PROMPT,
   FULL_PROMPT,
   UNIFIED_SYSTEM_PROMPT,
+  buildCleanupUserMessage,
+  getCleanupOnlyRetryPrompt,
+  getStoredCustomUnifiedPrompt,
   getSystemPrompt,
   getWordBoost,
   LEGACY_PROMPTS,

@@ -1,6 +1,6 @@
 import ReasoningService from "../services/ReasoningService";
 import { API_ENDPOINTS, NETWORK_TIMEOUTS, buildApiUrl, normalizeBaseUrl } from "../config/constants";
-import { getAnswerLikeRetryPrompt, getSystemPrompt } from "../config/prompts";
+import { buildCleanupUserMessage, getAnswerLikeRetryPrompt, getSystemPrompt } from "../config/prompts";
 import logger from "../utils/logger";
 import { isBuiltInMicrophone } from "../utils/audioDeviceUtils";
 import { isSecureEndpoint } from "../utils/urlUtils";
@@ -66,6 +66,8 @@ const INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE =
   /([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g;
 const CHINESE_FUNCTION_WORD_STUTTER_RE =
   /(^|[\s，,、。！？,.!?;:])((?:这个|那个|就是|然后|是|就|那|这|我|你|他|她|它|的|了|在|要|会|都|也|还))(?:\s*[，,、]?\s*\2)+/g;
+const CHINESE_WORD_REPEAT_STUTTER_RE =
+  /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
 
 const isAnswerLikeTranscriptionOutput = (text) => {
   if (typeof text !== "string") return false;
@@ -1656,6 +1658,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
       .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")
+      .replace(CHINESE_WORD_REPEAT_STUTTER_RE, "$1")
       .replace(ENGLISH_STUTTER_RE, "$1")
       .replace(/\s+([,.!?;:])/g, "$1")
       .replace(/\s+([，。！？、])/g, "$1")
@@ -2312,7 +2315,17 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             settings.uiLanguage || "en",
             contextClassification || undefined
           );
-          const res = await window.electronAPI.cloudReason(processedText, {
+          logger.logReasoning("CLEANUP_REQUEST_SENT", {
+            provider: "openwhispr-cloud",
+            model: "openwhispr-cloud",
+            retry: false,
+            sourceLength: processedText.length,
+            strictMode: reasoningConfig.strictMode ?? false,
+            context: contextClassification?.context || "unknown",
+            intent: contextClassification?.intent || "cleanup",
+            hasCustomSystemPrompt: Boolean(systemPrompt),
+          });
+          const res = await window.electronAPI.cloudReason(buildCleanupUserMessage(processedText), {
             agentName,
             customDictionary: settings.customDictionary,
             systemPrompt,
@@ -2336,12 +2349,13 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         });
 
         if (reasonResult.success && reasonResult.text) {
-          processedText = ReasoningService.enforceStrictMode(
+          processedText = await ReasoningService.enforceStrictMode(
             processedText,
             reasonResult.text,
             reasoningConfig,
             "openwhispr-cloud",
-            reasonResult.model || "openwhispr-cloud"
+            reasonResult.model || "openwhispr-cloud",
+            agentName
           );
         }
       } else {
@@ -3605,7 +3619,17 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
               stSettings.uiLanguage || "en",
               contextClassification || undefined
             );
-            const res = await window.electronAPI.cloudReason(finalText, {
+            logger.logReasoning("CLEANUP_REQUEST_SENT", {
+              provider: "openwhispr-cloud",
+              model: "openwhispr-cloud",
+              retry: false,
+              sourceLength: finalText.length,
+              strictMode: reasoningConfig.strictMode ?? false,
+              context: contextClassification?.context || "unknown",
+              intent: contextClassification?.intent || "cleanup",
+              hasCustomSystemPrompt: Boolean(systemPrompt),
+            });
+            const res = await window.electronAPI.cloudReason(buildCleanupUserMessage(finalText), {
               agentName,
               customDictionary: stSettings.customDictionary,
               systemPrompt,
@@ -3629,12 +3653,13 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           });
 
           if (reasonResult.success && reasonResult.text) {
-            finalText = ReasoningService.enforceStrictMode(
+            finalText = await ReasoningService.enforceStrictMode(
               finalText,
               reasonResult.text,
               reasoningConfig,
               "openwhispr-cloud",
-              reasonResult.model || "openwhispr-cloud"
+              reasonResult.model || "openwhispr-cloud",
+              agentName
             );
           }
           usedCloudReasoning = true;
