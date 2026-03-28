@@ -180,6 +180,25 @@ class DatabaseManager {
     }
   }
 
+  getTranscriptionsPage(limit = 50, beforeId = null) {
+    try {
+      if (!this.db) {
+        throw new Error("Database not initialized");
+      }
+
+      if (beforeId != null) {
+        return this.db
+          .prepare("SELECT * FROM transcriptions WHERE id < ? ORDER BY id DESC LIMIT ?")
+          .all(beforeId, limit);
+      }
+
+      return this.db.prepare("SELECT * FROM transcriptions ORDER BY id DESC LIMIT ?").all(limit);
+    } catch (error) {
+      debugLogger.error("Error getting transcription page", { error: error.message }, "database");
+      throw error;
+    }
+  }
+
   clearTranscriptions() {
     try {
       if (!this.db) {

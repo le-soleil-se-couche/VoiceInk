@@ -31,14 +31,18 @@ class EnvironmentManager {
     this.loadEnvironmentVariables();
   }
 
+  _loadDotenvIfExists(envPath, options = {}) {
+    try {
+      if (envPath && fs.existsSync(envPath)) {
+        require("dotenv").config({ path: envPath, ...options });
+      }
+    } catch {}
+  }
+
   loadEnvironmentVariables() {
     // Loaded in priority order - dotenv won't override, so first file wins per variable.
     const userDataEnv = path.join(app.getPath("userData"), ".env");
-    try {
-      if (fs.existsSync(userDataEnv)) {
-        require("dotenv").config({ path: userDataEnv });
-      }
-    } catch {}
+    this._loadDotenvIfExists(userDataEnv);
 
     const fallbackPaths = [
       path.join(__dirname, "..", "..", ".env"), // Development
@@ -48,11 +52,17 @@ class EnvironmentManager {
     ];
 
     for (const envPath of fallbackPaths) {
-      try {
-        if (fs.existsSync(envPath)) {
-          require("dotenv").config({ path: envPath });
-        }
-      } catch {}
+      this._loadDotenvIfExists(envPath);
+    }
+
+    // Optional local secrets file for machine-level key management.
+    // This file is loaded last with override=true so the operator can keep
+    // a single source of truth outside the repository and userData directory.
+    const externalSecretsPath =
+      process.env.VOICEINK_SECRETS_FILE || path.join(app.getPath("home"), ".voiceink-secrets", "qwen.env");
+    this._loadDotenvIfExists(externalSecretsPath, { override: true });
+    if (process.env.VOICEINK_SECRETS_FALLBACK_FILE) {
+      this._loadDotenvIfExists(process.env.VOICEINK_SECRETS_FALLBACK_FILE, { override: true });
     }
   }
 
