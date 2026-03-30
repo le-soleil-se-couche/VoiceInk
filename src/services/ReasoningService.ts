@@ -224,6 +224,53 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .some((clause) => clause.length > 0 && !this.isQuestionLikeText(clause));
   }
 
+  private getLeadingSourceRemainder(source: string, candidate: string): string | null {
+    const sourceTerms = Array.from(source.matchAll(/[\p{L}\p{N}'-]+/gu), (match) => match[0]).filter(
+      Boolean
+    );
+    if (sourceTerms.length === 0) {
+      return null;
+    }
+
+    const escapedTerms = sourceTerms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const pattern = escapedTerms
+      .map((term, index) => (index === 0 ? `\\s*${term}\\b` : `[\\s\\p{P}]+${term}\\b`))
+      .join("");
+    const match = candidate.match(new RegExp(`^${pattern}`, "iu"));
+    if (!match) {
+      return null;
+    }
+
+    return candidate.slice(match[0].length);
+  }
+
+  private hasInlineQuestionAnswerPattern(source: string, candidate: string): boolean {
+    if (!this.isQuestionLikeText(source) || !this.isQuestionLikeText(candidate)) {
+      return false;
+    }
+
+    const remainder = this.getLeadingSourceRemainder(source, candidate);
+    if (remainder === null) {
+      return false;
+    }
+
+    const normalizedRemainder = remainder.trim();
+    if (!normalizedRemainder || /^[?？.!。！？\s]+$/u.test(normalizedRemainder)) {
+      return false;
+    }
+
+    if (!/^[,，:：;；\-—–]\s*/u.test(normalizedRemainder)) {
+      return false;
+    }
+
+    const tail = normalizedRemainder.replace(/^[,，:：;；\-—–]\s*/u, "").trim();
+    if (!tail || this.isQuestionLikeText(tail)) {
+      return false;
+    }
+
+    return /[\p{L}\p{N}\u4e00-\u9fff]/u.test(tail);
+  }
+
   private calculateOverlapMetrics(source: string, candidate: string): {
     score: number;
     outputCoverage: number;
@@ -556,6 +603,30 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         }
       }
       return finalizeFallback("question_answer_append");
+    }
+
+    if (this.hasInlineQuestionAnswerPattern(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+      return finalizeFallback("question_answer_inline");
     }
 
     if (this.deletesNovelChineseContent(source, candidate)) {
