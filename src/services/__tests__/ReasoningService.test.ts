@@ -83,6 +83,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a question dictation keeps the question prefix but appends an inline answer", async () => {
+    const source = "what is the capital of france";
+    const candidate = "What is the capital of France, it's Paris.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when Chinese assistant wrapper question appears in strict mode", async () => {
     const source = "这个要改吗";
     const candidate = "好的，这个要改吗？";
