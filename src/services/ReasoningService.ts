@@ -178,6 +178,12 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
+    const enTagQuestionEnd =
+      /\b(?:(?:am\s+i\s+not)|(?:(?:is|are|was|were|do|does|did|could|would|should|have|has|had|must)n['’]?t|can['’]?t|won['’]?t|(?:is|are|was|were|do|does|did|can|could|will|would|should|have|has|had|must))\s+(?:i|you|we|he|she|they|it|there))\s*$/i;
+    if (enTagQuestionEnd.test(normalized)) {
+      return true;
+    }
+
     const enIndirectQuestionPatterns = [
       /^(?:i\s+(?:need|want|would\s+like|'d\s+like)\s+to\s+(?:find\s+out|see))\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
       /^(?:please\s+)?(?:find\s+out|see)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
