@@ -186,6 +186,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const enIndirectQuestionPatterns = [
       /^(?:i\s+(?:need|want|would\s+like|'d\s+like)\s+to\s+(?:find\s+out|see|know))\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:i\s+(?:wonder|(?:am|was)\s+wondering))\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
       /^(?:please\s+)?(?:find\s+out|see|check|confirm|verify)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
       /^(?:please\s+)?(?:let\s+me\s+know|tell\s+me)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
     ];
