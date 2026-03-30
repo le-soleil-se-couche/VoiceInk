@@ -116,9 +116,31 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("treats tell-me-if dictation as question intent and blocks direct answers", async () => {
+    const source = "tell me if we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("keeps let-me-know-whether cleanup when the indirect question intent is preserved", async () => {
     const source = "let me know whether we should ship this today";
     const candidate = "Let me know whether we should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps tell-me-if cleanup when the indirect question intent is preserved", async () => {
+    const source = "tell me if we should ship this today";
+    const candidate = "Tell me if we should ship this today.";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
       strictMode: true,
