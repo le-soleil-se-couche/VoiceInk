@@ -138,6 +138,18 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("treats need-to-know-if dictation as question intent and blocks cleanup-only answers", async () => {
+    const source = "i need to know if the staging deploy is healthy";
+    const candidate = "The staging deploy is healthy.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("keeps let-me-know-whether cleanup when the indirect question intent is preserved", async () => {
     const source = "let me know whether we should ship this today";
     const candidate = "Let me know whether we should ship this today.";
