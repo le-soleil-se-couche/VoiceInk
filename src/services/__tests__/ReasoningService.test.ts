@@ -127,6 +127,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("treats was-wondering-if dictation as question intent and blocks direct answers", async () => {
+    const source = "i was wondering if this will run on my laptop";
+    const candidate = "This will run on my laptop.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps was-wondering-if cleanup when the question intent is preserved", async () => {
+    const source = "i was wondering if this will run on my laptop";
+    const candidate = "I was wondering if this will run on my laptop.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
   it("passes cleanup-only deletions even when overlap thresholds are aggressive", async () => {
     const source = "嗯我想说这个项目其实有很多问题";
     const candidate = "我想说这个项目有很多问题";
