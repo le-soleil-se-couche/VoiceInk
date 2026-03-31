@@ -119,6 +119,28 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return tokens;
   }
 
+  private hasAssistantQuestionWrapper(text: string): boolean {
+    const normalized = text.trim();
+    if (!normalized) {
+      return false;
+    }
+
+    const wrapperPatterns = [
+      /^(?:好的|是的|对|對|嗯)/u,
+      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)\b/i,
+    ];
+
+    return wrapperPatterns.some((pattern) => {
+      const match = normalized.match(pattern);
+      if (!match) {
+        return false;
+      }
+
+      const tail = this.normalizeInlineTail(normalized.slice(match[0].length));
+      return Boolean(tail) && this.isQuestionLikeText(tail);
+    });
+  }
+
   private isAnswerLikeOutput(text: string): boolean {
     if (!text || !text.trim()) {
       return false;
@@ -146,7 +168,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /\b(you can try).{0,20}(sentence|example)\b/i,
     ];
 
-    return patterns.some((re) => re.test(text));
+    return this.hasAssistantQuestionWrapper(text) || patterns.some((re) => re.test(text));
   }
 
   private isQuestionLikeText(text: string): boolean {
