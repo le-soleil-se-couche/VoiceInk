@@ -83,6 +83,18 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a terse answer is prepended before the preserved English question", async () => {
+    const source = "what is the capital of france";
+    const candidate = "Paris. What is the capital of France?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a Chinese answer is prepended before the preserved question", async () => {
     const source = "这个要改吗";
     const candidate = "这个需要修改。这个要改吗？";

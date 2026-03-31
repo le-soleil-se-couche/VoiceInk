@@ -312,15 +312,19 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     const sourceQuestionClauseIndex = sourceClauses.findIndex((clause) => this.isQuestionLikeText(clause));
     const sourceLeadingClauses =
       sourceQuestionClauseIndex > 0 ? sourceClauses.slice(0, sourceQuestionClauseIndex) : [];
+    const terseAnswerOpeners = new Set([
+      "yes",
+      "no",
+      "maybe",
+      "probably",
+      "definitely",
+      "certainly",
+      "absolutely",
+    ]);
 
     return substantiveLeadingClauses.some((clause) => {
       const normalizedClause = clause.trim();
       if (normalizedClause.length < 6) {
-        return false;
-      }
-
-      const overlapWithQuestion = this.calculateOverlapScore(normalizedClause, questionClause);
-      if (overlapWithQuestion < 0.6) {
         return false;
       }
 
@@ -331,7 +335,21 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         return false;
       }
 
-      return true;
+      const clauseTokens = this.tokenizeForOverlap(normalizedClause);
+      const clauseStartsWithTerseAnswer =
+        clauseTokens.length > 0 && terseAnswerOpeners.has(clauseTokens[0]);
+      const sourceOverlap = this.calculateOverlapScore(normalizedClause, source);
+      const isShortNovelLeadingClause =
+        clauseTokens.length > 0 &&
+        clauseTokens.length <= 4 &&
+        (clauseStartsWithTerseAnswer || sourceOverlap < 0.35);
+
+      if (isShortNovelLeadingClause) {
+        return true;
+      }
+
+      const overlapWithQuestion = this.calculateOverlapScore(normalizedClause, questionClause);
+      return overlapWithQuestion >= 0.6;
     });
   }
 
