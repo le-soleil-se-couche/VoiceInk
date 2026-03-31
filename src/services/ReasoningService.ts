@@ -216,6 +216,34 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .some((clause) => clause.length > 0 && !this.isQuestionLikeText(clause));
   }
 
+  private isAssistantDialogueQuestion(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    const normalized = text.trim().toLowerCase().normalize("NFKC");
+    const englishPatterns = [
+      /^(?:can|could|would|will)\s+you\s+(?:tell|confirm|check|verify|clarify)\b.{0,40}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:can|could|would|will)\s+you\s+let\s+me\s+know\b.{0,40}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+    ];
+    if (englishPatterns.some((re) => re.test(normalized))) {
+      return true;
+    }
+
+    const chinesePatterns = [
+      /^(?:你能|你可以|能不能|可不可以|请|麻烦你|帮我).{0,12}(?:告诉我|确认|看一下|看下|检查一下|检查下|说明).{0,20}(?:吗|么|呢|吧|[?？])?$/u,
+    ];
+    return chinesePatterns.some((re) => re.test(text.trim()));
+  }
+
+  private hasAssistantDialogueQuestionShift(source: string, candidate: string): boolean {
+    return (
+      this.isQuestionLikeText(candidate) &&
+      this.isAssistantDialogueQuestion(candidate) &&
+      !this.isAssistantDialogueQuestion(source)
+    );
+  }
+
   private calculateOverlapMetrics(source: string, candidate: string): {
     score: number;
     outputCoverage: number;
@@ -548,6 +576,30 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         }
       }
       return finalizeFallback("question_answer_append");
+    }
+
+    if (this.hasAssistantDialogueQuestionShift(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+      return finalizeFallback("assistant_dialogue_question");
     }
 
     if (this.deletesNovelChineseContent(source, candidate)) {
