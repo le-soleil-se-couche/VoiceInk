@@ -83,9 +83,31 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when assistant-style wrapper is split into a leading sentence before the question", async () => {
+    const source = "what is the capital of france";
+    const candidate = "Sure. What is the capital of France?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when Chinese assistant wrapper question appears in strict mode", async () => {
     const source = "这个要改吗";
     const candidate = "好的，这个要改吗？";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese assistant wrapper is split into a leading sentence before the question", async () => {
+    const source = "这个要改吗";
+    const candidate = "好的。这个要改吗？";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
       strictMode: true,

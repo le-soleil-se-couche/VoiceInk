@@ -192,10 +192,44 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
   }
 
   private splitIntoClauses(text: string): string[] {
-    return text
-      .split(/(?<=[?？.!。！？])\s+|[\n\r]+/u)
+    return (text.match(/[^?？.!。！？\n\r]+[?？.!。！？]?/gu) || [])
       .map((part) => part.trim())
       .filter(Boolean);
+  }
+
+  private isStandaloneAssistantWrapperClause(clause: string): boolean {
+    const normalized = clause
+      .trim()
+      .replace(/^[`"'“”‘’]+|[`"'“”‘’]+$/gu, "")
+      .replace(/[?？.!。！？]+$/gu, "")
+      .trim();
+
+    if (!normalized) {
+      return false;
+    }
+
+    return [
+      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)$/i,
+      /^(?:好的|好|是的|对|對|嗯|当然|可以|行|没问题)$/u,
+    ].some((re) => re.test(normalized));
+  }
+
+  private hasLeadingAssistantWrapper(source: string, candidate: string): boolean {
+    const candidateClauses = this.splitIntoClauses(candidate);
+    if (candidateClauses.length < 2) {
+      return false;
+    }
+
+    if (!this.isStandaloneAssistantWrapperClause(candidateClauses[0])) {
+      return false;
+    }
+
+    const sourceClauses = this.splitIntoClauses(source);
+    if (sourceClauses.length > 0 && this.isStandaloneAssistantWrapperClause(sourceClauses[0])) {
+      return false;
+    }
+
+    return true;
   }
 
   private hasQuestionThenAnswerPattern(source: string, candidate: string): boolean {
@@ -550,6 +584,31 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         }
       }
       return finalizeFallback("question_answer_append");
+    }
+
+    if (this.hasLeadingAssistantWrapper(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+
+      return finalizeFallback("assistant_wrapper");
     }
 
     if (this.deletesNovelChineseContent(source, candidate)) {
