@@ -13,6 +13,7 @@ import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
   "了",
@@ -257,6 +258,40 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return clauses
       .slice(questionClauseIndex + 1)
       .some((clause) => clause.length > 0 && !this.isQuestionLikeText(clause));
+  }
+
+  private hasInlineQuestionAnswerPattern(source: string, candidate: string): boolean {
+    if (!this.isQuestionLikeText(source)) {
+      return false;
+    }
+
+    const normalizeForQuestionAppend = (text: string) =>
+      text
+        .normalize("NFKC")
+        .toLowerCase()
+        .replace(/[“”]/g, "\"")
+        .replace(/[‘’]/g, "'")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const normalizedSource = normalizeForQuestionAppend(source).replace(/[?？]+$/u, "").trim();
+    const normalizedCandidate = normalizeForQuestionAppend(candidate);
+    if (!normalizedSource || !normalizedCandidate) {
+      return false;
+    }
+
+    const inlineAnswerMatch = normalizedCandidate.match(
+      new RegExp(
+        `^${escapeRegExp(normalizedSource)}\\s*(?:[?？])?\\s*(?:[-–—:：])\\s*(.+)$`,
+        "u"
+      )
+    );
+    if (!inlineAnswerMatch) {
+      return false;
+    }
+
+    const appendedText = inlineAnswerMatch[1]?.trim();
+    return Boolean(appendedText) && !this.isQuestionLikeText(appendedText);
   }
 
   private calculateOverlapMetrics(source: string, candidate: string): {
@@ -631,6 +666,30 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         }
       }
       return finalizeFallback("question_answer_append");
+    }
+
+    if (this.hasInlineQuestionAnswerPattern(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+      return finalizeFallback("question_answer_inline");
     }
 
     if (this.deletesNovelChineseContent(source, candidate)) {
