@@ -14,4 +14,20 @@ describe("packaging script staging", () => {
         .toContain("download:nircmd");
     }
   });
+
+  it("blocks Linux packaging entrypoints on non-Linux hosts", () => {
+    const linuxHostGuard = "node scripts/require-native-packaging-host.js linux";
+
+    for (const scriptName of [
+      "prebuild:linux",
+      "build:linux",
+      "build:linux:appimage",
+      "build:linux:deb",
+      "build:linux:rpm",
+      "build:linux:tar",
+    ]) {
+      expect(packageJson.scripts[scriptName], `${scriptName} should enforce a Linux host`)
+        .toContain(linuxHostGuard);
+    }
+  });
 });
