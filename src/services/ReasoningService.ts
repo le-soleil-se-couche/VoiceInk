@@ -257,6 +257,20 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       }
     }
 
+    const questionPunctuationMatches = Array.from(normalizedCandidate.matchAll(/[?？]/gu));
+    for (const match of questionPunctuationMatches) {
+      const punctuationIndex = match.index ?? -1;
+      if (punctuationIndex < 0 || punctuationIndex >= normalizedCandidate.length - 1) {
+        continue;
+      }
+
+      const prefix = normalizedCandidate.slice(0, punctuationIndex + match[0].length);
+      const tail = normalizedCandidate.slice(punctuationIndex + match[0].length);
+      if (this.isInlineAnswerContinuation(source, prefix, tail)) {
+        return true;
+      }
+    }
+
     const chineseInlineTailPatterns = [
       /^(.*?(?:吗|嗎|么|麼|呢|吧))(.*)$/u,
       /^(.*?(?:是不是|能不能|可不可以|要不要|会不会|會不會|有没有|有沒有|行不行|对不对|對不對|好不好))(.*)$/u,
