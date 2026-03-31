@@ -138,6 +138,18 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("treats check-if dictation as question intent and blocks direct answers", async () => {
+    const source = "check if this will run locally";
+    const candidate = "This will run locally.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats help-me-decide-whether dictation as question intent and blocks direct answers", async () => {
     const source = "help me decide whether we should ship this today";
     const candidate = "We should ship this today.";
