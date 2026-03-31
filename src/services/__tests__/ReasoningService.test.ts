@@ -127,6 +127,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("treats i-wonder-if dictation as indirect question intent and blocks direct answers", async () => {
+    const source = "i wonder if we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("keeps let-me-know-if cleanup when the indirect question phrasing is preserved", async () => {
     const source = "let me know if we should ship this today";
     const candidate = "Let me know if we should ship this today.";
