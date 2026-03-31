@@ -68,6 +68,14 @@ describe("getAnswerLikeRetryPrompt", () => {
     expect(prompt.startsWith("VoiceInk")).toBe(true);
   });
 
+  it("adds question-preservation guidance to the default cleanup system prompt", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "can this run on my laptop", "en");
+
+    expect(prompt).toContain("keep it as a cleaned-up question");
+    expect(prompt).toContain("remove stutters, restarts, and false starts inside questions");
+    expect(prompt).toContain("Do not add assistant wrappers such as 'Sure'");
+  });
+
   it("keeps short Chinese restart-question guidance in the zh cleanup prompt", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "zh-CN", "那个就是我的电我电脑上能跑吗", "zh-CN");
 
