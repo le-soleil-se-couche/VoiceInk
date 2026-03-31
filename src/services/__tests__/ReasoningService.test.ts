@@ -39,6 +39,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a Chinese arithmetic question is rewritten into a numeric answer", async () => {
+    const source = "5+5等于几";
+    const candidate = "5+5等于10。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese value question ending with shi duoshao is rewritten into a value", async () => {
+    const source = "这个版本号是多少";
+    const candidate = "这个版本号是3.2.1。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an English yes-no dictation ending with or not is rewritten into an answer", async () => {
     const source = "we should ship this today or not";
     const candidate = "We should ship this today.";
