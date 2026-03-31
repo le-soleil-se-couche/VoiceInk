@@ -12,6 +12,8 @@ import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
+const ENGLISH_QUESTION_START_RE =
+  /^(?:(?:what|when|where|who|how)(?:['’]?s)?|why|whom|whose|which|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/i;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
@@ -167,9 +169,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
-    const enQuestionStart =
-      /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/;
-    if (enQuestionStart.test(normalized)) {
+    if (ENGLISH_QUESTION_START_RE.test(normalized)) {
       return true;
     }
 

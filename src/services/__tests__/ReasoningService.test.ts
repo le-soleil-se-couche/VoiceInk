@@ -28,6 +28,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(candidate);
   });
 
+  it("falls back when an apostrophe-less English wh-question is rewritten into an answer", async () => {
+    const source = "whats the capital of france";
+    const candidate = "The capital of France is Paris.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps an apostrophe-less English wh-question when cleanup restores punctuation", async () => {
+    const source = "whats the capital of france";
+    const candidate = "What's the capital of France?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
   it("falls back when a Chinese question is rewritten into a declarative answer", async () => {
     const source = "这个要改吗";
     const candidate = "这个需要修改。";
