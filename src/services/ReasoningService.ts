@@ -232,6 +232,38 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return true;
   }
 
+  private stripInlineAssistantQuestionWrapper(text: string): string | null {
+    const normalized = text.trim();
+    if (!normalized) {
+      return null;
+    }
+
+    const englishWrapperMatch = normalized.match(
+      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)\s+/i
+    );
+    if (englishWrapperMatch) {
+      const remainder = normalized.slice(englishWrapperMatch[0].length).trim();
+      return this.isQuestionLikeText(remainder) ? remainder : null;
+    }
+
+    const chineseWrapperMatch = normalized.match(/^(?:好的|是的|当然|可以|没问题)\s*/u);
+    if (chineseWrapperMatch) {
+      const remainder = normalized.slice(chineseWrapperMatch[0].length).trim();
+      return this.isQuestionLikeText(remainder) ? remainder : null;
+    }
+
+    return null;
+  }
+
+  private hasInlineAssistantQuestionWrapper(source: string, candidate: string): boolean {
+    const strippedCandidate = this.stripInlineAssistantQuestionWrapper(candidate);
+    if (!strippedCandidate) {
+      return false;
+    }
+
+    return this.stripInlineAssistantQuestionWrapper(source) === null;
+  }
+
   private hasQuestionThenAnswerPattern(source: string, candidate: string): boolean {
     if (!this.isQuestionLikeText(source)) {
       return false;
@@ -587,6 +619,31 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     if (this.hasLeadingAssistantWrapper(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+
+      return finalizeFallback("assistant_wrapper");
+    }
+
+    if (this.hasInlineAssistantQuestionWrapper(source, candidate)) {
       if (!hasRetried) {
         const retryResult = await this.retryWithCleanupOnlyPrompt(
           source,
