@@ -109,6 +109,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a Chinese 是否 question is rewritten into a statement", async () => {
+    const source = "这个版本今天发布是否合适";
+    const candidate = "这个版本今天发布合适。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese 等于几 question is rewritten into a statement answer", async () => {
+    const source = "五加五等于几";
+    const candidate = "五加五等于10。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a question dictation is preserved and then answered in the same output", async () => {
     const source = "what is the capital of france";
     const candidate = "What is the capital of France? The capital of France is Paris.";

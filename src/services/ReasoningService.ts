@@ -12,6 +12,8 @@ import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
+const CHINESE_QUESTION_KEYWORD_RE =
+  /(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|是否|等于几|几(?:个|位|点|次|年|月|号|日|天|页|项|种|块|元|分钟|小时))/u;
 const ENGLISH_QUESTION_START_RE =
   /^(?:(?:what|when|where|who|how)(?:['’]?s)?|why|whom|whose|which|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/i;
 const ASSISTANT_STYLE_PREAMBLE_PATTERNS: RegExp[] = [
@@ -166,7 +168,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const zhQuestionPatterns = [
       /[吗么呢吧]$/,
-      /\b(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否)\b/,
+      CHINESE_QUESTION_KEYWORD_RE,
       /(?:是不是|能不能|可不可以|要不要|会不会|有没有)/,
       /(?:行不行|对不对|好不好|可不可以|能不能|要不要|有没有|是不是)$/,
     ];
