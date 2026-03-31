@@ -85,11 +85,6 @@
   "asarUnpack": ["**/node_modules/ffmpeg-static/**/*", "**/node_modules/better-sqlite3/**/*"],
   "extraResources": [
     "src/assets/**/*",
-    "resources/bin/macos-globe-listener",
-    "resources/bin/macos-fast-paste",
-    "resources/bin/macos-text-monitor",
-    "resources/bin/linux-fast-paste",
-    "resources/bin/linux-text-monitor",
     {
       "from": "resources/bin/",
       "to": "bin/",
@@ -98,9 +93,6 @@
         "whisper-server-*",
         "llama-server-*",
         "sherpa-onnx-*",
-        "windows-key-listener*",
-        "windows-text-monitor*",
-        "windows-fast-paste*",
         "*.dylib",
         "*.dll",
         "*.so*"
@@ -111,6 +103,11 @@
     "category": "public.app-category.productivity",
     "target": ["dmg", "zip"],
     "icon": "src/assets/icon.icns",
+    "extraResources": [
+      "resources/bin/macos-globe-listener",
+      "resources/bin/macos-fast-paste",
+      "resources/bin/macos-text-monitor"
+    ],
     "gatekeeperAssess": false,
     "hardenedRuntime": true,
     "entitlements": "resources/mac/entitlements.mac.plist",
@@ -126,6 +123,15 @@
     "icon": "src/assets/icon.ico",
     "extraResources": [
       {
+        "from": "resources/bin/",
+        "to": "bin/",
+        "filter": [
+          "windows-key-listener*",
+          "windows-text-monitor*",
+          "windows-fast-paste*"
+        ]
+      },
+      {
         "from": "resources/bin/nircmd.exe",
         "to": "bin/nircmd.exe"
       }
@@ -135,6 +141,18 @@
     "target": ["AppImage", "deb", "rpm", "tar.gz"],
     "icon": "src/assets/icon.png",
     "category": "Utility",
+    "extraResources": [
+      {
+        "from": "resources/bin/",
+        "to": "bin/",
+        "filter": ["linux-fast-paste", "linux-text-monitor"]
+      },
+      {
+        "from": "resources/",
+        "to": ".",
+        "filter": ["linux-text-monitor.py"]
+      }
+    ],
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
   },
   "flatpak": {
