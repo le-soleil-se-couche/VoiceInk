@@ -151,6 +151,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("treats i-wonder-if dictation as question intent and blocks direct answers", async () => {
+    const source = "i wonder if we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats Chinese want-to-know dictation as question intent and blocks direct answers", async () => {
     const source = "我想知道为什么我们今天还不能把这个版本发出去";
     const candidate = "我想知道为什么我们今天还不能把这个版本发出去，因为还有几个阻塞 bug 没修完。";
