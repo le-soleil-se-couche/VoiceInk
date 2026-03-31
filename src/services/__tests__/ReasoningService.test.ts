@@ -105,6 +105,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("treats tell-me-whether dictation as question intent and blocks direct answers", async () => {
+    const source = "tell me whether we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an indirect dictation question is rewritten into assistant dialogue", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "Can you tell me if we should ship this today?";
