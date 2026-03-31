@@ -207,6 +207,41 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .filter(Boolean);
   }
 
+  private normalizeForQuestionPrefixMatch(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize("NFKC")
+      .replace(/['’]/g, "")
+      .replace(/[^\p{L}\p{N}\u4e00-\u9fff]+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  private hasInlineQuestionThenAnswerPattern(source: string, candidate: string): boolean {
+    if (!this.isQuestionLikeText(source) || !this.isQuestionLikeText(candidate)) {
+      return false;
+    }
+
+    const normalizedSource = this.normalizeForQuestionPrefixMatch(source);
+    const normalizedCandidate = this.normalizeForQuestionPrefixMatch(candidate);
+
+    if (
+      !normalizedSource ||
+      !normalizedCandidate ||
+      normalizedCandidate === normalizedSource ||
+      !normalizedCandidate.startsWith(`${normalizedSource} `)
+    ) {
+      return false;
+    }
+
+    const trailingContent = normalizedCandidate.slice(normalizedSource.length).trim();
+    if (!trailingContent) {
+      return false;
+    }
+
+    return !this.isQuestionLikeText(trailingContent);
+  }
+
   private hasQuestionThenAnswerPattern(source: string, candidate: string): boolean {
     if (!this.isQuestionLikeText(source)) {
       return false;
@@ -214,12 +249,12 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const clauses = this.splitIntoClauses(candidate);
     if (clauses.length < 2) {
-      return false;
+      return this.hasInlineQuestionThenAnswerPattern(source, candidate);
     }
 
     const questionClauseIndex = clauses.findIndex((clause) => this.isQuestionLikeText(clause));
     if (questionClauseIndex === -1 || questionClauseIndex === clauses.length - 1) {
-      return false;
+      return this.hasInlineQuestionThenAnswerPattern(source, candidate);
     }
 
     return clauses
