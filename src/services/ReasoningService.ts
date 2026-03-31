@@ -275,11 +275,43 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return chinesePatterns.some((re) => re.test(text.trim()));
   }
 
+  private hasAssistantWrapperQuestionShift(source: string, candidate: string): boolean {
+    if (!this.isQuestionLikeText(source) || !candidate.trim()) {
+      return false;
+    }
+
+    const englishWrapperRe =
+      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)\b[\s,，、:：-]*(.+)$/i;
+    const chineseWrapperRe =
+      /^(?:好的|好|是的|对|對|嗯)\s*[，,、:：-]?\s*(.+)$/u;
+
+    const englishCandidateMatch = candidate.trim().match(englishWrapperRe);
+    if (englishCandidateMatch) {
+      const sourceMatch = source.trim().match(englishWrapperRe);
+      const remainder = englishCandidateMatch[1]?.trim() ?? "";
+      if (!sourceMatch && remainder && this.isQuestionLikeText(remainder)) {
+        return true;
+      }
+    }
+
+    const chineseCandidateMatch = candidate.trim().match(chineseWrapperRe);
+    if (chineseCandidateMatch) {
+      const sourceMatch = source.trim().match(chineseWrapperRe);
+      const remainder = chineseCandidateMatch[1]?.trim() ?? "";
+      if (!sourceMatch && remainder && this.isQuestionLikeText(remainder)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private hasAssistantDialogueQuestionShift(source: string, candidate: string): boolean {
     return (
-      this.isQuestionLikeText(candidate) &&
-      this.isAssistantDialogueQuestion(candidate) &&
-      !this.isAssistantDialogueQuestion(source)
+      (this.isQuestionLikeText(candidate) &&
+        this.isAssistantDialogueQuestion(candidate) &&
+        !this.isAssistantDialogueQuestion(source)) ||
+      this.hasAssistantWrapperQuestionShift(source, candidate)
     );
   }
 
