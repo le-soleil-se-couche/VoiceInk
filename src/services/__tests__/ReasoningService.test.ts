@@ -107,6 +107,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a question dictation keeps the question text and appends an inline answer", async () => {
+    const source = "what is the capital of france";
+    const candidate = "What is the capital of France it's Paris.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a question dictation is followed by a same-sentence comma answer", async () => {
+    const source = "what is the capital of france";
+    const candidate = "What is the capital of France, the capital of France is Paris.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when assistant-style wrapper keeps the question but shifts to dialogue tone", async () => {
     const source = "what is the capital of france";
     const candidate = "Sure, what is the capital of France?";

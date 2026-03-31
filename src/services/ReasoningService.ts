@@ -197,6 +197,91 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .filter(Boolean);
   }
 
+  private normalizeInlineTail(text: string): string {
+    return text.replace(/^[\s,，、；;:：\-—]+/u, "").trim();
+  }
+
+  private isLikelyAlternativeQuestionTail(text: string): boolean {
+    return /^(?:还是|還是|或者|or\b)/iu.test(text);
+  }
+
+  private isInlineAnswerContinuation(
+    source: string,
+    questionPrefix: string,
+    tail: string
+  ): boolean {
+    const normalizedPrefix = questionPrefix.replace(/[\s,，、；;:：\-—]+$/u, "").trim();
+    const normalizedTail = this.normalizeInlineTail(tail);
+
+    if (!normalizedPrefix || !normalizedTail || normalizedTail.length < 2) {
+      return false;
+    }
+
+    if (this.isLikelyAlternativeQuestionTail(normalizedTail)) {
+      return false;
+    }
+
+    if (!this.isQuestionLikeText(normalizedPrefix) || this.isQuestionLikeText(normalizedTail)) {
+      return false;
+    }
+
+    return this.calculateOverlapScore(source, normalizedPrefix) >= 0.7;
+  }
+
+  private hasInlineQuestionAnswerPattern(source: string, candidate: string): boolean {
+    if (!this.isQuestionLikeText(source) || !this.isQuestionLikeText(candidate)) {
+      return false;
+    }
+
+    const normalizedCandidate = candidate.trim();
+    if (!normalizedCandidate) {
+      return false;
+    }
+
+    const separatorMatches = Array.from(normalizedCandidate.matchAll(/[，,；;:：]/gu));
+    for (const match of separatorMatches) {
+      const separatorIndex = match.index ?? -1;
+      if (separatorIndex <= 0) {
+        continue;
+      }
+
+      const prefix = normalizedCandidate.slice(0, separatorIndex);
+      const tail = normalizedCandidate.slice(separatorIndex + match[0].length);
+      if (this.isInlineAnswerContinuation(source, prefix, tail)) {
+        return true;
+      }
+    }
+
+    const chineseInlineTailPatterns = [
+      /^(.*?(?:吗|嗎|么|麼|呢|吧))(.*)$/u,
+      /^(.*?(?:是不是|能不能|可不可以|要不要|会不会|會不會|有没有|有沒有|行不行|对不对|對不對|好不好))(.*)$/u,
+      /^(.*?(?:多少|几))(.*)$/u,
+    ];
+
+    for (const pattern of chineseInlineTailPatterns) {
+      const match = pattern.exec(normalizedCandidate);
+      if (!match) {
+        continue;
+      }
+
+      const [, prefix, tail] = match;
+      if (this.isInlineAnswerContinuation(source, prefix, tail)) {
+        return true;
+      }
+    }
+
+    const englishAnswerStarter =
+      /\b(?:it(?:'s| is)|this is|that is|the answer is|answer is|yes\b|no\b|we should|you should|we can|you can)\b/i;
+    const englishAnswerMatch = englishAnswerStarter.exec(normalizedCandidate);
+    if (!englishAnswerMatch || (englishAnswerMatch.index ?? 0) <= 0) {
+      return false;
+    }
+
+    const prefix = normalizedCandidate.slice(0, englishAnswerMatch.index);
+    const tail = normalizedCandidate.slice(englishAnswerMatch.index);
+    return this.isInlineAnswerContinuation(source, prefix, tail);
+  }
+
   private hasQuestionThenAnswerPattern(source: string, candidate: string): boolean {
     if (!this.isQuestionLikeText(source)) {
       return false;
@@ -549,6 +634,30 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         }
       }
       return finalizeFallback("question_answer_append");
+    }
+
+    if (this.hasInlineQuestionAnswerPattern(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+      return finalizeFallback("inline_question_answer_append");
     }
 
     if (this.deletesNovelChineseContent(source, candidate)) {
