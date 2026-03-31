@@ -105,9 +105,31 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a neutral English preamble labels the dictated question", async () => {
+    const source = "what is the capital of france";
+    const candidate = "Here's the polished question: What is the capital of France?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when Chinese assistant wrapper question appears in strict mode", async () => {
     const source = "这个要改吗";
     const candidate = "好的，这个要改吗？";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a neutral Chinese preamble labels the dictated question", async () => {
+    const source = "这个要改吗";
+    const candidate = "这是整理后的问题：这个要改吗？";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
       strictMode: true,

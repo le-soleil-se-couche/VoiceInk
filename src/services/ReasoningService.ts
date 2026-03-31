@@ -146,6 +146,47 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return patterns.some((re) => re.test(text));
   }
 
+  private hasInjectedAssistantPreamble(source: string, candidate: string): boolean {
+    const normalizedCandidate = candidate.trim();
+    if (!normalizedCandidate) {
+      return false;
+    }
+
+    const preamblePatterns = [
+      /^(?:here(?:'s| is)|this is|below is)\s+(?:the\s+)?(?:cleaned(?:-up)?|polished|rewritten|revised|formatted|transcribed)\s+(?:question|text|transcript|version|result|output)\s*[:：-]\s*/i,
+      /^(?:here(?:'s| is)|this is|below is)\s+(?:the\s+)?(?:question|text|transcript|version|result|output)\s*[:：-]\s*/i,
+      /^(?:这是|以下是|下面是)(?:整理后(?:的)?|润色后(?:的)?|修改后(?:的)?|清理后(?:的)?)(?:问题|文本|内容|版本|结果|输出)?\s*[:：-]\s*/u,
+      /^(?:这是|以下是|下面是)(?:问题|文本|内容|版本|结果|输出)\s*[:：-]\s*/u,
+    ];
+
+    const matchedPreamble = preamblePatterns
+      .map((pattern) => normalizedCandidate.match(pattern)?.[0] ?? null)
+      .find(Boolean);
+
+    if (!matchedPreamble) {
+      return false;
+    }
+
+    const normalizeForPrefixComparison = (text: string) =>
+      text
+        .normalize("NFKC")
+        .toLowerCase()
+        .replace(/[“”]/g, "\"")
+        .replace(/[‘’]/g, "'")
+        .replace(/\s+/g, " ")
+        .replace(/\s*[:：-]+\s*$/u, "")
+        .trim();
+
+    const normalizedSource = normalizeForPrefixComparison(source);
+    const normalizedPreamble = normalizeForPrefixComparison(matchedPreamble);
+
+    if (!normalizedPreamble) {
+      return false;
+    }
+
+    return !normalizedSource.startsWith(normalizedPreamble);
+  }
+
   private isQuestionLikeText(text: string): boolean {
     if (!text || !text.trim()) {
       return false;
@@ -463,6 +504,46 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       });
       return fallback;
     };
+
+    if (this.hasInjectedAssistantPreamble(source, candidate)) {
+      if (!hasRetried) {
+        logger.logReasoning("STRICT_MODE_ASSISTANT_PREAMBLE_RETRY", {
+          provider,
+          model,
+          originalLength: source.length,
+          candidateLength: candidate.length,
+        });
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          const guardedRetry = await this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+          if (guardedRetry !== this.localCleanupFallback(source)) {
+            logger.logReasoning("STRICT_MODE_ASSISTANT_PREAMBLE_RETRY_RECOVERED", {
+              provider,
+              model,
+              originalLength: source.length,
+              candidateLength: candidate.length,
+              retryLength: retryResult.length,
+            });
+            return guardedRetry;
+          }
+        }
+      }
+      return finalizeFallback("assistant_preamble");
+    }
 
     if (this.isAnswerLikeOutput(candidate)) {
       if (!hasRetried) {
