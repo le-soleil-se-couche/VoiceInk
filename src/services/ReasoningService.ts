@@ -13,6 +13,9 @@ import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
+const CHINESE_SELECTOR_QUESTION_RE = /哪(?:里|裏|儿|個|个|些|種|种|款|边|邊|位|天|年|月|版|条)?/u;
+const CHINESE_SELECTOR_STATEMENT_RE =
+  /(?:这|這|那|此|本|该|該)(?:里|裏|儿|個|个|些|種|种|款|边|邊|位|天|年|月|版|条)?/u;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
   "了",
@@ -432,6 +435,55 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return false;
   }
 
+  private getChineseSelectorRewriteDetails(
+    source: string,
+    candidate: string
+  ): { sourceMarker: string; candidateMarker: string | null } | null {
+    const normalizedSource = source.replace(/\s+/g, "").trim();
+    const normalizedCandidate = candidate.replace(/\s+/g, "").trim();
+
+    if (
+      !normalizedSource ||
+      !normalizedCandidate ||
+      !this.isLikelyChineseText(normalizedSource) ||
+      this.isQuestionLikeText(normalizedCandidate)
+    ) {
+      return null;
+    }
+
+    const sourceMarkerMatch = normalizedSource.match(CHINESE_SELECTOR_QUESTION_RE);
+    if (!sourceMarkerMatch) {
+      return null;
+    }
+
+    if (CHINESE_SELECTOR_QUESTION_RE.test(normalizedCandidate)) {
+      return null;
+    }
+
+    const sourceMarker = sourceMarkerMatch[0];
+    const candidateMarkerMatch = normalizedCandidate.match(CHINESE_SELECTOR_STATEMENT_RE);
+    const candidateMarker = candidateMarkerMatch?.[0] ?? null;
+
+    if (this.calculateOverlapScore(source, candidate) < 0.7) {
+      return null;
+    }
+
+    const sourceRemainder = normalizedSource.replace(sourceMarker, "");
+    const candidateRemainder = candidateMarker
+      ? normalizedCandidate.replace(candidateMarker, "")
+      : normalizedCandidate;
+
+    if (!sourceRemainder || !candidateRemainder) {
+      return null;
+    }
+
+    if (this.calculateOverlapScore(sourceRemainder, candidateRemainder) < 0.7) {
+      return null;
+    }
+
+    return { sourceMarker, candidateMarker };
+  }
+
   private logCleanupRequest(
     provider: string,
     model: string,
@@ -658,6 +710,32 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         }
       }
       return finalizeFallback("inline_question_answer_append");
+    }
+
+    const chineseSelectorRewrite = this.getChineseSelectorRewriteDetails(source, candidate);
+    if (chineseSelectorRewrite) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+
+      return finalizeFallback("selector_question_rewrite", chineseSelectorRewrite);
     }
 
     if (this.deletesNovelChineseContent(source, candidate)) {

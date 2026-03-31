@@ -61,6 +61,18 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a Chinese which-question is rewritten into a declarative statement", async () => {
+    const source = "哪个版本能跑";
+    const candidate = "这个版本能跑。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an English yes-no dictation ending with or not is rewritten into an answer", async () => {
     const source = "we should ship this today or not";
     const candidate = "We should ship this today.";
