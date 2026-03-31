@@ -262,6 +262,31 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .some((clause) => clause.length > 0 && !this.isQuestionLikeText(clause));
   }
 
+  private hasAssistantWrapperQuestionShift(source: string, candidate: string): boolean {
+    if (!candidate.trim()) {
+      return false;
+    }
+
+    const wrapperPatterns = [
+      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)\b[\s,，、:：-]+(.+)$/i,
+      /^(?:好的|好|是的|对|對|嗯)[\s，,、:：-]*(.+)$/u,
+    ];
+
+    return wrapperPatterns.some((pattern) => {
+      const candidateMatch = candidate.trim().match(pattern);
+      if (!candidateMatch) {
+        return false;
+      }
+
+      if (source.trim().match(pattern)) {
+        return false;
+      }
+
+      const remainder = candidateMatch[1]?.trim() ?? "";
+      return remainder.length > 0 && this.isQuestionLikeText(remainder);
+    });
+  }
+
   private calculateOverlapMetrics(source: string, candidate: string): {
     score: number;
     outputCoverage: number;
@@ -546,6 +571,30 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         }
       }
       return finalizeFallback("answer_like");
+    }
+
+    if (this.hasAssistantWrapperQuestionShift(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+      return finalizeFallback("assistant_wrapper_question");
     }
 
     if (this.isQuestionLikeText(source) && !this.isQuestionLikeText(candidate)) {
