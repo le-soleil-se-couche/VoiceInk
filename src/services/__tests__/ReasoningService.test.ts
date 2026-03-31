@@ -52,6 +52,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(candidate);
   });
 
+  it("falls back when a cleanup candidate starts with an English assistant preamble", async () => {
+    const source = "send the roadmap update after lunch";
+    const candidate = "Sure, here's a polished version of your note: Send the roadmap update after lunch.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a cleanup candidate starts with a Chinese assistant preamble", async () => {
+    const source = "把这个周会纪要发给产品";
+    const candidate = "当然可以，我来帮你整理一下：把这个周会纪要发给产品。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a Chinese question is rewritten into a declarative answer", async () => {
     const source = "这个要改吗";
     const candidate = "这个需要修改。";

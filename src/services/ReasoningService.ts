@@ -14,6 +14,11 @@ const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
 const ENGLISH_QUESTION_START_RE =
   /^(?:(?:what|when|where|who|how)(?:['’]?s)?|why|whom|whose|which|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/i;
+const ASSISTANT_STYLE_PREAMBLE_PATTERNS: RegExp[] = [
+  /^(?:(?:sure|certainly|of course|absolutely|definitely|okay|ok|alright)[,，.!！。:\-\s]+)?here(?:['’]s| is)(?:\s+(?:the|a))?(?:\s+(?:cleaned(?:\s+up)?|polished|rewritten|revised|final))?(?:\s+(?:version|note|question|prompt|request|query|content))(?:\s+of\s+your\s+(?:note|message|text))?[,，.!！。:\-\s]*/i,
+  /^(?:(?:the\s+)?(?:cleaned(?:\s+up)?|polished|rewritten|revised|final)\s+(?:version|note|question|prompt|request|query|content))[,，.!！。:\-\s]+/i,
+  /^(?:(?:当然可以|当然能|没问题(?:的)?|好的|当然|可以)[，,！!。:\-\s]+)?(?:我来帮你(?:整理|润色|改写)(?:一下)?|这是(?:整理后|润色后|改写后)?的?(?:版本|内容|问题|提问|请求)?|下面是(?:整理后|润色后|改写后)?的?(?:版本|内容|问题|提问|请求)?)[，,！!。:\-\s]*/u,
+];
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
@@ -128,6 +133,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const patterns = [
+      ...ASSISTANT_STYLE_PREAMBLE_PATTERNS,
       /(作为|身为).{0,10}(ai|语言模型|助手)/i,
       /\b(as\s+(?:an?|your)\s+(?:ai\s+)?(?:assistant|language\s+model))\b/i,
       /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
