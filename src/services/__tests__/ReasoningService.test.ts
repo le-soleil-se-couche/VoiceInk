@@ -50,6 +50,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a question dictation is followed by a dash-delimited answer", async () => {
+    const source = "what is the capital of france";
+    const candidate = "What is the capital of France - Paris.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a Chinese value question ending with shi duoshao is rewritten into a value", async () => {
     const source = "这个版本号是多少";
     const candidate = "这个版本号是3.2.1。";

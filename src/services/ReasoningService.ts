@@ -243,7 +243,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return false;
     }
 
-    const separatorMatches = Array.from(normalizedCandidate.matchAll(/[，,；;:：]/gu));
+    const separatorMatches = Array.from(normalizedCandidate.matchAll(/[，,；;:：]|\s[-—–]\s/gu));
     for (const match of separatorMatches) {
       const separatorIndex = match.index ?? -1;
       if (separatorIndex <= 0) {
