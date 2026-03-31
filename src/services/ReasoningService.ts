@@ -173,7 +173,8 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
-    const enQuestionEnd = /\b(?:or\s+not|right|correct|okay|ok)\s*$/;
+    const enQuestionEnd =
+      /\b(?:or\s+not|(?:yes|no)\s+or\s+(?:yes|no)|right|correct|okay|ok)\s*$/;
     if (enQuestionEnd.test(normalized)) {
       return true;
     }
