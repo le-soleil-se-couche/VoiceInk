@@ -127,6 +127,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("treats check-whether dictation as question intent and blocks direct answers", async () => {
+    const source = "check whether we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("passes cleanup-only deletions even when overlap thresholds are aggressive", async () => {
     const source = "嗯我想说这个项目其实有很多问题";
     const candidate = "我想说这个项目有很多问题";
