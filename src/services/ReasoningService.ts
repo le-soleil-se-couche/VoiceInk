@@ -239,14 +239,16 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const englishWrapperMatch = normalized.match(
-      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)\s+/i
+      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely|no|nope|maybe|probably|definitely)(?:\s*[，,、.。!！?？:：;-]\s*|\s+)/i
     );
     if (englishWrapperMatch) {
       const remainder = normalized.slice(englishWrapperMatch[0].length).trim();
       return this.isQuestionLikeText(remainder) ? remainder : null;
     }
 
-    const chineseWrapperMatch = normalized.match(/^(?:好的|是的|当然|可以|没问题)\s*/u);
+    const chineseWrapperMatch = normalized.match(
+      /^(?:好的|是的|当然|可以|没问题|不是|不对|不行)(?:\s*[，,、.。!！?？:：；;-]\s*|\s*)/u
+    );
     if (chineseWrapperMatch) {
       const remainder = normalized.slice(chineseWrapperMatch[0].length).trim();
       return this.isQuestionLikeText(remainder) ? remainder : null;

@@ -95,12 +95,48 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a terse English answer prefix is kept inline before the preserved question", async () => {
+    const source = "what is the capital of france";
+    const candidate = "No, what is the capital of France?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a terse English answer sentence is prepended before the preserved question", async () => {
+    const source = "what is the capital of france";
+    const candidate = "No. What is the capital of France?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a Chinese answer is prepended before the preserved question", async () => {
     const source = "这个要改吗";
     const candidate = "这个需要修改。这个要改吗？";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
       strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a terse Chinese answer prefix is kept inline before the preserved question", async () => {
+    const source = "这个版本在我的笔记本电脑和测试环境里都能跑吗";
+    const candidate = "不是，这个版本在我的笔记本电脑和测试环境里都能跑吗？";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
     });
 
     expect(result).toBe(source);
