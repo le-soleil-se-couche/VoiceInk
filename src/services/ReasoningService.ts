@@ -284,6 +284,57 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .some((clause) => clause.length > 0 && !this.isQuestionLikeText(clause));
   }
 
+  private hasAnswerBeforeQuestionPattern(source: string, candidate: string): boolean {
+    if (!this.isQuestionLikeText(source)) {
+      return false;
+    }
+
+    const candidateClauses = this.splitIntoClauses(candidate);
+    if (candidateClauses.length < 2) {
+      return false;
+    }
+
+    const questionClauseIndex = candidateClauses.findIndex((clause) => this.isQuestionLikeText(clause));
+    if (questionClauseIndex <= 0) {
+      return false;
+    }
+
+    const questionClause = candidateClauses[questionClauseIndex];
+    const substantiveLeadingClauses = candidateClauses
+      .slice(0, questionClauseIndex)
+      .filter((clause) => !this.isStandaloneAssistantWrapperClause(clause));
+
+    if (substantiveLeadingClauses.length === 0) {
+      return false;
+    }
+
+    const sourceClauses = this.splitIntoClauses(source);
+    const sourceQuestionClauseIndex = sourceClauses.findIndex((clause) => this.isQuestionLikeText(clause));
+    const sourceLeadingClauses =
+      sourceQuestionClauseIndex > 0 ? sourceClauses.slice(0, sourceQuestionClauseIndex) : [];
+
+    return substantiveLeadingClauses.some((clause) => {
+      const normalizedClause = clause.trim();
+      if (normalizedClause.length < 6) {
+        return false;
+      }
+
+      const overlapWithQuestion = this.calculateOverlapScore(normalizedClause, questionClause);
+      if (overlapWithQuestion < 0.6) {
+        return false;
+      }
+
+      const sourceAlreadyHadLeadingClause = sourceLeadingClauses.some((sourceClause) =>
+        this.isCleanupOnlyOutput(sourceClause, normalizedClause)
+      );
+      if (sourceAlreadyHadLeadingClause) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
   private calculateOverlapMetrics(source: string, candidate: string): {
     score: number;
     outputCoverage: number;
@@ -616,6 +667,31 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         }
       }
       return finalizeFallback("question_answer_append");
+    }
+
+    if (this.hasAnswerBeforeQuestionPattern(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+
+      return finalizeFallback("answer_before_question");
     }
 
     if (this.hasLeadingAssistantWrapper(source, candidate)) {
