@@ -140,6 +140,18 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("treats Chinese want-to-know dictation as question intent and blocks direct answers", async () => {
+    const source = "我想知道为什么我们今天还不能把这个版本发出去";
+    const candidate = "我想知道为什么我们今天还不能把这个版本发出去，因为还有几个阻塞 bug 没修完。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an indirect dictation question is rewritten into assistant dialogue", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "Can you tell me if we should ship this today?";

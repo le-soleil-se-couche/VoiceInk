@@ -146,6 +146,16 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return patterns.some((re) => re.test(text));
   }
 
+  private isChineseIndirectQuestion(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    return /^(?:我)?(?:想知道|想问(?:一下)?|想确认(?:一下)?|请问|麻烦你|麻烦帮我|帮我)(?:.{0,40})(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否|是不是|能不能|可不可以|要不要|会不会|有没有|行不行|对不对|好不好)/u.test(
+      text.trim()
+    );
+  }
+
   private isQuestionLikeText(text: string): boolean {
     if (!text || !text.trim()) {
       return false;
@@ -165,6 +175,10 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     ];
 
     if (zhQuestionPatterns.some((re) => re.test(normalized))) {
+      return true;
+    }
+
+    if (this.isChineseIndirectQuestion(text)) {
       return true;
     }
 
@@ -189,6 +203,27 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
+  }
+
+  private hasQuestionLeadInThenAnswerTail(source: string, candidate: string): boolean {
+    const normalizedSource = source.trim().replace(/[?？。.!！]+$/u, "");
+    const normalizedCandidate = candidate.trim();
+    if (
+      !normalizedSource ||
+      !normalizedCandidate ||
+      normalizedCandidate.length <= normalizedSource.length ||
+      !this.isQuestionLikeText(source) ||
+      !normalizedCandidate.startsWith(normalizedSource)
+    ) {
+      return false;
+    }
+
+    const tail = normalizedCandidate
+      .slice(normalizedSource.length)
+      .replace(/^[?？。.!！,，、；;:\-\s]+/u, "")
+      .trim();
+
+    return tail.length > 0;
   }
 
   private splitIntoClauses(text: string): string[] {
@@ -578,6 +613,30 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         }
       }
       return finalizeFallback("question_answer_append");
+    }
+
+    if (this.hasQuestionLeadInThenAnswerTail(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+      return finalizeFallback("question_answer_tail");
     }
 
     if (this.hasAssistantDialogueQuestionShift(source, candidate)) {
