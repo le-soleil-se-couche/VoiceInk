@@ -70,13 +70,7 @@ jobs:
           sudo apt-get install -y rpm libx11-dev libxtst-dev libatspi2.0-dev libglib2.0-dev
 
       - name: Build Application
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npm run build:renderer
-          else
-            npm run build:linux -- --publish never
-          fi
+        run: npm run build:linux -- --publish never
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
           VITE_NEON_AUTH_URL: ${{ vars.VITE_NEON_AUTH_URL }}
@@ -139,12 +133,12 @@ jobs:
       - name: Download windows-fast-paste.exe
         run: node scripts/download-windows-fast-paste.js
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Download windows-key-listener.exe
         run: node scripts/download-windows-key-listener.js
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Cache Electron
         uses: actions/cache@v4
@@ -154,13 +148,7 @@ jobs:
           restore-keys: windows-electron-
 
       - name: Build Application
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npm run build:renderer
-          else
-            npm run build:win -- --publish never
-          fi
+        run: npm run build:win -- --publish never
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
           VITE_NEON_AUTH_URL: ${{ vars.VITE_NEON_AUTH_URL }}
@@ -256,13 +244,7 @@ jobs:
           echo "APPLE_API_KEY=$API_KEY_PATH" >> $GITHUB_ENV
 
       - name: Build Application (${{ matrix.arch }})
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npm run build:renderer
-          else
-            npm run build:mac -- --${{ matrix.arch }} --publish never
-          fi
+        run: npm run build:mac -- --${{ matrix.arch }} --publish never
         env:
           TARGET_ARCH: ${{ matrix.arch }}
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}

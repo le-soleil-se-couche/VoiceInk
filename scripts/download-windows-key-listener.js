@@ -15,11 +15,11 @@ const path = require("path");
 const {
   downloadFile,
   extractZip,
-  fetchLatestRelease,
+  fetchLatestReleaseFromRepos,
   setExecutable,
 } = require("./lib/download-utils");
 
-const REPO = "OpenWhispr/openwhispr";
+const REPOS = ["le-soleil-se-couche/VoiceInk", "OpenWhispr/openwhispr"];
 const TAG_PREFIX = "windows-key-listener-v";
 const ZIP_NAME = "windows-key-listener-win32-x64.zip";
 const BINARY_NAME = "windows-key-listener.exe";
@@ -53,7 +53,8 @@ async function main() {
     console.log("\n[windows-key-listener] Fetching latest release...");
   }
   const tagToFind = VERSION_OVERRIDE || TAG_PREFIX;
-  const release = await fetchLatestRelease(REPO, { tagPrefix: tagToFind });
+  const repoMatch = await fetchLatestReleaseFromRepos(REPOS, { tagPrefix: tagToFind });
+  const release = repoMatch?.release;
 
   if (!release) {
     console.error("[windows-key-listener] Could not find a release matching prefix:", TAG_PREFIX);
@@ -62,6 +63,8 @@ async function main() {
     );
     return;
   }
+
+  console.log(`[windows-key-listener] Using release source: ${repoMatch.repo}`);
 
   // Find the zip asset
   const zipAsset = release.assets.find((a) => a.name === ZIP_NAME);

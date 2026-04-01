@@ -126,6 +126,16 @@ async function fetchLatestRelease(repo, options = {}) {
   }
 }
 
+async function fetchLatestReleaseFromRepos(repos, options = {}) {
+  for (const repo of repos) {
+    const release = await fetchLatestRelease(repo, options);
+    if (release) {
+      return { repo, release };
+    }
+  }
+  return null;
+}
+
 /**
  * Format a GitHub release response into a simplified object.
  * @param {object} release - GitHub release API response
@@ -337,6 +347,7 @@ module.exports = {
   extractArchive,
   extractZip,
   fetchLatestRelease,
+  fetchLatestReleaseFromRepos,
   findBinaryInDir,
   parseArgs,
   setExecutable,
