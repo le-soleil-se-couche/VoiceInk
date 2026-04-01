@@ -158,12 +158,13 @@
   },
   "deb": {
     "afterRemove": "resources/linux/after-remove.sh",
-    "depends": ["ydotool"],
     "fpm": [
       "--deb-suggests",
       "xdotool",
       "--deb-suggests",
       "wtype",
+      "--deb-suggests",
+      "ydotool",
       "--deb-recommends",
       "wl-clipboard"
     ]
