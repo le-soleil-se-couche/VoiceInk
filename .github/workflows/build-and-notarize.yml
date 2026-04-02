@@ -92,6 +92,10 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
+    env:
+      WHISPER_CPP_VERSION: "0.0.6"
+      LLAMA_CPP_VERSION: "b8631"
+      WINDOWS_TEXT_MONITOR_VERSION: "windows-text-monitor-v1.0.0"
     steps:
       - uses: actions/checkout@v4
 

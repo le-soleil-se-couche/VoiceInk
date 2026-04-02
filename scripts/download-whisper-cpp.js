@@ -48,7 +48,14 @@ async function getRelease() {
   if (cachedRelease) return cachedRelease;
 
   if (VERSION_OVERRIDE) {
-    cachedRelease = await fetchLatestRelease(WHISPER_CPP_REPO, { tagPrefix: VERSION_OVERRIDE });
+    cachedRelease = {
+      tag: VERSION_OVERRIDE,
+      url: `https://github.com/${WHISPER_CPP_REPO}/releases/tag/${VERSION_OVERRIDE}`,
+      assets: Object.values(BINARIES).map((config) => ({
+        name: config.zipName,
+        url: `https://github.com/${WHISPER_CPP_REPO}/releases/download/${VERSION_OVERRIDE}/${config.zipName}`,
+      })),
+    };
   } else {
     cachedRelease = await fetchLatestRelease(WHISPER_CPP_REPO);
   }
