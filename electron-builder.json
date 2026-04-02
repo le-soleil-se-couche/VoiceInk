@@ -201,6 +201,7 @@
     "owner": "le-soleil-se-couche",
     "repo": "VoiceInk",
     "private": false,
-    "releaseType": "draft"
+    "releaseType": "draft",
+    "updaterCacheDirName": "voiceink-updater"
   }
 }

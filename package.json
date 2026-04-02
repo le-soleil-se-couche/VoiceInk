@@ -1,5 +1,5 @@
 {
-  "name": "open-whispr",
+  "name": "voiceink",
   "version": "1.5.5",
   "description": "A desktop dictation application using whisper.cpp for speech-to-text transcription",
   "main": "main.js",
