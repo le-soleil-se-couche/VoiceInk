@@ -51,11 +51,39 @@ const BIN_DIR = path.join(__dirname, "..", "resources", "bin");
 
 let cachedRelease = null;
 
+function buildVersionOverrideAssetName(key, version) {
+  switch (key) {
+    case "darwin-arm64":
+      return `llama-${version}-bin-macos-arm64.tar.gz`;
+    case "darwin-x64":
+      return `llama-${version}-bin-macos-x64.tar.gz`;
+    case "win32-x64-cpu":
+      return `llama-${version}-bin-win-cpu-x64.zip`;
+    case "linux-x64-cpu":
+      return `llama-${version}-bin-ubuntu-x64.tar.gz`;
+    default:
+      return null;
+  }
+}
+
 async function getRelease() {
   if (cachedRelease) return cachedRelease;
 
   if (VERSION_OVERRIDE) {
-    cachedRelease = await fetchLatestRelease(LLAMA_CPP_REPO, { tagPrefix: VERSION_OVERRIDE });
+    cachedRelease = {
+      tag: VERSION_OVERRIDE,
+      url: `https://github.com/${LLAMA_CPP_REPO}/releases/tag/${VERSION_OVERRIDE}`,
+      assets: Object.entries(BINARIES)
+        .map(([key]) => {
+          const assetName = buildVersionOverrideAssetName(key, VERSION_OVERRIDE);
+          if (!assetName) return null;
+          return {
+            name: assetName,
+            url: `https://github.com/${LLAMA_CPP_REPO}/releases/download/${VERSION_OVERRIDE}/${assetName}`,
+          };
+        })
+        .filter(Boolean),
+    };
   } else {
     cachedRelease = await fetchLatestRelease(LLAMA_CPP_REPO);
   }

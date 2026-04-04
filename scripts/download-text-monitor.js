@@ -61,8 +61,18 @@ async function main() {
   } else {
     console.log(`\n[${label}] Fetching latest release...`);
   }
-  const tagToFind = versionOverride || tagPrefix;
-  const release = await fetchLatestRelease(REPO, { tagPrefix: tagToFind });
+  const release = versionOverride
+    ? {
+        tag: versionOverride,
+        url: `https://github.com/${REPO}/releases/tag/${versionOverride}`,
+        assets: [
+          {
+            name: archiveName,
+            url: `https://github.com/${REPO}/releases/download/${versionOverride}/${archiveName}`,
+          },
+        ],
+      }
+    : await fetchLatestRelease(REPO, { tagPrefix });
 
   if (!release) {
     console.error(`[${label}] Could not find a release matching prefix:`, tagPrefix);

@@ -92,6 +92,10 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
+    env:
+      WHISPER_CPP_VERSION: "0.0.6"
+      LLAMA_CPP_VERSION: "b8631"
+      WINDOWS_TEXT_MONITOR_VERSION: "windows-text-monitor-v1.0.0"
     steps:
       - uses: actions/checkout@v4
 
@@ -139,12 +143,12 @@ jobs:
       - name: Download windows-fast-paste.exe
         run: node scripts/download-windows-fast-paste.js
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Download windows-key-listener.exe
         run: node scripts/download-windows-key-listener.js
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Cache Electron
         uses: actions/cache@v4
@@ -206,7 +210,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: resources/bin
-          key: macos-${{ matrix.arch }}-bin-${{ hashFiles('scripts/download-*.js', 'scripts/build-globe-listener.js', 'resources/macos-globe-listener.swift', 'scripts/build-macos-fast-paste.js', 'resources/macos-fast-paste.swift') }}
+          key: macos-${{ matrix.arch }}-bin-${{ hashFiles('scripts/download-*.js', 'scripts/build-globe-listener.js', 'resources/macos-globe-listener.swift', 'scripts/build-macos-fast-paste.js', 'resources/macos-fast-paste.swift', 'scripts/build-macos-text-monitor.js', 'resources/macos-text-monitor.swift') }}
 
       - name: Download whisper.cpp binaries
         run: node scripts/download-whisper-cpp.js --current --platform darwin --arch ${{ matrix.arch }}

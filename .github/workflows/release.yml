@@ -38,17 +38,17 @@ jobs:
       - name: Download whisper.cpp binaries
         run: node scripts/download-whisper-cpp.js --current
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Download llama-server binaries
         run: node scripts/download-llama-server.js --current
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Download sherpa-onnx binaries
         run: node scripts/download-sherpa-onnx.js --current
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Cache Electron
         uses: actions/cache@v4
@@ -57,21 +57,25 @@ jobs:
           key: linux-electron-${{ hashFiles('**/package-lock.json') }}
           restore-keys: linux-electron-
 
-      - name: Install Linux packaging dependencies
+      - name: Install Linux build and packaging dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm
+          sudo apt-get install -y rpm libx11-dev libxtst-dev libatspi2.0-dev libglib2.0-dev
 
       - name: Build Application
         run: npm run build:linux -- --publish always
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
           VITE_NEON_AUTH_URL: ${{ vars.VITE_NEON_AUTH_URL }}
           VITE_OPENWHISPR_API_URL: ${{ vars.VITE_OPENWHISPR_API_URL }}
           VITE_OPENWHISPR_OAUTH_CALLBACK_URL: ${{ vars.VITE_OPENWHISPR_OAUTH_CALLBACK_URL }}
 
   build-windows:
     runs-on: windows-latest
+    env:
+      WHISPER_CPP_VERSION: "0.0.6"
+      LLAMA_CPP_VERSION: "b8631"
+      WINDOWS_TEXT_MONITOR_VERSION: "windows-text-monitor-v1.0.0"
     steps:
       - uses: actions/checkout@v4
 
@@ -93,32 +97,32 @@ jobs:
       - name: Download whisper.cpp binaries
         run: node scripts/download-whisper-cpp.js --current
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Download llama-server binaries
         run: node scripts/download-llama-server.js --current
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Download sherpa-onnx binaries
         run: node scripts/download-sherpa-onnx.js --current
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Download nircmd.exe
         run: node scripts/download-nircmd.js
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Download windows-fast-paste.exe
         run: node scripts/download-windows-fast-paste.js
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Download windows-key-listener.exe
         run: node scripts/download-windows-key-listener.js
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Cache Electron
         uses: actions/cache@v4
@@ -130,7 +134,8 @@ jobs:
       - name: Build Application
         run: npm run build:win -- --publish always
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
           VITE_NEON_AUTH_URL: ${{ vars.VITE_NEON_AUTH_URL }}
           VITE_OPENWHISPR_API_URL: ${{ vars.VITE_OPENWHISPR_API_URL }}
           VITE_OPENWHISPR_OAUTH_CALLBACK_URL: ${{ vars.VITE_OPENWHISPR_OAUTH_CALLBACK_URL }}
@@ -161,22 +166,22 @@ jobs:
         uses: actions/cache@v4
         with:
           path: resources/bin
-          key: macos-${{ matrix.arch }}-bin-${{ hashFiles('scripts/download-*.js', 'scripts/build-globe-listener.js', 'resources/macos-globe-listener.swift', 'scripts/build-macos-fast-paste.js', 'resources/macos-fast-paste.swift') }}
+          key: macos-${{ matrix.arch }}-bin-${{ hashFiles('scripts/download-*.js', 'scripts/build-globe-listener.js', 'resources/macos-globe-listener.swift', 'scripts/build-macos-fast-paste.js', 'resources/macos-fast-paste.swift', 'scripts/build-macos-text-monitor.js', 'resources/macos-text-monitor.swift') }}
 
       - name: Download whisper.cpp binaries
         run: node scripts/download-whisper-cpp.js --current --platform darwin --arch ${{ matrix.arch }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Download llama-server binaries
         run: node scripts/download-llama-server.js --current --platform darwin --arch ${{ matrix.arch }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Download sherpa-onnx binaries
         run: node scripts/download-sherpa-onnx.js --current --platform darwin --arch ${{ matrix.arch }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Cache Electron
         uses: actions/cache@v4
@@ -213,7 +218,7 @@ jobs:
         run: npm run build:mac -- --${{ matrix.arch }} --publish always
         env:
           TARGET_ARCH: ${{ matrix.arch }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
           VITE_NEON_AUTH_URL: ${{ vars.VITE_NEON_AUTH_URL }}
           VITE_OPENWHISPR_API_URL: ${{ vars.VITE_OPENWHISPR_API_URL }}
           VITE_OPENWHISPR_OAUTH_CALLBACK_URL: ${{ vars.VITE_OPENWHISPR_OAUTH_CALLBACK_URL }}
@@ -225,10 +230,11 @@ jobs:
 
       - name: Upload arch-specific update metadata
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
           cp dist/latest-mac.yml "dist/latest-${{ matrix.arch }}-mac.yml"
-          gh release upload "${{ github.ref_name }}" "dist/latest-${{ matrix.arch }}-mac.yml" --clobber
+          RELEASE_TAG="${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', inputs.version) }}"
+          gh release upload "$RELEASE_TAG" "dist/latest-${{ matrix.arch }}-mac.yml" --clobber
 
       - name: Cleanup Certificates
         if: always()
