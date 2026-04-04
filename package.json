@@ -69,7 +69,8 @@
     "desktop-app"
   ],
   "author": {
-    "name": "VoiceInk Contributors"
+    "name": "VoiceInk Contributors",
+    "email": "142781844+le-soleil-se-couche@users.noreply.github.com"
   },
   "license": "MIT",
   "devDependencies": {
