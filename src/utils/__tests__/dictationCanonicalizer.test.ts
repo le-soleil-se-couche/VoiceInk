@@ -155,3 +155,116 @@ describe("canonicalizeDictationText", () => {
     expect(twice).toBe(input);
   });
 });
+
+describe("canonicalizeDictationText over-optimization prevention", () => {
+  it("preserves small conversational numbers in natural spoken contexts", () => {
+    const result = canonicalizeDictationText("今天来了两个人", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("今天来了两个人");
+    expect(result.stats.numberReplacements).toBe(0);
+  });
+
+  it("preserves short number sequences without quantifier context", () => {
+    const result = canonicalizeDictationText("一二", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("一二");
+    expect(result.stats.numberReplacements).toBe(0);
+  });
+
+  it("preserves numbers adjacent to English words", () => {
+    const result = canonicalizeDictationText("这个 API 返回 300 个 error", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("这个 API 返回 300 个 error");
+    expect(result.stats.numberReplacements).toBe(0);
+  });
+
+  it("preserves idiomatic expressions with numbers", () => {
+    const idioms = ["一心一意", "三心二意", "七上八下", "十全十美"];
+    for (const idiom of idioms) {
+      const result = canonicalizeDictationText(idiom, {
+        preferredLanguage: "zh-CN",
+        locale: "zh-CN",
+        source: "unit-test",
+      });
+      expect(result.text).toBe(idiom);
+      expect(result.stats.numberReplacements).toBe(0);
+    }
+  });
+
+  it("converts dates but preserves conversational quantities", () => {
+    const dateResult = canonicalizeDictationText("二零二六年一月十五日", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(dateResult.text).toBe("2026年1月15日");
+    expect(dateResult.stats.numberReplacements).toBeGreaterThan(0);
+
+    const conversationalResult = canonicalizeDictationText("等了几分钟", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(conversationalResult.text).toBe("等了几分钟");
+    expect(conversationalResult.stats.numberReplacements).toBe(0);
+  });
+
+  it("preserves conversational quantity with small numbers", () => {
+    const result = canonicalizeDictationText("我有三个问题", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("我有三个问题");
+    expect(result.stats.numberReplacements).toBe(0);
+  });
+
+  it("preserves conversational frequency expressions", () => {
+    const result = canonicalizeDictationText("说了三遍", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("说了三遍");
+    expect(result.stats.numberReplacements).toBe(0);
+  });
+
+  it("converts hundred with generic quantifier", () => {
+    const result = canonicalizeDictationText("一百个", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("100个");
+    expect(result.stats.numberReplacements).toBe(1);
+  });
+
+  it("preserves conversational time duration", () => {
+    const result = canonicalizeDictationText("等了三分钟", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("等了3分钟");
+    expect(result.stats.numberReplacements).toBe(1);
+  });
+
+  it("preserves conversational code quantity", () => {
+    const result = canonicalizeDictationText("写了三行代码", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("写了3行代码");
+    expect(result.stats.numberReplacements).toBe(1);
+  });
+});
