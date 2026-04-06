@@ -141,6 +141,7 @@ jobs:
           VITE_OPENWHISPR_OAUTH_CALLBACK_URL: ${{ vars.VITE_OPENWHISPR_OAUTH_CALLBACK_URL }}
 
   build-macos:
+    if: false
     runs-on: macos-latest
     strategy:
       fail-fast: false

@@ -179,6 +179,7 @@ jobs:
           retention-days: 7
 
   build-macos:
+    if: false
     runs-on: macos-latest
     strategy:
       fail-fast: false
