@@ -80,7 +80,17 @@ function getContextInstruction(context?: ContextClassification): string {
       ? "Likely direct instruction mode."
       : "Likely cleanup mode; stay anchored to user content.";
 
-  return `Context hint: ${contextLabels[context.context]}.${appSuffix} ${focusHints[context.context]} ${intentHint}`;
+  let instruction = `Context hint: ${contextLabels[context.context]}.${appSuffix} ${focusHints[context.context]} ${intentHint}`;
+
+  if (context.context === "code") {
+    instruction +=
+      "\n\nCODE CONTEXT PROTECTION:\n" +
+      "- Preserve command names, module names, product names, function names, and technical identifiers exactly as spoken.\n" +
+      "- Do not rewrite code snippets, paths, or CLI commands into natural language.\n" +
+      "- Keep technical terminology intact even if it sounds like regular words.";
+  }
+
+  return instruction;
 }
 
 function getDictionaryEnforcementInstruction(uiLanguage?: string): string {

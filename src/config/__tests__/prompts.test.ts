@@ -150,3 +150,89 @@ describe("getSystemPrompt question-intent safety", () => {
     expect(prompt).not.toContain("QUESTION INTENT SAFETY:");
   });
 });
+
+describe("getSystemPrompt code context protection", () => {
+  it("adds code context protection guidance when context is code", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:code"],
+      targetApp: {
+        appName: "VSCode",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "run npm install", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Preserve command names, module names, product names");
+    expect(prompt).toContain("Do not rewrite code snippets, paths, or CLI commands");
+    expect(prompt).toContain("Keep technical terminology intact");
+  });
+
+  it("does not add code context protection for non-code contexts", () => {
+    const context = {
+      context: "email" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:email"],
+      targetApp: {
+        appName: "Outlook",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "send an email", "en", context);
+
+    expect(prompt).not.toContain("CODE CONTEXT PROTECTION:");
+  });
+
+  it("does not add code context protection when context is undefined", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "run npm install", "en");
+
+    expect(prompt).not.toContain("CODE CONTEXT PROTECTION:");
+  });
+
+  it("includes code context protection alongside other safety instructions", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:code"],
+      targetApp: {
+        appName: "VSCode",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en",
+      "should we run npm install or yarn add",
+      "en",
+      context
+    );
+
+    expect(prompt).toContain("STRICT TRANSCRIPTION SAFETY:");
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+  });
+});
