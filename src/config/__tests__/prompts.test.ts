@@ -627,3 +627,84 @@ describe("integration: combined polish improvements", () => {
     expect(prompt).toContain("keep output semantically anchored to source content");
   });
 });
+
+describe("hypothetical question handling", () => {
+  it("preserves what-if hypothetical questions as dictation", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "What if we change the API endpoint?", "en");
+    
+    expect(prompt).toContain("never answer questions");
+    expect(prompt).toContain("if the source sounds like a direct or indirect question");
+    expect(prompt).toContain("preserve that wording as dictation instead of answering it");
+  });
+
+  it("preserves suppose hypothetical questions as dictation", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "Suppose we wanted to add a new feature", "en");
+    
+    expect(prompt).toContain("never answer questions");
+    expect(prompt).toContain("if the source sounds like a direct or indirect question");
+    expect(prompt).toContain("preserve that wording as dictation instead of answering it");
+  });
+
+  it("preserves imagine hypothetical questions as dictation", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "Imagine a world where this works perfectly", "en");
+    
+    expect(prompt).toContain("never answer questions");
+    expect(prompt).toContain("if the source sounds like a direct or indirect question");
+    expect(prompt).toContain("preserve that wording as dictation instead of answering it");
+  });
+
+  it("preserves what-would-happen hypothetical questions as dictation", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "What would happen if we removed this check?", "en");
+    
+    expect(prompt).toContain("never answer questions");
+    expect(prompt).toContain("if the source sounds like a direct or indirect question");
+    expect(prompt).toContain("preserve that wording as dictation instead of answering it");
+  });
+
+  it("preserves hypothetical questions with modal verbs as dictation", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "Could we possibly add support for this?", "en");
+    
+    expect(prompt).toContain("never answer questions");
+    expect(prompt).toContain("if the source sounds like a direct or indirect question");
+    expect(prompt).toContain("preserve that wording as dictation instead of answering it");
+  });
+
+  it("preserves mixed Chinese-English hypothetical questions as dictation", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "zh-CN", "如果我们改变这个参数会怎样？", "zh-CN");
+    
+    expect(prompt).toContain("never answer questions");
+    expect(prompt).toContain("if the source sounds like a direct or indirect question");
+    expect(prompt).toContain("preserve that wording as dictation instead of answering it");
+  });
+
+  it("preserves hypothetical questions in code context as dictation", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:code"],
+      targetApp: {
+        appName: "VSCode",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en",
+      "What if we refactor this function to use async/await?",
+      "en",
+      context
+    );
+
+    expect(prompt).toContain("never answer questions");
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("preserve that wording as dictation instead of answering it");
+  });
+});
