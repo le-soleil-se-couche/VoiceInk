@@ -155,3 +155,131 @@ describe("canonicalizeDictationText", () => {
     expect(twice).toBe(input);
   });
 });
+
+describe("English tech term protection", () => {
+  it("preserves API acronym in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("调用这个 API 接口", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("调用这个 API 接口");
+  });
+
+  it("preserves SDK acronym in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("使用这个 SDK 构建应用", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("使用这个 SDK 构建应用");
+  });
+
+  it("preserves multiple tech acronyms in one sentence", () => {
+    const result = canonicalizeDictationText("通过 HTTP 请求获取 JSON 数据", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("通过 HTTP 请求获取 JSON 数据");
+  });
+
+  it("preserves IDE and editor names", () => {
+    const result = canonicalizeDictationText("在 VSCode 或 IDE 中打开", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("在 VSCode 或 IDE 中打开");
+  });
+
+  it("preserves framework and library names", () => {
+    const result = canonicalizeDictationText("使用 React 和 TypeScript 开发", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("使用 React 和 TypeScript 开发");
+  });
+
+  it("preserves cloud platform names", () => {
+    const result = canonicalizeDictationText("部署到 AWS 或 Azure", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("部署到 AWS 或 Azure");
+  });
+
+  it("preserves protocol names", () => {
+    const result = canonicalizeDictationText("通过 REST API 和 GraphQL 查询", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("通过 REST API 和 GraphQL 查询");
+  });
+
+  it("preserves tool names while still normalizing numbers", () => {
+    const result = canonicalizeDictationText("用 Webpack 打包三百个文件", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 Webpack 打包300个文件");
+  });
+
+  it("preserves GitHub and GitLab names", () => {
+    const result = canonicalizeDictationText("推送到 GitHub 或 GitLab", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("推送到 GitHub 或 GitLab");
+  });
+
+  it("preserves npm and package manager names", () => {
+    const result = canonicalizeDictationText("用 npm 安装依赖", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 npm 安装依赖");
+  });
+
+  it("preserves Docker and Kubernetes names", () => {
+    const result = canonicalizeDictationText("用 Docker 和 Kubernetes 部署", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 Docker 和 Kubernetes 部署");
+  });
+
+  it("preserves language names like Python Java Go", () => {
+    const result = canonicalizeDictationText("用 Python Java 和 Go 编写", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 Python Java 和 Go 编写");
+  });
+
+  it("preserves testing framework names", () => {
+    const result = canonicalizeDictationText("用 Jest 和 Vitest 测试", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 Jest 和 Vitest 测试");
+  });
+
+  it("preserves URL and web tech terms", () => {
+    const result = canonicalizeDictationText("检查 URL 和 HTTP 状态", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("检查 URL 和 HTTP 状态");
+  });
+});
