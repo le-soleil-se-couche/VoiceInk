@@ -113,7 +113,7 @@
       "zip"
     ],
     "icon": "src/assets/icon.icns",
-    "gatekeeperAssess": false,
+    "gatekeeperAssess": true,
     "hardenedRuntime": true,
     "entitlements": "resources/mac/entitlements.mac.plist",
     "entitlementsInherit": "resources/mac/entitlements.mac.plist",
@@ -121,6 +121,9 @@
       "LSUIElement": false,
       "NSMicrophoneUsageDescription": "VoiceInk needs microphone access for speech-to-text transcription.",
       "NSAccessibilityUsageDescription": "VoiceInk needs accessibility permissions to paste transcribed text into other applications."
+    },
+    "notarize": {
+      "teamId": ""
     }
   },
   "win": {
@@ -135,7 +138,12 @@
         "to": "bin/nircmd.exe"
       }
     ],
-    "artifactName": "${productName}-${version}-Windows-${arch}.${ext}"
+    "artifactName": "${productName}-${version}-Windows-${arch}.${ext}",
+    "sign": "./scripts/sign-windows.exe",
+    "signingHashAlgorithms": [
+      "SHA256"
+    ],
+    "certificateSubjectFile": "cert.txt"
   },
   "linux": {
     "target": [
@@ -146,7 +154,8 @@
     ],
     "icon": "src/assets/icon.png",
     "category": "Utility",
-    "artifactName": "${productName}-${version}-Linux-${arch}.${ext}"
+    "artifactName": "${productName}-${version}-Linux-${arch}.${ext}",
+    "maintainer": "VoiceInk Team <support@voiceink.app>"
   },
   "flatpak": {
     "runtime": "org.freedesktop.Platform",
@@ -199,7 +208,8 @@
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
     "include": "resources/nsis/cleanup-models.nsh",
-    "artifactName": "${productName}-${version}-Windows-${arch}.${ext}"
+    "artifactName": "${productName}-${version}-Windows-${arch}.${ext}",
+    "signAndEditExecutable": true
   },
   "dmg": {
     "title": "VoiceInk",
@@ -208,7 +218,8 @@
       "width": 540,
       "height": 380
     },
-    "artifactName": "${productName}-${version}-macOS-${arch}.${ext}"
+    "artifactName": "${productName}-${version}-macOS-${arch}.${ext}",
+    "signOverwrite": true
   },
   "publish": {
     "provider": "github",
