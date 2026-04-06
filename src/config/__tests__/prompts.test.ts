@@ -270,3 +270,145 @@ describe("getSystemPrompt mixed-language preservation", () => {
     expect(prompt).not.toContain("preserve English words, acronyms, product names");
   });
 });
+
+describe("getSystemPrompt context-specific focus hints", () => {
+  it("includes email-specific focus hint for email context", () => {
+    const context = {
+      context: "email" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:email"],
+      targetApp: {
+        appName: "Outlook",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "send an email", "en", context);
+
+    expect(prompt).toContain("Context hint: email drafting");
+    expect(prompt).toContain("Preserve recipient intent and structure it like a clear, professional email");
+  });
+
+  it("includes chat-specific focus hint for chat context", () => {
+    const context = {
+      context: "chat" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:chat"],
+      targetApp: {
+        appName: "Slack",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "send a message", "en", context);
+
+    expect(prompt).toContain("Context hint: chat/message writing");
+    expect(prompt).toContain("Keep it concise and conversational, but still polished");
+  });
+
+  it("includes document-specific focus hint for document context", () => {
+    const context = {
+      context: "document" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:document"],
+      targetApp: {
+        appName: "Notion",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "write a document", "en", context);
+
+    expect(prompt).toContain("Context hint: document or notes writing");
+    expect(prompt).toContain("Preserve headings, bullets, and list structure when they aid readability");
+  });
+
+  it("includes general writing focus hint for general context", () => {
+    const context = {
+      context: "general" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: null,
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "write something", "en", context);
+
+    expect(prompt).toContain("Context hint: general writing");
+    expect(prompt).toContain("Keep output natural and concise");
+  });
+
+  it("includes target app name in context hint when available", () => {
+    const context = {
+      context: "email" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:email"],
+      targetApp: {
+        appName: "Spark",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "send an email", "en", context);
+
+    expect(prompt).toContain("Target app: Spark");
+  });
+
+  it("includes intent hint for cleanup mode", () => {
+    const context = {
+      context: "general" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: null,
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "write something", "en", context);
+
+    expect(prompt).toContain("Likely cleanup mode; stay anchored to user content");
+  });
+
+  it("includes intent hint for instruction mode", () => {
+    const context = {
+      context: "general" as const,
+      intent: "instruction" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: null,
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "do something", "en", context);
+
+    expect(prompt).toContain("Likely direct instruction mode");
+  });
+});
