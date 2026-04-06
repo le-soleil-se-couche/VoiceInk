@@ -58,6 +58,14 @@ function getContextInstruction(context?: ContextClassification): string {
 
   let instruction = `Context hint: ${contextLabels[context.context]}.${appSuffix} ${focusHints[context.context]} ${intentHint}`;
 
+  if (context.context === "email") {
+    instruction +=
+      "\n\nEMAIL PROTECTION:\n" +
+      "- Preserve email addresses (to/from/cc), subject lines, and signatures exactly.\n" +
+      "- Do not rewrite greeting/closing conventions (Dear X, Hi X, Best regards, Thanks, etc.).\n" +
+      "- Keep quoted reply text and inline replies anchored to original structure.";
+  }
+
   if (context.context === "code") {
     instruction +=
       "\n\nCODE CONTEXT PROTECTION:\n" +
