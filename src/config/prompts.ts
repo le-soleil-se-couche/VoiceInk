@@ -60,9 +60,14 @@ function getContextInstruction(context?: ContextClassification): string {
     context.context === "email"
       ? "\n\nEMAIL PROTECTION:\n- Preserve email addresses (to/from/cc), subject lines, and signatures exactly.\n- Do not rewrite greeting/closing conventions (Dear X, Hi X, Best regards, Thanks, etc.).\n- Keep quoted reply text and inline replies anchored to original structure."
       : "";
+  const chatProtection =
+    context.context === "chat"
+      ? "\n\nCHAT PROTECTION:\n- Preserve informal chat conventions (hey, yo, lol, btw, asap, fyi).\n- Keep emoji descriptions and emoticons intact.\n- Do not over-polish casual abbreviations or internet slang.\n- Maintain message-style brevity and conversational tone."
+      : "";
 
   const emailProtectionSuffix = context.context === "email" ? emailProtection : "";
-  return `Context hint: ${contextLabels[context.context]}.${appSuffix} ${focusHints[context.context]} ${intentHint}${emailProtectionSuffix}`;
+  const chatProtectionSuffix = context.context === "chat" ? chatProtection : "";
+  return `Context hint: ${contextLabels[context.context]}.${appSuffix} ${focusHints[context.context]} ${intentHint}${emailProtectionSuffix}${chatProtectionSuffix}`;
 }
 
 function getDictionaryEnforcementInstruction(uiLanguage?: string): string {

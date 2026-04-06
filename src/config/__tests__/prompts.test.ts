@@ -79,3 +79,54 @@ describe("email context protection", () => {
     expect(prompt).not.toContain("EMAIL PROTECTION");
   });
 });
+
+describe("chat context protection", () => {
+  it("includes chat protection instructions when context is chat", () => {
+    const context = {
+      context: "chat" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:chat"],
+      targetApp: {
+        appName: "Slack",
+        processId: 1234,
+        platform: "darwin" as const,
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).toContain("CHAT PROTECTION");
+    expect(prompt).toContain("informal chat conventions");
+    expect(prompt).toContain("hey, yo, lol, btw, asap, fyi");
+    expect(prompt).toContain("emoji descriptions and emoticons");
+    expect(prompt).toContain("casual abbreviations or internet slang");
+    expect(prompt).toContain("message-style brevity and conversational tone");
+  });
+
+  it("does not include chat protection when context is not chat", () => {
+    const context = {
+      context: "general" as const,
+      intent: "cleanup" as const,
+      confidence: 0.6,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: {
+        appName: null,
+        processId: null,
+        platform: "darwin" as const,
+        source: "renderer-fallback" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).not.toContain("CHAT PROTECTION");
+  });
+});
