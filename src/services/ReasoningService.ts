@@ -84,22 +84,25 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const patterns = [
-      /(作为|身为).{0,10}(ai|语言模型|助手)/i,
-      /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
-      /(不用担心|别担心|我会尽力|我可以帮你|请告诉我|请问你|你想要).{0,40}/,
-      /(对不起|抱歉).{0,20}(我会|我将|让我|我们)/,
-      /你想要.{0,20}(什么|哪一个|哪两个|哪些)/,
-      /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
+      /(作为 | 身为).{0,10}(ai|语言模型 | 助手)/i,
+      /(我无法 | 不能 | 不会 | 不可以).{0,18}(提供 | 协助 | 回答 | 满足 | 处理)/,
+      /(不用担心 | 别担心 | 我会尽力 | 我可以帮你 | 请告诉我 | 请问你 | 你想要).{0,40}/,
+      /(对不起 | 抱歉).{0,20}(我会 | 我将 | 让我 | 我们)/,
+      /你想要.{0,20}(什么 | 哪一个 | 哪两个 | 哪些)/,
+      /如果您想.{0,20}(测试 | 试试 | 尝试).{0,30}(语音转文字 | 转录 | 句子 | 示例)/,
       /\b(as an ai|as a language model)\b/i,
       /\b(i\s*(can't|cannot|am unable|won't))\b/i,
       /\b(i can help|don't worry|please tell me|what can i)\b/i,
       /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
       /\b(you can try).{0,20}(sentence|example)\b/i,
+      /^(?:sure|of course|certainly|absolutely|no problem)[!,]?\s*/i,
+      /^(?:好的|没问题)[,，]?\s*/u,
+      /\b(i'd be happy to|i would be happy to)\b/i,
+      /\b(let me)\b/i,
     ];
 
     return patterns.some((re) => re.test(text));
   }
-
   private isQuestionLikeText(text: string): boolean {
     if (!text || !text.trim()) {
       return false;

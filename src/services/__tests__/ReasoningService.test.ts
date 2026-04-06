@@ -351,3 +351,125 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(candidate);
   });
 });
+
+describe("ReasoningService subtle answer patterns", () => {
+  it("falls back when output starts with 'Sure' lead-in", () => {
+    const source = "update the meeting notes";
+    const candidate = "Sure, I'll update the meeting notes.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output starts with 'Of course' lead-in", () => {
+    const source = "send the email to john";
+    const candidate = "Of course, I'll send the email to John.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output starts with 'Certainly' lead-in", () => {
+    const source = "create a new task";
+    const candidate = "Certainly! I'll create a new task for you.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output starts with 'Absolutely' lead-in", () => {
+    const source = "schedule the call";
+    const candidate = "Absolutely, let me schedule the call.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output starts with Chinese affirmative lead-in '好的'", () => {
+    const source = "更新会议记录";
+    const candidate = "好的，我来更新会议记录。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output starts with Chinese affirmative lead-in '没问题'", () => {
+    const source = "帮我发邮件";
+    const candidate = "没问题，我会帮你发邮件。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps cleanup that doesn't have answer-like lead-in", () => {
+    const source = "um can you uh update the meeting notes";
+    const candidate = "Update the meeting notes.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("falls back when output contains 'I'd be happy to' phrase", () => {
+    const source = "review the document";
+    const candidate = "I'd be happy to review the document.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains 'Let me' assistant phrase", () => {
+    const source = "check the schedule";
+    const candidate = "Let me check the schedule for you.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output starts with 'No problem' lead-in", () => {
+    const source = "add it to the calendar";
+    const candidate = "No problem, I'll add it to the calendar.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+});
