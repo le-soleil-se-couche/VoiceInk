@@ -299,3 +299,62 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 });
+
+describe("ReasoningService answerization detection", () => {
+  it("detects classic AI assistant self-reference patterns", () => {
+    const patterns = [
+      "As an AI assistant, I can help you with that.",
+      "作为 AI 助手，我可以帮你处理这个。",
+      "I am a language model and cannot execute commands.",
+      "我是一个语言模型，无法执行此操作。",
+    ];
+
+    patterns.forEach((text) => {
+      const result = ReasoningService.enforceStrictMode("test", text, { strictMode: true });
+      expect(result).toBe("test");
+    });
+  });
+
+  it("detects refusal patterns with offers to help", () => {
+    const patterns = [
+      "I cannot do that, but I can help you draft the text.",
+      "我不能执行这个命令，但我可以帮你整理这句话。",
+      "I'm unable to assist with that request. However, I can summarize.",
+      "Don't worry, I'm here to help with your transcription.",
+    ];
+
+    patterns.forEach((text) => {
+      const result = ReasoningService.enforceStrictMode("test", text, { strictMode: true });
+      expect(result).toBe("test");
+    });
+  });
+
+  it("detects instructional meta-commentary about the tool itself", () => {
+    const patterns = [
+      "If you want to test VoiceInk, try speaking clearly.",
+      "You can try dictating a sample sentence to see how it works.",
+      "To use this transcription tool, press the hotkey and speak.",
+      "如果您想试试语音转文字，请对着麦克风说话。",
+    ];
+
+    patterns.forEach((text) => {
+      const result = ReasoningService.enforceStrictMode("test", text, { strictMode: true });
+      expect(result).toBe("test");
+    });
+  });
+
+  it("allows normal cleanup output that is not assistant-like", () => {
+    const normalOutputs = [
+      "What is the capital of France?",
+      "Should we ship this today?",
+      "这个需求我们今天发还是明天发比较稳妥",
+      "The meeting is scheduled for 3 PM tomorrow.",
+      "Please review the attached document.",
+    ];
+
+    normalOutputs.forEach((text) => {
+      const result = ReasoningService.enforceStrictMode(text, text, { strictMode: true });
+      expect(result).toBe(text);
+    });
+  });
+});
