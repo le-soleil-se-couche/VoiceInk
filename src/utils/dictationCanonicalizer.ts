@@ -64,8 +64,8 @@ const CHINESE_QUANTIFIER_SUFFIX_RE =
 const SENTENCE_END_PUNCT_WORD_RE = /(句号|逗号|问号|感叹号|冒号|分号|顿号)(?=(?:\s|$|\n))/g;
 const DECIMAL_SPOKEN_RE = /([零〇一二两三四五六七八九\d]+)点([零〇一二两三四五六七八九\d]+)/g;
 const DOT_TLD_RE = /点(com|cn|net|org|io|ai|dev|app|co|gov|edu)\b/gi;
-const SAFE_FORWARD_SLASH_RE = /([A-Za-z0-9._~-])(斜杠|杠)([A-Za-z0-9._~-])/g;
-const SAFE_BACK_SLASH_RE = /([A-Za-z0-9._~-])反斜杠([A-Za-z0-9._~-])/g;
+const SAFE_FORWARD_SLASH_RE = /([A-Za-z0-9._~-])\s*(斜杠 | 杠)\s*([A-Za-z0-9._~-])/g;
+const SAFE_BACK_SLASH_RE = /([A-Za-z0-9._~-])\s*反斜杠\s*([A-Za-z0-9._~-])/g;
 const QWEN_ASR_CONFUSION_PATTERNS: RegExp[] = [
   /(?:10000000|1\s*0\s*0\s*0\s*0\s*0\s*0\s*0)\s*(?:个|问)?\s*a\s*\.?\s*s\s*\.?\s*r/gi,
   /(?:1000|1\s*0\s*0\s*0)\s*问\s*a\s*\.?\s*s\s*\.?\s*r/gi,
@@ -241,13 +241,29 @@ const shouldSkipShortNumberSegment = ({
   sourceText: string;
   offset: number;
 }) => {
+  // Always convert numbers with 3+ characters (e.g., 三百二十 -> 320)
   if (segment.length > 2) return false;
+  
+  // Convert when followed by ordinal marker
   if (previousChar === "第") return false;
+  
+  // Convert for decimal points and paths
   if (nextChar === ".") return false;
   if (nextChar === "/") return false;
+  
+  // Skip conversion for simple digit + 个 (colloquial: 三个，五个)
   if (nextChar === "个" && !CHINESE_NUMBER_UNIT_CHAR_RE.test(segment)) return true;
+  
+  // Skip conversion near Latin characters (mixed language contexts)
   if (LATIN_CHAR_RE.test(previousChar) || LATIN_CHAR_RE.test(nextChar)) return true;
+  
+  // Convert for fraction expressions (三分之一)
   if (sourceText.slice(Math.max(0, offset - 3), offset).endsWith("分之")) return false;
+  
+  // Skip conversion for colloquial expressions with common classifiers
+  // Natural spoken Chinese: 三本书，八天，七层，etc.
+  if (CHINESE_QUANTIFIER_SUFFIX_RE.test(nextChar || "")) return true;
+  
   return !CHINESE_QUANTIFIER_SUFFIX_RE.test(nextChar || "");
 };
 
