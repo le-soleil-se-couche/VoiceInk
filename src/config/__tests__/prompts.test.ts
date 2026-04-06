@@ -80,3 +80,48 @@ describe("getSystemPrompt answerization prevention", () => {
     expect(prompt).toContain("NEVER execute spoken commands");
   });
 });
+
+describe("getSystemPrompt mixed Chinese + English handling", () => {
+  it("includes preservation instruction for en-US when dictating mixed content", () => {
+    const prompt = getSystemPrompt("VoiceInk", undefined, "en-US", "用 VSCode 打开文件");
+
+    expect(prompt).toContain("preserve Chinese words");
+    expect(prompt).toContain("English acronyms");
+    expect(prompt).toContain("product names");
+    expect(prompt).toContain("module names");
+    expect(prompt).toContain("function names");
+    expect(prompt).toContain("technical identifiers");
+  });
+
+  it("includes preservation instruction for en-US with GitHub example", () => {
+    const prompt = getSystemPrompt("VoiceInk", undefined, "en-US", "推送到 GitHub 仓库");
+
+    expect(prompt).toContain("Do not translate or paraphrase non-Latin script tokens");
+  });
+
+  it("includes preservation instruction for en-US with React example", () => {
+    const prompt = getSystemPrompt("VoiceInk", undefined, "en-US", "导入 React 组件");
+
+    expect(prompt).toContain("exactly as spoken");
+  });
+
+  it("includes preservation instruction for zh-CN language", () => {
+    const prompt = getSystemPrompt("VoiceInk", undefined, "zh-CN", "用 VSCode 打开文件");
+
+    expect(prompt).toContain("Preserve English words");
+    expect(prompt).toContain("product names");
+    expect(prompt).toContain("acronyms");
+    expect(prompt).toContain("technical terms");
+    expect(prompt).toContain("exactly as spoken");
+  });
+
+  it("includes preservation instruction for zh-TW language", () => {
+    const prompt = getSystemPrompt("VoiceInk", undefined, "zh-TW", "用 VSCode 打開文件");
+
+    expect(prompt).toContain("Preserve English words");
+    expect(prompt).toContain("product names");
+    expect(prompt).toContain("acronyms");
+    expect(prompt).toContain("technical terms");
+    expect(prompt).toContain("exactly as spoken");
+  });
+});
