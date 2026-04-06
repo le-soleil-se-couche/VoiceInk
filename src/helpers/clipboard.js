@@ -892,9 +892,13 @@ class ClipboardManager {
 
           if (code === 0) {
             this.safeLog(`Text pasted successfully via ${useFastPaste ? "CGEvent" : "osascript"}`);
-            this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.darwin, () => {
-              clipboard.writeText(originalClipboard);
-            });
+            if (!options.preserveClipboard) {
+              this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.darwin, () => {
+                clipboard.writeText(originalClipboard);
+              });
+            } else {
+              this.safeLog("📋 Clipboard preserved for manual paste fallback");
+            }
             resolve();
           } else if (useFastPaste) {
             this.safeLog(
@@ -956,9 +960,13 @@ class ClipboardManager {
 
         if (code === 0) {
           this.safeLog("Text pasted successfully via osascript fallback");
-          this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.darwin, () => {
-            clipboard.writeText(originalClipboard);
-          });
+          if (!options.preserveClipboard) {
+            this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.darwin, () => {
+              clipboard.writeText(originalClipboard);
+            });
+          } else {
+            this.safeLog("📋 Clipboard preserved for manual paste fallback");
+          }
           resolve();
         } else {
           this.accessibilityCache = { value: null, expiresAt: 0 };
@@ -1034,10 +1042,14 @@ class ClipboardManager {
               elapsedMs: elapsed,
               output,
             });
-            this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.win32_nircmd, () => {
-              clipboard.writeText(originalClipboard);
-              this.safeLog("🔄 Clipboard restored");
-            });
+            if (!options.preserveClipboard) {
+              this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.win32_nircmd, () => {
+                clipboard.writeText(originalClipboard);
+                this.safeLog("🔄 Clipboard restored");
+              });
+            } else {
+              this.safeLog("📋 Clipboard preserved for manual paste fallback");
+            }
             resolve();
           } else {
             this.safeLog(
@@ -1276,14 +1288,19 @@ class ClipboardManager {
       "clipboard"
     );
 
+    const shouldRestoreClipboard = !options?.preserveClipboard;
     const restoreClipboard = () => {
-      this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.linux, () => {
-        if (isWayland) {
-          this._writeClipboardWayland(originalClipboard, webContents);
-        } else {
-          clipboard.writeText(originalClipboard);
-        }
-      });
+      if (shouldRestoreClipboard) {
+        this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.linux, () => {
+          if (isWayland) {
+            this._writeClipboardWayland(originalClipboard, webContents);
+          } else {
+            clipboard.writeText(originalClipboard);
+          }
+        });
+      } else {
+        this.safeLog("📋 Clipboard preserved for manual paste fallback");
+      }
     };
 
     const terminalClasses = [
