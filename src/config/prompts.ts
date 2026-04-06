@@ -56,7 +56,13 @@ function getContextInstruction(context?: ContextClassification): string {
       ? "Likely direct instruction mode."
       : "Likely cleanup mode; stay anchored to user content.";
 
-  return `Context hint: ${contextLabels[context.context]}.${appSuffix} ${focusHints[context.context]} ${intentHint}`;
+  const emailProtection =
+    context.context === "email"
+      ? "\n\nEMAIL PROTECTION:\n- Preserve email addresses (to/from/cc), subject lines, and signatures exactly.\n- Do not rewrite greeting/closing conventions (Dear X, Hi X, Best regards, Thanks, etc.).\n- Keep quoted reply text and inline replies anchored to original structure."
+      : "";
+
+  const emailProtectionSuffix = context.context === "email" ? emailProtection : "";
+  return `Context hint: ${contextLabels[context.context]}.${appSuffix} ${focusHints[context.context]} ${intentHint}${emailProtectionSuffix}`;
 }
 
 function getDictionaryEnforcementInstruction(uiLanguage?: string): string {
