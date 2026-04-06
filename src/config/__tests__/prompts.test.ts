@@ -210,6 +210,65 @@ describe("getSystemPrompt chat context protection", () => {
 
 
 
+
+
+describe("getSystemPrompt document context protection", () => {
+  const mockTargetApp: TargetAppInfo = {
+    appName: "Notion",
+    processId: 12348,
+    platform: "darwin",
+    source: "renderer-fallback",
+    capturedAt: null,
+  };
+
+  const documentContext: ContextClassification = {
+    context: "document",
+    intent: "cleanup",
+    confidence: 0.85,
+    strictMode: true,
+    strictOverlapThreshold: 0.45,
+    signals: ["app:document"],
+    targetApp: mockTargetApp,
+  };
+
+  it("includes DOCUMENT PROTECTION for document context", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", documentContext);
+    
+    expect(prompt).toContain("DOCUMENT PROTECTION");
+    expect(prompt).toContain("Preserve headings, bullets, numbered lists, and checkbox formats exactly");
+    expect(prompt).toContain("Do not rewrite markdown syntax, indentation, or list markers into prose");
+    expect(prompt).toContain("Keep note-taking conventions (timestamps, tags, links) intact");
+  });
+
+  it("does not include DOCUMENT PROTECTION for general context", () => {
+    const generalContext: ContextClassification = {
+      context: "general",
+      intent: "cleanup",
+      confidence: 0.55,
+      strictMode: false,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: mockTargetApp,
+    };
+    
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", generalContext);
+    
+    expect(prompt).not.toContain("DOCUMENT PROTECTION");
+  });
+
+  it("includes document-specific focus hint", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", documentContext);
+    
+    expect(prompt).toContain("Preserve headings, bullets, and list structure when they aid readability");
+  });
+
+  it("maintains context label for document", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", documentContext);
+    
+    expect(prompt).toContain("document or notes writing");
+  });
+});
+
 describe("getSystemPrompt anti-answerization safety", () => {
   const mockTargetApp: TargetAppInfo = {
     appName: "VSCode",

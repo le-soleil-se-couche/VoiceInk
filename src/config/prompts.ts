@@ -85,6 +85,14 @@ function getContextInstruction(context?: ContextClassification): string {
       "- Keep conversational tone and informal expressions intact."
   }
 
+  if (context.context === "document") {
+    instruction +=
+      "\n\nDOCUMENT PROTECTION:\n" +
+      "- Preserve headings, bullets, numbered lists, and checkbox formats exactly.\n" +
+      "- Do not rewrite markdown syntax, indentation, or list markers into prose.\n" +
+      "- Keep note-taking conventions (timestamps, tags, links) intact."
+  }
+
   return instruction;
 }
 
