@@ -236,3 +236,37 @@ describe("getSystemPrompt code context protection", () => {
     expect(prompt).toContain("CODE CONTEXT PROTECTION:");
   });
 });
+
+describe("getSystemPrompt mixed-language preservation", () => {
+  it("includes mixed-language preservation guidance for en-US when transcript contains Chinese", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en-US",
+      "这个 API 返回了三百个 error",
+      "en-US"
+    );
+
+    expect(prompt).toContain("preserve English words, acronyms, product names");
+    expect(prompt).toContain("Do not translate or paraphrase Latin-script tokens");
+  });
+
+  it("includes mixed-language preservation guidance for en-US with technical identifiers", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en-US",
+      "调用 npm install 命令",
+      "en-US"
+    );
+
+    expect(prompt).toContain("preserve English words, acronyms, product names");
+    expect(prompt).toContain("module names, function names, and technical identifiers");
+  });
+
+  it("does not include mixed-language guidance for non-English locales", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "zh-CN", "这个 API 返回错误", "zh-CN");
+
+    expect(prompt).not.toContain("preserve English words, acronyms, product names");
+  });
+});
