@@ -282,4 +282,49 @@ describe("English tech term protection", () => {
     });
     expect(result.text).toBe("检查 URL 和 HTTP 状态");
   });
+
+  it("preserves AI assistant and IDE names", () => {
+    const result = canonicalizeDictationText("使用 Cursor 和 Copilot 编程", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("使用 Cursor 和 Copilot 编程");
+  });
+
+  it("preserves Claude AI name", () => {
+    const result = canonicalizeDictationText("问 Claude 这个问题", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("问 Claude 这个问题");
+  });
+
+  it("preserves DeepSeek and Qwen AI names", () => {
+    const result = canonicalizeDictationText("对比 DeepSeek 和 Qwen 模型", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("对比 DeepSeek 和 Qwen 模型");
+  });
+
+  it("preserves ChatGPT name", () => {
+    const result = canonicalizeDictationText("用 ChatGPT 生成代码", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 ChatGPT 生成代码");
+  });
+
+  it("preserves AI names while still normalizing numbers", () => {
+    const result = canonicalizeDictationText("用 Claude 处理三百个文件", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 Claude 处理300个文件");
+  });
 });

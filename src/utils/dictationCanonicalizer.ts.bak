@@ -95,6 +95,21 @@ const LITERAL_TERMS = [
   "杠",
 ];
 
+const ENGLISH_TECH_PROTECTIONS = [
+  "API",
+  "SDK",
+  "IDE",
+  "CLI",
+  "URL",
+  "HTTP",
+  "HTTPS",
+  "JSON",
+  "XML",
+  "CSS",
+  "HTML",
+  "DOM",
+  "npm",
+];
 
 const IDIOM_PROTECTIONS = [
   "一心一意",
@@ -350,7 +365,7 @@ const protectEnglishTechTerms = (
   stats: DictationCanonicalizerStats
 ) => {
   let protectedText = value;
-  const pattern = /\b(API|SDK|IDE|CLI|URL|HTTP|HTTPS|JSON|XML|CSS|HTML|DOM|npm|VSCode|GitHub|GitLab|Docker|Kubernetes|AWS|Azure|GCP|REST|GraphQL|gRPC|TCP|IP|DNS|SSH|SSL|TLS|JWT|OAuth|SAML|LDAP|SMTP|IMAP|POP3|FTP|SFTP|WebSocket|WebRTC|WebAssembly|TypeScript|JavaScript|Python|Java|Go|Rust|Ruby|Swift|Kotlin|React|Vue|Angular|Next\.js|Nuxt\.js|Electron|Vite|Webpack|Babel|ESLint|Prettier|Jest|Vitest|Playwright|Cypress|Cursor|Copilot|Claude|DeepSeek|Qwen|ChatGPT)\b/gi;
+  const pattern = /\b(API|SDK|IDE|CLI|URL|HTTP|HTTPS|JSON|XML|CSS|HTML|DOM|npm|VSCode|GitHub|GitLab|Docker|Kubernetes|AWS|Azure|GCP|REST|GraphQL|gRPC|TCP|IP|DNS|SSH|SSL|TLS|JWT|OAuth|SAML|LDAP|SMTP|IMAP|POP3|FTP|SFTP|WebSocket|WebRTC|WebAssembly|TypeScript|JavaScript|Python|Java|Go|Rust|Ruby|Swift|Kotlin|React|Vue|Angular|Next\.js|Nuxt\.js|Electron|Vite|Webpack|Babel|ESLint|Prettier|Jest|Vitest|Playwright|Cypress)\b/gi;
   protectedText = protectByRegex({
     value: protectedText,
     regex: pattern,
