@@ -3,7 +3,9 @@
   "productName": "VoiceInk",
   "protocols": {
     "name": "VoiceInk Protocol",
-    "schemes": ["voiceink"]
+    "schemes": [
+      "voiceink"
+    ]
   },
   "directories": {
     "output": "dist"
@@ -29,7 +31,6 @@
     "src/components.json",
     "!node_modules/.cache/**/*",
     "!src/node_modules/**/*",
-
     "!**/node_modules/electron/**",
     "!**/node_modules/electron-builder/**",
     "!**/node_modules/app-builder-bin/**",
@@ -37,7 +38,6 @@
     "!**/node_modules/builder-util/**",
     "!**/node_modules/dmg-builder/**",
     "!**/node_modules/7zip-bin/**",
-
     "!**/node_modules/typescript/**",
     "!**/node_modules/prettier/**",
     "!**/node_modules/eslint/**",
@@ -45,20 +45,17 @@
     "!**/node_modules/@eslint/**",
     "!**/node_modules/@typescript-eslint/**",
     "!**/node_modules/globals/**",
-
     "!**/node_modules/vite/**",
     "!**/node_modules/@vitejs/**",
     "!**/node_modules/esbuild/**",
     "!**/node_modules/@esbuild/**",
     "!**/node_modules/rollup/**",
     "!**/node_modules/@rollup/**",
-
     "!**/node_modules/postcss/**",
     "!**/node_modules/autoprefixer/**",
     "!**/node_modules/tailwindcss/**",
     "!**/node_modules/@tailwindcss/**",
     "!**/node_modules/lightningcss*/**",
-
     "!**/node_modules/react/**",
     "!**/node_modules/react-dom/**",
     "!**/node_modules/lucide-react/**",
@@ -69,12 +66,10 @@
     "!**/node_modules/tw-animate-css/**",
     "!**/node_modules/react-markdown/**",
     "!**/node_modules/shadcn-ui/**",
-
     "!**/node_modules/@types/**",
     "!**/node_modules/concurrently/**",
     "!**/node_modules/cross-env/**",
     "!**/node_modules/@electron/notarize/**",
-
     "!**/node_modules/**/test/**",
     "!**/node_modules/**/tests/**",
     "!**/node_modules/**/*.ts",
@@ -82,18 +77,21 @@
     "!**/node_modules/**/CHANGELOG*",
     "!**/node_modules/**/.github/**"
   ],
-  "asarUnpack": ["**/node_modules/ffmpeg-static/**/*", "**/node_modules/better-sqlite3/**/*"],
+  "asarUnpack": [
+    "**/node_modules/ffmpeg-static/**/*",
+    "**/node_modules/better-sqlite3/**/*"
+  ],
   "extraResources": [
     "src/assets/**/*",
-    "resources/bin/macos-globe-listener",
-    "resources/bin/macos-fast-paste",
-    "resources/bin/macos-text-monitor",
-    "resources/bin/linux-fast-paste",
-    "resources/bin/linux-text-monitor",
     {
       "from": "resources/bin/",
       "to": "bin/",
       "filter": [
+        "macos-globe-listener",
+        "macos-fast-paste",
+        "macos-text-monitor",
+        "linux-fast-paste",
+        "linux-text-monitor",
         "whisper-cpp-*",
         "whisper-server-*",
         "llama-server-*",
@@ -101,6 +99,7 @@
         "windows-key-listener*",
         "windows-text-monitor*",
         "windows-fast-paste*",
+        "nircmd.exe",
         "*.dylib",
         "*.dll",
         "*.so*"
@@ -109,7 +108,10 @@
   ],
   "mac": {
     "category": "public.app-category.productivity",
-    "target": ["dmg", "zip"],
+    "target": [
+      "dmg",
+      "zip"
+    ],
     "icon": "src/assets/icon.icns",
     "gatekeeperAssess": false,
     "hardenedRuntime": true,
@@ -122,7 +124,10 @@
     }
   },
   "win": {
-    "target": ["nsis", "portable"],
+    "target": [
+      "nsis",
+      "portable"
+    ],
     "icon": "src/assets/icon.ico",
     "extraResources": [
       {
@@ -132,7 +137,12 @@
     ]
   },
   "linux": {
-    "target": ["AppImage", "deb", "rpm", "tar.gz"],
+    "target": [
+      "AppImage",
+      "deb",
+      "rpm",
+      "tar.gz"
+    ],
     "icon": "src/assets/icon.png",
     "category": "Utility",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
@@ -158,7 +168,9 @@
   },
   "deb": {
     "afterRemove": "resources/linux/after-remove.sh",
-    "depends": ["ydotool"],
+    "depends": [
+      "ydotool"
+    ],
     "fpm": [
       "--deb-suggests",
       "xdotool",
