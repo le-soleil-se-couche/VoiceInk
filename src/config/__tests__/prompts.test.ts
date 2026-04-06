@@ -237,6 +237,93 @@ describe("getSystemPrompt code context protection", () => {
   });
 });
 
+describe("getSystemPrompt email context protection", () => {
+  it("adds email context protection guidance when context is email", () => {
+    const context = {
+      context: "email" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:email"],
+      targetApp: {
+        appName: "Outlook",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "send an email to john@example.com", "en", context);
+
+    expect(prompt).toContain("EMAIL PROTECTION:");
+    expect(prompt).toContain("Preserve recipient names, email addresses, and subject lines");
+    expect(prompt).toContain("Do not rewrite email structure");
+    expect(prompt).toContain("Keep salutations and sign-offs intact");
+  });
+
+  it("does not add email context protection for non-email contexts", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:code"],
+      targetApp: {
+        appName: "VSCode",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "run npm install", "en", context);
+
+    expect(prompt).not.toContain("EMAIL PROTECTION:");
+  });
+
+  it("does not add email context protection when context is undefined", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "send an email", "en");
+
+    expect(prompt).not.toContain("EMAIL PROTECTION:");
+  });
+
+  it("includes email context protection alongside other safety instructions", () => {
+    const context = {
+      context: "email" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:email"],
+      targetApp: {
+        appName: "Gmail",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en",
+      "should we send this email today or tomorrow",
+      "en",
+      context
+    );
+
+    expect(prompt).toContain("STRICT TRANSCRIPTION SAFETY:");
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("EMAIL PROTECTION:");
+  });
+});
+
+
 describe("getSystemPrompt mixed-language preservation", () => {
   it("includes mixed-language preservation guidance for en-US when transcript contains Chinese", () => {
     const prompt = getSystemPrompt(

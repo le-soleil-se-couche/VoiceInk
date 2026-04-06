@@ -90,6 +90,14 @@ function getContextInstruction(context?: ContextClassification): string {
       "- Keep technical terminology intact even if it sounds like regular words.";
   }
 
+  if (context.context === "email") {
+    instruction +=
+      "\n\nEMAIL PROTECTION:\n" +
+      "- Preserve recipient names, email addresses, and subject lines exactly as dictated.\n" +
+      "- Do not rewrite email structure (To/Cc/Bcc/Subject) into prose.\n" +
+      "- Keep salutations and sign-offs intact (Dear, Hi, Best regards, Sincerely, etc.).";
+  }
+
   return instruction;
 }
 
