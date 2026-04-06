@@ -1758,6 +1758,14 @@ class ClipboardManager {
         "\n\nNote: ydotool is installed but the ydotoold daemon is not running. Start it with: sudo systemctl enable --now ydotool";
     }
 
+    // Restore original clipboard before throwing error so manual paste fallback has correct content
+    if (isWayland) {
+      this._writeClipboardWayland(originalClipboard, webContents);
+    } else {
+      clipboard.writeText(originalClipboard);
+    }
+    this.safeLog("📋 Clipboard restored to original content for manual paste fallback");
+
     const err = new Error(errorMsg + failureSummary);
     err.code = "PASTE_SIMULATION_FAILED";
     err.failedAttempts = failedAttempts;
