@@ -246,9 +246,16 @@ const shouldSkipShortNumberSegment = ({
   if (previousChar === "第") return false;
   if (nextChar === ".") return false;
   if (nextChar === "/") return false;
-  if (nextChar === "个" && !CHINESE_NUMBER_UNIT_CHAR_RE.test(segment)) return true;
-  if (LATIN_CHAR_RE.test(previousChar) || LATIN_CHAR_RE.test(nextChar)) return true;
   if (sourceText.slice(Math.max(0, offset - 3), offset).endsWith("分之")) return false;
+  
+  // Preserve small numbers (一，两，二，三) in natural spoken contexts with quantifiers
+  // Examples: 三个人，两本书，三杯水，五公里，两斤苹果
+  const smallNumbers = new Set(["一", "两", "二", "三", "四", "五", "六", "七", "八", "九", "十"]);
+  if (smallNumbers.has(segment) && CHINESE_QUANTIFIER_SUFFIX_RE.test(nextChar || "")) {
+    return true;
+  }
+  
+  if (LATIN_CHAR_RE.test(previousChar) || LATIN_CHAR_RE.test(nextChar)) return true;
   return !CHINESE_QUANTIFIER_SUFFIX_RE.test(nextChar || "");
 };
 
