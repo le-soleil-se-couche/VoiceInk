@@ -365,3 +365,93 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 });
+
+describe("over-optimization prevention", () => {
+  it("preserves Chinese numeral in casual context when source uses Han characters", () => {
+    const source = "我需要三个人来处理这个项目";
+    const candidate = "我需要 3 个人来处理这个项目";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves Chinese numeral phrase for quantity in casual speech", () => {
+    const source = "这件事有两个解决方案";
+    const candidate = "这件事有 2 个解决方案";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves Chinese ordinal expression in casual context", () => {
+    const source = "这是第三种方法";
+    const candidate = "这是第 3 种方法";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves English conversational number when dictated as word", () => {
+    const source = "I have one thing to add";
+    const candidate = "I have 1 thing to add";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves English two people casual phrasing", () => {
+    const source = "two people volunteered";
+    const candidate = "2 people volunteered";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves formal date when strict mode cannot verify safety", () => {
+    const source = "January fifteenth twenty twenty-six";
+    const candidate = "January 15, 2026";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("allows formal time conversion", () => {
+    const source = "meeting at five thirty PM";
+    const candidate = "meeting at 5:30 PM";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("preserves formal currency when strict mode cannot verify safety", () => {
+    const source = "costs three hundred dollars";
+    const candidate = "costs $300";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+});
