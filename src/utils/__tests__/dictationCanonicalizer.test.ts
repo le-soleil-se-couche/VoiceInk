@@ -155,3 +155,4 @@ describe("canonicalizeDictationText", () => {
     expect(twice).toBe(input);
   });
 });
+

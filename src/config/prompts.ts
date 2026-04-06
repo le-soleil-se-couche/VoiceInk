@@ -158,6 +158,7 @@ function getChineseCanonicalizationInstruction(
     "- Prefer Arabic numerals for dates, time, currency, IDs, versions, and IP; keep small conversational numbers as Chinese when natural.",
     "- Keep idioms/fixed phrases and literal mentions (e.g. \"the word is question mark\") unchanged.",
     "- Convert spoken punctuation words to symbols only when context indicates punctuation intent.",
+    "- Be conservative with numeral conversion: when Chinese number sequences appear in casual spoken contexts (e.g. \"两个人\", \"三句话\"), keep them as Chinese characters rather than converting to Arabic numerals.",
   ].join("\n");
 }
 
