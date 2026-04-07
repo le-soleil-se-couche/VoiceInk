@@ -174,4 +174,26 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(candidate);
   });
+
+  it("preserves lexical uppercase abbreviation ER during strict short-input fallback cleanup", async () => {
+    const source = "should we go to ER now";
+    const candidate = "Should we go to ER now?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("still removes lowercase er hesitation filler during strict short-input fallback cleanup", async () => {
+    const source = "er, should we ship today";
+    const candidate = "Should we ship today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("should we ship today");
+  });
 });
