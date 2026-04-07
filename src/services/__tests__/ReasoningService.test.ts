@@ -138,6 +138,39 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe("这个要改吗？");
   });
 
+  it("preserves numeric Ah battery-capacity units during strict short-input fallback cleanup", async () => {
+    const source = "bring a 5 Ah battery pack";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lowercase numeric ah battery-capacity units during strict short-input fallback cleanup", async () => {
+    const source = "it uses 2 ah cells";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("removes sentence-initial ah hesitation filler during strict short-input fallback cleanup", async () => {
+    const source = "ah, we should ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
   it("keeps short Chinese restart-question cleanup when overlap stays anchored", async () => {
     const source = "那个就是我的电我电脑上能跑吗";
     const candidate = "那个就是我的电脑上能跑吗？";
