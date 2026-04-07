@@ -457,6 +457,10 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         /([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*you\s+know\s*(?=$|[。.!！!；;：:])/gi,
         "$1"
       )
+      .replace(
+        /(^|[\n\r]+)\s*you\s+know\s+(?=(?:(?:i|we|you|he|she|they)\s+(?:should|need|have|has|had|can|could|would|will|want|think|am|are|is|was|were|do|does|did|don't|doesn't|didn't|dont|doesnt|didnt|may|might|must)\b|(?:can|could|should|would|will|do|does|did|is|are|am|was|were|have|has|had|what|when|where|why|how)\b|please\b|let(?:'s|s)\s+(?:go|get|make|send|ship|do|start|review|check|update|move|keep|talk|discuss|write|call|schedule|plan|try|see|confirm|proceed|open|close|run|share|prepare|finalize)\b))/gi,
+        "$1"
+      )
       .replace(/(^|[\n\r]+)\s*i\s+mean\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1")
       .replace(/[，,、]\s*i\s+mean\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, " ")
       .replace(/([。！？.!?;:：；])\s*i\s+mean\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1 ")
