@@ -12,6 +12,8 @@ import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
+const ENGLISH_FALSE_START_REPEAT_RE =
+  /(^|[\s([{"'])((?:i|we|you|he|she|they|it)\s+(?:[a-z]+(?:'[a-z]+)?)(?:\s+[a-z]+(?:'[a-z]+)?)?)(?:\s*[，,、]\s*|\s+)\2(?=\s+[a-z])/gi;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
@@ -411,10 +413,31 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
   private localCleanupFallback(text: string): string {
     const protectedUppercaseErToken = "__VOICEINK_PROTECT_UPPERCASE_ER__";
     const protectedUppercaseHmmToken = "__VOICEINK_PROTECT_UPPERCASE_HMM__";
+    const stripCommaLedDiscourseFillerMatch = (
+      match: string,
+      token: string,
+      offset: number,
+      fullText: string
+    ): string => {
+      const normalizedToken = token.toLowerCase().replace(/\s+/g, " ");
+      const trailingText = fullText.slice(offset + match.length).replace(/^\s+/g, "");
+      const nextWordMatch = trailingText.match(/^[A-Za-z]+/);
+      const nextWord = nextWordMatch ? nextWordMatch[0].toLowerCase() : "";
+
+      if (/^(?:like|i mean)$/i.test(normalizedToken) && /^(?:this|that|these|those)$/.test(nextWord)) {
+        return match;
+      }
+
+      return " ";
+    };
     const stripEnglishFillerMatch = (match: string, offset: number, fullText: string): string => {
       if (/^you\s+know$/i.test(match)) {
         const leadingText = fullText.slice(0, offset);
-        if (/\b(?:as|do|did|does)\s+$/i.test(leadingText)) {
+        if (
+          /\b(?:as|do|did|does|don't|didn't|doesn't|don[’']t|didn[’']t|doesn[’']t|dont|didnt|doesnt|if|whether|what|when|where|why|who|whom|which|whoever|whatever|whichever|whenever|wherever|how|that|let|all|everything|anything|something|nothing|someone|anyone|everyone|nobody|somebody|anybody|everybody|people|person|folks|no\s+one|noone)\s+$/i.test(
+            leadingText
+          )
+        ) {
           return match;
         }
       }
@@ -439,12 +462,26 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .replace(/\bHMM\b/g, protectedUppercaseHmmToken)
       .replace(/^\s*mm+\s*[，,、]\s*/i, "")
       .replace(/[，,、]\s*mm+\s*$/i, "")
+      .replace(/[，,、]\s*mm+\s*(?=[。！？!?.;:；：…)\]）】》」』"'”’])/gi, "")
       .replace(/^\s*(?:um+|uh+|er+|ah+|hmm+)\s*[，,、]\s*/i, "")
       .replace(/[，,、]\s*(?:um+|uh+|er+|ah+|hmm+)\s*[，,、]\s*/gi, " ")
       .replace(/[，,、]\s*(?:um+|uh+|er+|ah+|hmm+)\s*$/i, "")
       .replace(/^\s*you\s+know\s*[，,、]\s*/i, "")
       .replace(/[，,、]\s*you\s+know\s*[，,、]\s*/gi, " ")
       .replace(/[，,、]\s*you\s+know\s*$/i, "")
+      .replace(
+        /[，,、]\s*(you\s+know|basically|like|i\s+mean)\s+(?=\S)/gi,
+        stripCommaLedDiscourseFillerMatch
+      )
+      .replace(
+        /^\s*well(?=\s+(?:i|we|you|he|she|they|it|can|could|should|would|will|is|are|am|was|were|do|does|did|have|has|had|let|please|what|when|where|why|who|how)\b)\s+/i,
+        ""
+      )
+      .replace(
+        /^\s*like(?=\s+(?:i|we|you|he|she|they|it|can|could|should|would|will|is|are|am|was|were|do|does|did|have|has|had|let|please|what|when|where|why|who|how)\b)\s+/i,
+        ""
+      )
+      .replace(/^\s*i\s+mean(?!\s+(?:this|that)\b)\s+/i, "")
       .replace(/^\s*basically\s*[，,、]\s*/i, "")
       .replace(/[，,、]\s*basically\s*[，,、]\s*/gi, " ")
       .replace(/[，,、]\s*basically\s*$/i, "")
@@ -461,12 +498,17 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         "$1$2"
       )
       .replace(CHINESE_WORD_REPEAT_STUTTER_RE, "$1")
+      .replace(ENGLISH_FALSE_START_REPEAT_RE, "$1$2")
       .replace(/\b(i|we|you|he|she|they|it|the|a|an|to|and|but)\b(?:\s+\1\b)+/gi, "$1")
-      .replace(/\s+([,.!?;:])/g, "$1")
+      .replace(/\s+([,.!?;:…；：])/g, "$1")
+      .replace(/\s+([)\]）】》」』"'”’])/g, "$1")
       .replace(/\s+([，。！？、])/g, "$1")
       .replace(/([,.!?;:，。！？、])\1+/g, "$1")
-      .replace(/([，,、])([。！？!?.;:；：])/g, "$2")
-      .replace(/([。！？!?.;:；：])[，,、]+/g, "$1")
+      .replace(/([，,、])([。！？!?.;:；：…])/g, "$2")
+      .replace(/([。！？!?.;:；：…])[，,、]+/g, "$1")
+      .replace(/([，,、])([)\]）】》」』"'”’])/g, "$2")
+      .replace(/([)\]）】》」』"'”’])[，,、]+/g, "$1")
+      .replace(/([，,、])[ \t]*(\r?\n)/g, "$2")
       .replace(/(^|[\n])\s*[，,、]+\s*/g, "$1")
       .replace(/[ \t]{2,}/g, " ")
       .replace(/\n{3,}/g, "\n\n")

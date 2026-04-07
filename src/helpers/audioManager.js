@@ -1652,7 +1652,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const stripEnglishFillerMatch = (match, offset, fullText) => {
       if (/^you\s+know$/i.test(match)) {
         const leadingText = fullText.slice(0, offset);
-        if (/\b(?:as|do|did|does)\s+$/i.test(leadingText)) {
+        if (
+          /\b(?:as|do|did|does|don't|didn't|doesn't|don[’']t|didn[’']t|doesn[’']t|dont|didnt|doesnt|if|whether|what|when|where|why|who|whom|which|whoever|whatever|whichever|whenever|wherever|how|that|let|all|everything|anything|something|nothing|someone|anyone|everyone|nobody|somebody|anybody|everybody|people|person|folks|no\s+one|noone)\s+$/i.test(
+            leadingText
+          )
+        ) {
           return match;
         }
       }
@@ -1688,7 +1692,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")
       .replace(CHINESE_WORD_REPEAT_STUTTER_RE, "$1")
       .replace(ENGLISH_STUTTER_RE, "$1")
-      .replace(/\s+([,.!?;:])/g, "$1")
+      .replace(/\s+([,.!?;:…；：])/g, "$1")
+      .replace(/\s+([)\]）】》」』"'”’])/g, "$1")
       .replace(/\s+([，。！？、])/g, "$1")
       .replace(/([,.!?;:，。！？、])\1+/g, "$1")
       .replace(/([，,、])[，,、]+/g, "$1")
@@ -1696,8 +1701,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(/\s+,/g, ",")
       .replace(/[，、]\s+/g, (match) => match.trim())
       .replace(/([A-Za-z0-9]),\s*([A-Za-z])/g, "$1, $2")
-      .replace(/([，,、])([。！？!?.;:；：])/g, "$2")
-      .replace(/([。！？!?.;:；：])[，,、]+/g, "$1")
+      .replace(/([，,、])([。！？!?.;:；：…])/g, "$2")
+      .replace(/([。！？!?.;:；：…])[，,、]+/g, "$1")
+      .replace(/([，,、])([)\]）】》」』"'”’])/g, "$2")
+      .replace(/([)\]）】》」』"'”’])[，,、]+/g, "$1")
+      .replace(/([，,、])[ \t]*(\r?\n)/g, "$2")
       .replace(/[，,、](?=$|[\n])/g, "")
       .replace(/[ \t]{2,}/g, " ")
       .replace(/\n{3,}/g, "\n\n")
