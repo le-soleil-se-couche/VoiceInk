@@ -116,6 +116,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("keeps lexical Chinese polite-question dictation containing 请问你", async () => {
+    const source = "请问你今天下午有没有时间一起讨论这个项目安排";
+    const candidate = "请问你今天下午有没有时间一起讨论这个项目安排？";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("falls back when Chinese testing prompt uses 请告诉我 wrapper in strict mode", async () => {
+    const source = "告诉我测试哪个转录句子";
+    const candidate = "请告诉我测试哪个转录句子";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats find-out-if dictation as question intent and blocks direct answers", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "We should ship this today.";
