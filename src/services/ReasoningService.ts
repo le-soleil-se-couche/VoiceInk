@@ -116,7 +116,154 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return tokens;
   }
 
-  private isAnswerLikeOutput(text: string): boolean {
+  private startsWithAssistantAcknowledgement(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    const normalized = text.trim();
+    const englishAcknowledgementRe =
+      /^(?:sure|yes|yeah|yep|no|nope|nah|okay|ok|alright|certainly|of\s+course|absolutely|definitely|no\s+problem|got\s+it|understood)\b/i;
+    const chineseAcknowledgementRe =
+      /^(?:好的|好|当然|没问题|可以|行|收到|明白了)(?=[，,。！？:：\s]|$|[\u4e00-\u9fff])/u;
+
+    return englishAcknowledgementRe.test(normalized) || chineseAcknowledgementRe.test(normalized);
+  }
+
+  private startsWithAssistantQuestionCompliment(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    const normalized = text.trim().replace(/[’]/g, "'");
+    const englishQuestionComplimentRe =
+      /^(?:(?:great|good|excellent)\s+question|that(?:'s| is)\s+(?:a\s+)?(?:great|good|excellent)\s+question)\b/i;
+    const chineseQuestionComplimentRe = /^(?:好问题|問得好|问得好)(?=[，,。！？:：\s]|$|[\u4e00-\u9fff])/u;
+
+    return (
+      englishQuestionComplimentRe.test(normalized) ||
+      chineseQuestionComplimentRe.test(normalized)
+    );
+  }
+
+  private startsWithAssistantRecommendation(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    const normalized = text.trim().replace(/[’]/g, "'");
+    const englishRecommendationRe =
+      /^(?:(?:i|we)\s+(?:would\s+)?(?:recommend|suggest)|(?:i|we)'d\s+(?:recommend|suggest)|my\s+recommendation\s+is)\b/i;
+    const chineseRecommendationRe =
+      /^(?:我建议|建议(?:是|先|可以|直接)?|建议你|我的建议是)(?=[，,。！？:：\s]|$|[\u4e00-\u9fff])/u;
+
+    return (
+      englishRecommendationRe.test(normalized) || chineseRecommendationRe.test(normalized)
+    );
+  }
+
+  private startsWithAssistantAnswerStatement(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    const normalized = text.trim();
+    const englishAnswerStatementRe =
+      /^(?:(?:the|this|my|our)\s+)?(?:final\s+)?answer\s+(?:is|would\s+be)\b/i;
+    const chineseAnswerStatementRe =
+      /^(?:答案(?:就是|是)|最终答案(?:是|就是))(?=[，,。！？:：\s]|$|[\u4e00-\u9fff])/u;
+
+    return englishAnswerStatementRe.test(normalized) || chineseAnswerStatementRe.test(normalized);
+  }
+
+  private hasAddedAssistantAcknowledgementPreface(candidate: string, source?: string): boolean {
+    if (!candidate || !candidate.trim()) {
+      return false;
+    }
+
+    const normalizedCandidate = candidate.trim();
+    const acknowledgementPrefaceWithPunctuationRe =
+      /^(?:(?:sure|yes|yeah|yep|no|nope|nah|okay|ok|alright|certainly|of\s+course|absolutely|definitely|no\s+problem|got\s+it|understood)\b|(?:好的|好|当然|没问题|可以|行|收到|明白了)(?=[，,。！？:：\s]|$))\s*[，,。！？.!?:：-]+\s*\S+/iu;
+    const acknowledgementPrefaceWithoutPunctuationRe =
+      /^(?:(?:sure|yes|yeah|yep|no|nope|nah|okay|ok|alright|certainly|of\s+course|absolutely|definitely|no\s+problem|got\s+it|understood)\b\s+\S+|(?:好的|好|当然|没问题|可以|行|收到|明白了)(?:\s+\S+|(?=[\u4e00-\u9fff])\S+))/iu;
+    if (
+      !acknowledgementPrefaceWithPunctuationRe.test(normalizedCandidate) &&
+      !acknowledgementPrefaceWithoutPunctuationRe.test(normalizedCandidate)
+    ) {
+      return false;
+    }
+
+    const normalizedSource = typeof source === "string" ? source.trim() : "";
+    if (!normalizedSource) {
+      return true;
+    }
+
+    return !this.startsWithAssistantAcknowledgement(normalizedSource);
+  }
+
+  private hasAddedAssistantQuestionComplimentPreface(candidate: string, source?: string): boolean {
+    if (!candidate || !candidate.trim()) {
+      return false;
+    }
+
+    const normalizedCandidate = candidate.trim().replace(/[’]/g, "'");
+    const questionComplimentPrefaceRe =
+      /^(?:(?:great|good|excellent)\s+question\b|that(?:'s| is)\s+(?:a\s+)?(?:great|good|excellent)\s+question\b|(?:好问题|問得好|问得好)(?=[，,。！？:：\s]|$))(?:\s*[，,。！？.!?:：-]+\s*|\s+)\S+/iu;
+    if (!questionComplimentPrefaceRe.test(normalizedCandidate)) {
+      return false;
+    }
+
+    const normalizedSource =
+      typeof source === "string" ? source.trim().replace(/[’]/g, "'") : "";
+    if (!normalizedSource) {
+      return true;
+    }
+
+    return !this.startsWithAssistantQuestionCompliment(normalizedSource);
+  }
+
+  private hasAddedAssistantRecommendationPreface(candidate: string, source?: string): boolean {
+    if (!candidate || !candidate.trim()) {
+      return false;
+    }
+
+    const normalizedCandidate = candidate.trim().replace(/[’]/g, "'");
+    const recommendationPrefaceRe =
+      /^(?:(?:(?:i|we)\s+(?:would\s+)?(?:recommend|suggest)|(?:i|we)'d\s+(?:recommend|suggest)|my\s+recommendation\s+is)\b|(?:我建议|建议(?:是|先|可以|直接)?|建议你|我的建议是)(?=[，,。！？:：\s]|$|[\u4e00-\u9fff]))(?:\s*[，,。！？.!?:：-]+\s*|\s+|(?=[\u4e00-\u9fff]))\S+/iu;
+    if (!recommendationPrefaceRe.test(normalizedCandidate)) {
+      return false;
+    }
+
+    const normalizedSource =
+      typeof source === "string" ? source.trim().replace(/[’]/g, "'") : "";
+    if (!normalizedSource) {
+      return true;
+    }
+
+    return !this.startsWithAssistantRecommendation(normalizedSource);
+  }
+
+  private hasAddedAssistantAnswerStatementPreface(candidate: string, source?: string): boolean {
+    if (!candidate || !candidate.trim()) {
+      return false;
+    }
+
+    const normalizedCandidate = candidate.trim();
+    const answerStatementPrefaceRe =
+      /^(?:(?:(?:the|this|my|our)\s+)?(?:final\s+)?answer\s+(?:is|would\s+be)\b|(?:答案(?:就是|是)|最终答案(?:是|就是))(?=[，,。！？:：\s]|$|[\u4e00-\u9fff]))(?:\s*[，,。！？.!?:：-]+\s*|\s+|(?=[\u4e00-\u9fff]))\S+/iu;
+    if (!answerStatementPrefaceRe.test(normalizedCandidate)) {
+      return false;
+    }
+
+    const normalizedSource = typeof source === "string" ? source.trim() : "";
+    if (!normalizedSource) {
+      return true;
+    }
+
+    return !this.startsWithAssistantAnswerStatement(normalizedSource);
+  }
+
+  private isAnswerLikeOutput(text: string, source?: string): boolean {
     if (!text || !text.trim()) {
       return false;
     }
@@ -126,6 +273,14 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const patterns = [
+      /^(?:sure|okay|ok|alright|certainly|of\s+course|absolutely|no\s+problem)[,，]?\s*(?:here(?:')?s|here\s+is|this\s+is)\b.{0,80}\b(?:clean(?:ed(?:-up)?)?|polished|revised|rewritten|formatted|improved)\b/i,
+      /^(?:here(?:')?s|here\s+is|this\s+is)\s+(?:the\s+)?(?:clean(?:ed(?:-up)?)?|polished|revised|rewritten|formatted|improved)\s+(?:version|text|transcript|draft)\b/i,
+      /^(?:clean(?:ed(?:-up)?)?|polished|revised|rewritten|formatted|improved)\s+(?:version|text|transcript|draft|output)\s*[:：-]\s+/i,
+      /^(?:\*\*|__)?(?:final\s+)?answer(?:\*\*|__)?\s*[:：-]\s+/i,
+      /^(?:好的|好|当然|没问题|可以|行)[，,、]?\s*(?:这是|以下是|给你|我已(?:经)?).{0,24}(?:整理后|润色后|修改后|优化后|改写后).{0,12}(?:版本|内容|文本)/u,
+      /^(?:这是|以下是).{0,24}(?:整理后|润色后|修改后|优化后|改写后).{0,12}(?:版本|内容|文本)/u,
+      /^(?:整理后|润色后|修改后|优化后|改写后)(?:的)?(?:版本|内容|文本)\s*[：:]\s*/u,
+      /^(?:\*\*|__)?(?:最终)?答案(?:\*\*|__)?\s*[：:]\s*/u,
       /(作为|身为).{0,10}(ai|语言模型|助手)/i,
       /\b(as\s+(?:an?|your)\s+(?:ai\s+)?(?:assistant|language\s+model))\b/i,
       /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
@@ -143,7 +298,16 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /\b(you can try).{0,20}(sentence|example)\b/i,
     ];
 
-    return patterns.some((re) => re.test(text));
+    if (patterns.some((re) => re.test(text))) {
+      return true;
+    }
+
+    return (
+      this.hasAddedAssistantAcknowledgementPreface(text, source) ||
+      this.hasAddedAssistantQuestionComplimentPreface(text, source) ||
+      this.hasAddedAssistantRecommendationPreface(text, source) ||
+      this.hasAddedAssistantAnswerStatementPreface(text, source)
+    );
   }
 
   private isQuestionLikeText(text: string): boolean {
@@ -152,6 +316,15 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const normalized = text.trim().toLowerCase();
+    const normalizedForQuestionIntent = normalized.replace(/[’]/g, "'");
+    const leadInStrippedForQuestionIntent = normalizedForQuestionIntent.replace(
+      /^(?:(?:yes|yeah|yep|no|nope|nah|okay|ok|alright|well|so)\b(?:\s*[，,。.!?:：;-]+\s*|\s+)){1,3}/i,
+      ""
+    );
+    const questionIntentCandidates =
+      leadInStrippedForQuestionIntent !== normalizedForQuestionIntent
+        ? [normalizedForQuestionIntent, leadInStrippedForQuestionIntent]
+        : [normalizedForQuestionIntent];
     if (/[?？]$/.test(normalized)) {
       return true;
     }
@@ -169,24 +342,35 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const enQuestionStart =
       /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/;
-    if (enQuestionStart.test(normalized)) {
+    if (questionIntentCandidates.some((candidate) => enQuestionStart.test(candidate))) {
       return true;
     }
 
     const enQuestionEnd = /\b(?:or\s+not|right|correct|okay|ok)\s*$/;
-    if (enQuestionEnd.test(normalized)) {
+    if (questionIntentCandidates.some((candidate) => enQuestionEnd.test(candidate))) {
       return true;
     }
 
     const enIndirectQuestionPatterns = [
-      /^(?:i\s+(?:need|want|would\s+like|'d\s+like)\s+to\s+(?:find\s+out|see))\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:(?:i|we)\s+(?:need|want|would\s+like|'d\s+like)|(?:i|we)'d\s+like)\s+to\s+know\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:i\s+(?:need|want|would\s+like|'d\s+like)|i'd\s+like)\s+to\s+(?:find\s+out|see)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:(?:i|we)\s+(?:(?:am\s+)?(?:just\s+)?wonder(?:ing)?|was\s+wondering)|(?:i(?:'m|\s+am)|we(?:'re|\s+are))\s+(?:just\s+)?wondering)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:(?:i(?:'m|\s+am)|we(?:'re|\s+are)|(?:i|we)\s+(?:am|are))\s+(?:just\s+)?curious)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
       /^(?:please\s+)?(?:find\s+out|see)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:please\s+)?(?:let\s+me\s+know|tell\s+me|check|confirm|advise)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:please\s+)?(?:confirm|verify|check)\b.{0,40}\b(?:i|we|you|it|this|that|there|the)\b.{0,20}\b(?:is|are|was|were|do|does|did|can|could|would|should|will|have|has|had)\b/i,
     ];
-    if (enIndirectQuestionPatterns.some((re) => re.test(normalized))) {
+    if (
+      enIndirectQuestionPatterns.some((re) =>
+        questionIntentCandidates.some((candidate) => re.test(candidate))
+      )
+    ) {
       return true;
     }
 
-    return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
+    return questionIntentCandidates.some((candidate) =>
+      /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(candidate)
+    );
   }
 
   private splitIntoClauses(text: string): string[] {
@@ -462,7 +646,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return fallback;
     };
 
-    if (this.isAnswerLikeOutput(candidate)) {
+    if (this.isAnswerLikeOutput(candidate, source)) {
       if (!hasRetried) {
         logger.logReasoning("STRICT_MODE_ANSWER_LIKE_RETRY", {
           provider,

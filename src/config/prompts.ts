@@ -42,6 +42,47 @@ function getPromptBundle(uiLanguage?: string): PromptBundle {
   };
 }
 
+function getCustomPromptConflictSignalCount(customPrompt: string): number {
+  const signals = [
+    /mode\s*2\s*:\s*agent/i,
+    /\byou\s+operate\s+in\s+two\s+modes\b/i,
+    /\banswer\s+questions\s+directly\b/i,
+    /\b(?:output|return)\s+just\s+the\s+answer\b/i,
+    /模式二[:：]\s*助手/u,
+    /兩種(?:工作|運作)模式/u,
+    /两种(?:工作|运作)模式/u,
+    /直接回答问题|直接回答問題/u,
+    /只输出答案|只輸出答案/u,
+  ];
+
+  let count = 0;
+  for (const signal of signals) {
+    if (signal.test(customPrompt)) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+function selectSafeCleanupPrompt(
+  cleanupPrompt: string,
+  customPrompt: string | null | undefined
+): string {
+  const normalizedCustomPrompt = typeof customPrompt === "string" ? customPrompt.trim() : "";
+  if (!normalizedCustomPrompt) {
+    return cleanupPrompt;
+  }
+
+  // Stored PromptStudio content can include two-mode/agent prompts that invite direct answers.
+  // Treat multi-signal matches as unsafe for cleanup-only dictation and fall back to baseline cleanup.
+  if (getCustomPromptConflictSignalCount(normalizedCustomPrompt) >= 2) {
+    return cleanupPrompt;
+  }
+
+  return normalizedCustomPrompt;
+}
+
 function getCleanupSafetyInstruction(): string {
   return [
     "STRICT TRANSCRIPTION SAFETY:",
@@ -116,13 +157,13 @@ export function getAnswerLikeRetryPrompt(
         "仅做语音转写。",
         "只输出用户实际说出的内容，不要回答问题，不要解释，不要润色。",
         "如果用户说的是问题，就直接转写这个问题本身。",
-        "不要添加“好的”“这是润色后的内容”等助手式前缀。",
+        "不要添加“好的”“答案：”“这是润色后的内容”等助手式前缀。",
       ]
     : [
         "Transcription only.",
         "Return only the spoken words. Do not answer questions, explain, or polish.",
-        "If the speaker dictated a question, transcribe that question itself.",
-        "Do not add assistant wrappers such as 'Sure' or 'Here's the polished version'.",
+        "If the speaker dictated a question, transcribe that question itself, including indirect requests such as 'i wonder whether ...', 'i'm wondering whether ...', 'i'm curious whether ...', 'i'd like to know if ...', or 'please advise whether ...', and discourse-marker lead-ins before a question such as 'yes should we ...', 'well can we ...', or 'okay what is ...'.",
+        "Do not add assistant wrappers, standalone acknowledgement prefaces (for example, 'Sure.', 'Yes.', 'No.', or 'Definitely.'), question-compliment prefaces (for example, 'Great question.', 'Good question.', or 'That's a great question.'), advisory lead-ins (for example, 'I recommend ...', 'I'd suggest ...', or '建议...'), answer-statement prefaces (for example, 'The answer is ...' or '答案是...'), bare acknowledgement lead-ins (for example, 'Yes we should ...' or 'Definitely we should ...'), or label prefixes such as 'Answer:', 'Final answer:', 'Here's the polished version', 'Rewritten text:', or 'Cleaned transcript:'.",
       ];
 
   if (normalizedDictionary.length === 0) {
@@ -148,15 +189,15 @@ export function getCleanupOnlyRetryPrompt(
         "只能整理 <transcript> 标签内的转录文本，不能回答、建议、解释、总结或补充。",
         "如果源文本本身是问题，输出也必须保持为问题的整理版，不能改写成答案或陈述句。",
         "允许删除口吃、重启、填充词和无意重复，但不要删掉真实含义。",
-        "不要添加“好的”“当然”“你可以”“这是整理后的版本”等助手式前缀。",
+        "不要添加“好的”“当然”“你可以”“答案：”“这是整理后的版本”等助手式前缀。",
         "只输出整理后的文本本身。",
       ]
     : [
         "You are in strict transcript-cleanup retry mode.",
         "Only clean the transcript inside <transcript>; do not answer, advise, explain, summarize, or add content.",
-        "If the source itself is a question, the output must remain a cleaned-up question, not an answer or declarative statement.",
+        "If the source itself is a question, the output must remain a cleaned-up question, not an answer or declarative statement, including indirect requests like 'let me know if ...', 'i need to know whether ...', 'i wonder whether ...', 'i'm wondering whether ...', 'i'm curious whether ...', 'i'd like to know if ...', or 'please advise whether ...', and discourse-marker lead-ins before a question such as 'yes should we ...', 'well can we ...', or 'okay what is ...'.",
         "You may remove stutters, restarts, filler words, and accidental repetition, but do not remove real meaning.",
-        "Do not add assistant wrappers such as 'Sure', 'Of course', 'You can', or 'Here's the polished version'.",
+        "Do not add assistant wrappers, standalone acknowledgement prefaces (for example, 'Sure.', 'Yes.', 'No.', or 'Definitely.'), question-compliment prefaces (for example, 'Great question.', 'Good question.', or 'That's a great question.'), advisory lead-ins (for example, 'I recommend ...', 'I'd suggest ...', or '建议...'), answer-statement prefaces (for example, 'The answer is ...' or '答案是...'), bare acknowledgement lead-ins (for example, 'Yes we should ...' or 'Definitely we should ...'), or label prefixes such as 'Sure', 'Of course', 'You can', 'Answer:', 'Final answer:', 'Here's the polished version', 'Rewritten text:', or 'Cleaned transcript:'.",
         "Output only the cleaned transcript text.",
       ];
 
@@ -225,7 +266,8 @@ export function getSystemPrompt(
   const name = agentName?.trim() || "Assistant";
   const prompts = getPromptBundle(uiLanguage);
   const customPrompt = getStoredCustomUnifiedPrompt();
-  let prompt = (customPrompt || prompts.cleanupPrompt).replace(/\{\{agentName\}\}/g, name);
+  const selectedPrompt = selectSafeCleanupPrompt(prompts.cleanupPrompt, customPrompt);
+  let prompt = selectedPrompt.replace(/\{\{agentName\}\}/g, name);
   prompt += `\n\n${getCleanupSafetyInstruction()}`;
 
   const langInstruction = getLanguageInstruction(language);
