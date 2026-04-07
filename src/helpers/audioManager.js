@@ -1654,6 +1654,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(/^[\u200B-\u200D\uFEFF]+/g, "")
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
+      .replace(/(^|[\s，,、。！!;:；：])你懂吗(?=[\s，,、。！!;:；：])/gu, "$1")
       .replace(ENGLISH_FILLER_WORD_RE, "")
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")

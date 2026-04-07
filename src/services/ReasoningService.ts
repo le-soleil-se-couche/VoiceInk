@@ -415,6 +415,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         "$1"
       )
       .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
+      .replace(/(^|[\s，,、。！!;:；：])你懂吗(?=[\s，,、。！!;:；：])/gu, "$1")
       .replace(/\byou\s+know\b/gi, (match: string, offset: number, source: string) => {
         const prefix = source.slice(0, offset);
         if (/\b(?:do|did|does)(?:n['’]t)?\s*$/i.test(prefix)) {

@@ -196,4 +196,26 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe("we should ship today");
   });
+
+  it("removes punctuation-delimited 你懂吗 filler during strict fallback cleanup", async () => {
+    const source = "这个方案，你懂吗，今天发版";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("这个方案，今天发版");
+  });
+
+  it("preserves direct-question 你懂吗 phrasing during strict fallback cleanup", async () => {
+    const source = "这个方案，你懂吗？";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
