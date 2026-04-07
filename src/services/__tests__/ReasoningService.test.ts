@@ -174,4 +174,34 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(candidate);
   });
+
+  it("preserves uppercase UH acronym tokens during strict short-input fallback cleanup", async () => {
+    const source = "check UH 60 status";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("check UH 60 status");
+  });
+
+  it("preserves uppercase UM acronym tokens during strict short-input fallback cleanup", async () => {
+    const source = "UM module blocked";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("UM module blocked");
+  });
+
+  it("still removes lowercase uh hesitation filler during strict short-input fallback cleanup", async () => {
+    const source = "uh we should ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
 });
