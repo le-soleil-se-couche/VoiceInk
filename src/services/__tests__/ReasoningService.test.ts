@@ -174,4 +174,26 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(candidate);
   });
+
+  it("preserves lexical do-you-know interrogative phrasing during strict fallback cleanup", async () => {
+    const source = "do you know where the file is";
+    const candidate = "I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("removes sentence-initial you-know filler during strict fallback cleanup", async () => {
+    const source = "you know we should ship today";
+    const candidate = "I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
 });
