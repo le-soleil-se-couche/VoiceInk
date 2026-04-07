@@ -191,7 +191,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
   private splitIntoClauses(text: string): string[] {
     return text
-      .split(/(?<=[?？.!。！？])\s+|[\n\r]+/u)
+      .split(/(?<=[?？])(?:\s+|(?=\S))|(?<=[.!。！？])\s+|[\n\r]+/u)
       .map((part) => part.trim())
       .filter(Boolean);
   }
