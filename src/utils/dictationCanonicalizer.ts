@@ -59,6 +59,7 @@ const CHINESE_UNIT_VALUES: Record<string, number> = {
 
 const CHINESE_NUMBER_SEQUENCE_RE = /[零〇一二两三四五六七八九十百千万萬]+/g;
 const CHINESE_NUMBER_UNIT_CHAR_RE = /[十百千万萬]/;
+const CHINESE_NUMBER_CONTEXT_CHAR_RE = /[零〇一二两三四五六七八九十百千万萬\d]/;
 const CHINESE_SPOKEN_NUMBER_RE = /^[零〇一二两三四五六七八九十百千万萬\d]+/;
 const CHINESE_QUANTIFIER_SUFFIX_RE =
   /(?:个|位|名|条|项|份|台|次|句|行|段|年|月|周|天|日|号|点|分|秒|时|钟|元|块|币|￥|¥|度|℃|公里|里|米|厘米|毫米|千克|公斤|克|%|％|版|章|节|页|级|本|件|篇|集|层|届|期|套|辆)/;
@@ -106,6 +107,9 @@ const IDIOM_PROTECTIONS = [
   "一唱一和",
   "一来二去",
   "一知半解",
+  "一点一滴",
+  "两点一线",
+  "三点一线",
   "二话不说",
   "三心二意",
   "三番五次",
@@ -129,7 +133,18 @@ const IDIOM_PROTECTIONS = [
 ];
 const ORAL_ONE_NEXT_RE = /^[下些样起直会]/;
 const ORAL_ONE_PREV_RE = /[这那哪每另前后上下同某]/;
+const EXPLICIT_CLOCK_TAIL_RE = /^(?:半|一刻|三刻|[零〇一二两三四五六七八九十百千万萬\d])/;
 const TIME_CONTEXT_PREV_RE = /[上下早晚晨午夜今明昨零〇一二两三四五六七八九十百千万萬\d]/;
+const MINUTE_LIKE_TIME_FOLLOWUP_RE =
+  /^(?:开会|开始|结束|出发|见面|集合|提醒|闹钟|上课|下课|下班|上线|起床|睡觉|发车|起飞|到达|截止|截至)/;
+const MINUTE_LIKE_TIME_APPROX_FOLLOWUP_RE =
+  /^(?:左右|前后)\s*[，,、]?\s*(?:开会|开始|结束|出发|见面|集合|提醒|闹钟|上课|下课|下班|上线|起床|睡觉|发车|起飞|到达|截止|截至|提交)/;
+const MINUTE_LIKE_TIME_SUBMIT_FOLLOWUP_RE = /^(?:[，,、]\s*)?提交/;
+const MINUTE_LIKE_NON_TIME_VERSION_PREFIX_RE = /(?:版本(?:号)?)$/;
+const MINUTE_LIKE_TIME_PREFIX_RE =
+  /(?:今天|明天|后天|昨天|今晚|今早|今晨|今夜|上午|下午|晚上|凌晨|中午|早上|傍晚)$/;
+const MINUTE_LIKE_TIME_PREPOSITION_PREFIX_RE =
+  /(?:^|[，。！？；、\s])(?:(?:请)?在|(?:请)?于|(?:要|得|会|应|能|可|只|都|就|如果|安排|定|约|计划|预计|将)在|(?:将|会|定|约|预计)于)$/;
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -246,16 +261,29 @@ const shouldSkipShortNumberSegment = ({
   offset: number;
 }) => {
   if (segment.length > 2) return false;
+  if (previousChar === "第") return true;
   if (segment === "一" && ORAL_ONE_NEXT_RE.test(nextChar || "")) return true;
   if (segment === "一" && ORAL_ONE_PREV_RE.test(previousChar || "")) return true;
   if (segment === "一" && nextChar === "点") {
     const tail = sourceText.slice(offset + segment.length + 1).trim();
+    // Preserve colloquial "早一点/晚一点" phrasing unless the tail clearly encodes a clock time.
+    if (previousChar === "早" || previousChar === "晚") {
+      // Preserve repeated colloquial phrasing like "早一点一点..." / "晚一点一点..." unless
+      // the second "一点" itself clearly starts an explicit clock-tail expression.
+      if (tail.startsWith("一点")) {
+        const repeatedTail = tail.slice("一点".length).trimStart();
+        if (!EXPLICIT_CLOCK_TAIL_RE.test(repeatedTail)) return true;
+      }
+      if (!EXPLICIT_CLOCK_TAIL_RE.test(tail)) {
+        return true;
+      }
+    }
+    if (tail.startsWith("一点") && !TIME_CONTEXT_PREV_RE.test(previousChar || "")) return true;
     if (TIME_CONTEXT_PREV_RE.test(previousChar || "")) return false;
     if (/^[零〇一二两三四五六七八九十百千万萬\d]+(?:分|时|秒|鐘|钟)/.test(tail)) return false;
     if (CHINESE_SPOKEN_NUMBER_RE.test(tail)) return false;
     return true;
   }
-  if (previousChar === "第") return true;
   if (nextChar === ".") return false;
   if (nextChar === "/") return false;
   if (nextChar === "个" && !CHINESE_NUMBER_UNIT_CHAR_RE.test(segment)) return true;
@@ -274,6 +302,11 @@ const normalizeSpokenChineseNumbersWithContext = (value: string, stats: Dictatio
     const previousChar = safeOffset > 0 ? sourceText[safeOffset - 1] : "";
     const nextChar = sourceText[safeOffset + segment.length] || "";
     const nextTwoChars = sourceText.slice(safeOffset + segment.length, safeOffset + segment.length + 2);
+    // Preserve lexical `点 + ...万/千/百` tails (for example "三点二十万") so they are not
+    // eagerly collapsed into large Arabic integers and then reinterpreted as decimals.
+    if (previousChar === "点" && /[百千万萬]/.test(segment)) {
+      return segment;
+    }
     if ((segment === "百" || segment === "千" || segment === "万" || segment === "萬") && nextTwoChars === "分之") {
       return segment;
     }
@@ -406,8 +439,78 @@ const normalizeResidualChineseDecimals = (
     decimalPass += 1;
     next = next.replace(DECIMAL_SPOKEN_RE, (match, left, right, offset, sourceText) => {
       const safeOffset = typeof offset === "number" ? offset : 0;
+      const charBefore = safeOffset > 0 ? sourceText[safeOffset - 1] : "";
       const charAfter = sourceText[safeOffset + match.length] || "";
+      // Avoid partial matches inside a larger spoken-number fragment (for example
+      // "十一点一" matching only "一点一"), which can cause malformed hybrids like "十1.1".
+      if (CHINESE_NUMBER_CONTEXT_CHAR_RE.test(charBefore)) {
+        return match;
+      }
+      if (charBefore === "第") {
+        return match;
+      }
       if (charAfter && "分时秒钟".includes(charAfter)) {
+        return match;
+      }
+      // Preserve leading-zero spoken tails like "点零五" instead of collapsing to ".5".
+      // These are often lexical time phrasing and decimalizing them drifts from dictation.
+      if ((right.startsWith("零") || right.startsWith("〇") || right.startsWith("0")) && right.length > 1) {
+        return match;
+      }
+      // Avoid malformed hybrids like "4.5十": this usually indicates spoken-number continuation
+      // (for example "四点五十"), not a true decimal.
+      if (charAfter && "十百千".includes(charAfter)) {
+        return match;
+      }
+      // Preserve quarter-hour phrasing like "十点一刻" / "十点三刻"; this is time, not a decimal.
+      if (charAfter === "刻" && (right === "一" || right === "1" || right === "三" || right === "3")) {
+        return match;
+      }
+      // Preserve colloquial repetition like "一点一点" ("bit by bit"), not decimal chains.
+      if (charAfter === "点" && (right === "一" || right === "1")) {
+        return match;
+      }
+      const rightArabicForContext = /^\d+$/.test(right) ? right : parseChineseNumberWords(right);
+      const minuteLikeValue =
+        rightArabicForContext && /^\d+$/.test(rightArabicForContext)
+          ? Number(rightArabicForContext)
+          : Number.NaN;
+      const leftArabicForContext = /^\d+$/.test(left) ? left : parseChineseNumberWords(left);
+      const hourLikeValue =
+        leftArabicForContext && /^\d+$/.test(leftArabicForContext)
+          ? Number(leftArabicForContext)
+          : Number.NaN;
+      const leadingText = sourceText.slice(0, safeOffset).trimEnd();
+      const trailingText = sourceText.slice(safeOffset + match.length).trimStart();
+      const hasTimePrefix = MINUTE_LIKE_TIME_PREFIX_RE.test(leadingText);
+      const hasPrepositionPrefix = MINUTE_LIKE_TIME_PREPOSITION_PREFIX_RE.test(leadingText);
+      const hasSubmitFollowup = MINUTE_LIKE_TIME_SUBMIT_FOLLOWUP_RE.test(trailingText);
+      const hasVersionPrefix = MINUTE_LIKE_NON_TIME_VERSION_PREFIX_RE.test(leadingText);
+      const hasScheduleFollowup = MINUTE_LIKE_TIME_FOLLOWUP_RE.test(trailingText);
+      const hasApproxScheduleFollowup = MINUTE_LIKE_TIME_APPROX_FOLLOWUP_RE.test(trailingText);
+      // Preserve explicit time-prefix phrasing like "今天四点二十五" as clock time, not decimals.
+      if (
+        Number.isFinite(minuteLikeValue) &&
+        ((minuteLikeValue >= 10 && minuteLikeValue <= 59 && (hasTimePrefix || hasPrepositionPrefix)) ||
+          (minuteLikeValue >= 0 &&
+            minuteLikeValue <= 9 &&
+            (hasPrepositionPrefix || (hasTimePrefix && hasSubmitFollowup)) &&
+            Number.isFinite(hourLikeValue) &&
+            hourLikeValue >= 0 &&
+            hourLikeValue <= 23))
+      ) {
+        return match;
+      }
+      // Preserve schedule-style phrasing like "四点二十三开会" as clock time, not decimals.
+      if (
+        Number.isFinite(hourLikeValue) &&
+        hourLikeValue >= 0 &&
+        hourLikeValue <= 23 &&
+        Number.isFinite(minuteLikeValue) &&
+        minuteLikeValue >= 0 &&
+        minuteLikeValue <= 59 &&
+        (hasScheduleFollowup || (hasApproxScheduleFollowup && !hasVersionPrefix))
+      ) {
         return match;
       }
       const leftArabic = /\d/.test(left) ? left : parseChineseNumberWords(left);

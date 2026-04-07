@@ -101,4 +101,31 @@ describe("getAnswerLikeRetryPrompt", () => {
 
     expect(prompt).toContain("自定义 VoiceInk 提示");
   });
+
+  it("adds dictionary boundary guidance to prevent over-expanding shorter spoken product phrases", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      ["auto Deep Search", "VoiceInk"],
+      "en",
+      "please enable auto search now",
+      "en"
+    );
+
+    expect(prompt).toContain("Do not expand a shorter spoken phrase into a longer dictionary term");
+    expect(prompt).toContain('if the user says "auto Search", do not rewrite it as "auto Deep Search"');
+    expect(prompt).toContain("keep the original transcript wording");
+  });
+
+  it("adds Chinese dictionary boundary guidance that blocks forced expansion", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      ["auto Deep Search", "VoiceInk"],
+      "zh-CN",
+      "请打开auto search",
+      "zh-CN"
+    );
+
+    expect(prompt).toContain("不要把较短口述短语扩写成更长词典词条");
+    expect(prompt).toContain("如果只是“可能接近”，保持原转写");
+  });
 });

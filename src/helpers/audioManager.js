@@ -362,6 +362,18 @@ const buildAsrConfusionAliasKeys = (normalizedKey) => {
 
 const splitCamelCase = (value) => value.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
 
+const countDictionaryTokens = (value) => {
+  if (typeof value !== "string" || !value) return 0;
+
+  DICTIONARY_TOKEN_RE.lastIndex = 0;
+  let count = 0;
+  while (DICTIONARY_TOKEN_RE.exec(value) !== null) {
+    count += 1;
+  }
+
+  return count;
+};
+
 const editDistance = (a, b) => {
   const m = a.length;
   const n = b.length;
@@ -427,6 +439,7 @@ const buildDictionaryCanonicalEntries = (dictionary) => {
     entries.push({
       canonical,
       canonicalKey,
+      canonicalTokenCount: countDictionaryTokens(canonical),
       aliasKeys: Array.from(aliasKeys),
     });
   }
@@ -474,6 +487,14 @@ const applyDictionaryCanonicalization = (text, entries) => {
       sourceKeyVariants.add(sourceKey);
 
       for (const entry of entries) {
+        // Prevent over-expansion: do not force fewer spoken tokens into a much longer dictionary term
+        // unless the compact lexical content is already nearly identical (spacing/minor typo cases).
+        const missingCanonicalChars = entry.canonicalKey.length - sourceKey.length;
+        const isTokenExpansion = entry.canonicalTokenCount > windowSize;
+        if (isTokenExpansion && sourceKey !== entry.canonicalKey && missingCanonicalChars > 1) {
+          continue;
+        }
+
         for (const aliasKey of entry.aliasKeys) {
           let bestDistance = Number.POSITIVE_INFINITY;
           for (const sourceVariant of sourceKeyVariants) {

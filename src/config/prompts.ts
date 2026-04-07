@@ -87,17 +87,17 @@ function getDictionaryEnforcementInstruction(uiLanguage?: string): string {
   if (isZh) {
     return [
       "词典强约束：",
-      "- 对人名、产品名、缩写与专有名词，优先使用词典中的写法。",
-      "- 当转录词与词典词存在明显发音相近时，优先归一到词典写法。",
-      "- 不要在词典候选明显可用时自行发明新的拼写。",
+      "- 对人名、产品名、缩写与专有名词，只在词形基本一致时使用词典写法（大小写、轻微错拼可纠正）。",
+      "- 不要把较短口述短语扩写成更长词典词条；若口述是“auto Search”，不要改成“auto Deep Search”。",
+      "- 仅在明显同词的情况下归一；如果只是“可能接近”，保持原转写，不要强行贴合词典。",
     ].join("\n");
   }
 
   return [
     "Dictionary enforcement:",
-    "- For names, product terms, acronyms, and proper nouns, prefer dictionary spellings.",
-    "- If a transcript token sounds close to a dictionary entry, normalize to the dictionary spelling.",
-    "- Do not invent alternate spellings when a dictionary candidate is plausible.",
+    "- For names, product terms, acronyms, and proper nouns, apply dictionary spellings only when the lexical form clearly matches (including casing or minor misspelling fixes).",
+    "- Do not expand a shorter spoken phrase into a longer dictionary term; if the user says \"auto Search\", do not rewrite it as \"auto Deep Search\".",
+    "- If similarity is only plausible but not clear, keep the original transcript wording instead of forcing dictionary alignment.",
   ].join("\n");
 }
 
