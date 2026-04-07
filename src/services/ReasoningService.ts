@@ -15,6 +15,7 @@ const CHINESE_WORD_REPEAT_STUTTER_RE =
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
 const NUMERIC_MILLIMETER_CONTEXT_RE = /(?:^|[\s([{（【])[-+]?\d+(?:[.,]\d+)?\s*$/u;
+const HYPHENATED_UH_OH_SUFFIX_RE = /^\s*[-‐‑–—]\s*oh\b/i;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
@@ -419,9 +420,13 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       )
       .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
       .replace(ENGLISH_FILLER_WORD_RE, (match, offset, sourceText) => {
+        const compactMatch = match.toLowerCase();
+        if (compactMatch === "mm" && NUMERIC_MILLIMETER_CONTEXT_RE.test(sourceText.slice(0, offset))) {
+          return match;
+        }
         if (
-          match.toLowerCase() === "mm" &&
-          NUMERIC_MILLIMETER_CONTEXT_RE.test(sourceText.slice(0, offset))
+          compactMatch === "uh" &&
+          HYPHENATED_UH_OH_SUFFIX_RE.test(sourceText.slice(offset + match.length))
         ) {
           return match;
         }

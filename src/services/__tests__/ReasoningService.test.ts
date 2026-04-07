@@ -198,4 +198,28 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe("we should ship today");
   });
+
+  it("preserves hyphenated uh-oh lexical interjection during strict fallback cleanup", async () => {
+    const source = "This is uh-oh behavior";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("removes sentence-initial uh hesitation filler during strict fallback cleanup", async () => {
+    const source = "uh we should ship today";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
 });
