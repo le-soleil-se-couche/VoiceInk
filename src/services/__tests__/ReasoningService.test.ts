@@ -174,4 +174,26 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(candidate);
   });
+
+  it("preserves numeric mm units during strict fallback cleanup", async () => {
+    const source = "use a 5 mm screw and keep a 0.8mm gap";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("still removes sentence-initial mm hesitation during strict fallback cleanup", async () => {
+    const source = "mm we should ship this today";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship this today");
+  });
 });

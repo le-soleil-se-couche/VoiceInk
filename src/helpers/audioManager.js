@@ -55,6 +55,9 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
 
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
+const NUMERIC_MM_UNIT_RE = /\b(\d+(?:\.\d+)?)(\s*)mm\b/gi;
+const MM_UNIT_PLACEHOLDER = "__voiceink_mm_unit__";
+const MM_UNIT_PLACEHOLDER_RE = new RegExp(MM_UNIT_PLACEHOLDER, "g");
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -1654,7 +1657,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(/^[\u200B-\u200D\uFEFF]+/g, "")
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
+      .replace(NUMERIC_MM_UNIT_RE, `$1$2${MM_UNIT_PLACEHOLDER}`)
       .replace(ENGLISH_FILLER_WORD_RE, "")
+      .replace(MM_UNIT_PLACEHOLDER_RE, "mm")
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
       .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")
