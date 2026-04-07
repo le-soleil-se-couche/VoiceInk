@@ -688,6 +688,66 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("removes sentence-initial discourse filler well without punctuation in strict short-input fallback", async () => {
+    const source = "well we should ship today";
+    const candidate = "Well we should ship today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 80,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes sentence-initial discourse filler well before modal question without punctuation in strict short-input fallback", async () => {
+    const source = "well can we ship today";
+    const candidate = "Well can we ship today?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 80,
+    });
+
+    expect(result).toBe("can we ship today");
+  });
+
+  it("removes sentence-initial discourse filler well before imperative please without punctuation in strict short-input fallback", async () => {
+    const source = "well please send the update today";
+    const candidate = "Well please send the update today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 80,
+    });
+
+    expect(result).toBe("please send the update today");
+  });
+
+  it("removes sentence-initial discourse filler well before let's action lead-in without punctuation in strict short-input fallback", async () => {
+    const source = "well let's review this section";
+    const candidate = "Well let's review this section.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 80,
+    });
+
+    expect(result).toBe("let's review this section");
+  });
+
+  it("keeps lexical sentence-initial well usage in strict short-input fallback", async () => {
+    const source = "Well this is the final draft";
+    const candidate = "Well this is the final draft.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 80,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("removes sentence-initial discourse filler mm in strict short-input fallback", async () => {
     const source = "mm, send update today";
     const candidate = "Mm, send update today.";

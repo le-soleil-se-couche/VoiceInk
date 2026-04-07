@@ -54,7 +54,8 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
 ];
 
 const ENGLISH_FILLER_WORD_RE =
-  /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
+  /\b(um+|uh+|er+|ah+|hmm+)\b/gi;
+const ENGLISH_FILLER_LEXICAL_ACRONYM_RE = /^(?:ER|HMM+)$/;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -68,6 +69,10 @@ const CHINESE_FUNCTION_WORD_STUTTER_RE =
   /(^|[\s，,、。！？,.!?;:])((?:这个|那个|就是|然后|是|就|那|这|我|你|他|她|它|的|了|在|要|会|都|也|还))(?:\s*[，,、]?\s*\2)+/g;
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
+const ALNUM_TOKEN_RE = /[A-Za-z0-9]/;
+
+const bridgeFillerNeighbors = (left, right) =>
+  ALNUM_TOKEN_RE.test(left) && ALNUM_TOKEN_RE.test(right) ? `${left} ${right}` : `${left}${right}`;
 
 const isAnswerLikeTranscriptionOutput = (text) => {
   if (typeof text !== "string") return false;
@@ -1652,9 +1657,116 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     return text
       .replace(/^[\s\u200B-\u200D\uFEFF]*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*[，,、]?\s*/g, "")
       .replace(/^[\u200B-\u200D\uFEFF]+/g, "")
+      .replace(
+        /([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fffA-Za-z0-9])/g,
+        (_match, left, right) => bridgeFillerNeighbors(left, right)
+      )
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
-      .replace(ENGLISH_FILLER_WORD_RE, "")
+      .replace(/(^|[\n\r]+)\s*(?:就是|那个)\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/g, "$1")
+      .replace(
+        /([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*(?:就是|那个)\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/g,
+        "$1"
+      )
+      .replace(
+        /([。！？.!?;:：；])\s*(?:就是|那个)\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/g,
+        "$1 "
+      )
+      .replace(/([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*(?:就是|那个)\s*(?=$|[。.!！!；;：:])/g, "$1")
+      .replace(/(^|[\n\r]+)\s*你\s*懂\s*(?:吗|嗎)\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/g, "$1")
+      .replace(
+        /([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*你\s*懂\s*(?:吗|嗎)\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/g,
+        "$1"
+      )
+      .replace(
+        /([。！？.!?;:：；])\s*你\s*懂\s*(?:吗|嗎)\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/g,
+        "$1 "
+      )
+      .replace(
+        /([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*你\s*懂\s*(?:吗|嗎)\s*(?=$|[。.!！!；;：:])/g,
+        "$1"
+      )
+      .replace(
+        /([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*you\s+know\s+(?!that\b)([\u4e00-\u9fffA-Za-z0-9])/gi,
+        (_match, left, right) => bridgeFillerNeighbors(left, right)
+      )
+      .replace(
+        /([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*like\s+(?!(?:this|that|these|those)\b)([\u4e00-\u9fffA-Za-z0-9])/gi,
+        (_match, left, right) => bridgeFillerNeighbors(left, right)
+      )
+      .replace(
+        /([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*i\s+mean\s+(?!(?:this|that|these|those)\b)([\u4e00-\u9fffA-Za-z0-9])/gi,
+        (_match, left, right) => bridgeFillerNeighbors(left, right)
+      )
+      .replace(
+        /([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*basically\s+(?!(?:this|that|these|those)\b)([\u4e00-\u9fffA-Za-z0-9])/gi,
+        (_match, left, right) => bridgeFillerNeighbors(left, right)
+      )
+      .replace(/(^|[\n\r]+)\s*you\s+know\s*[，,、]\s*(?!that\b)/gi, "$1")
+      .replace(/[，,、]\s*you\s+know\s*[，,、]\s*(?!that\b)/gi, " ")
+      .replace(/([。！？.!?;:：；])\s*you\s+know\s*[，,、]\s*(?!that\b)/gi, "$1 ")
+      .replace(
+        /([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*you\s+know\s*(?=$|[。.!！!；;：:])/gi,
+        "$1"
+      )
+      .replace(
+        /(^|[\n\r]+)\s*you\s+know\s+(?=(?:(?:i|we|you|he|she|they)\s+(?:should|need|have|has|had|can|could|would|will|want|think|am|are|is|was|were|do|does|did|don't|doesn't|didn't|dont|doesnt|didnt|may|might|must)\b|(?:can|could|should|would|will|do|does|did|is|are|am|was|were|have|has|had|what|when|where|why|how)\b|please\b|let(?:'s|s)\s+(?:go|get|make|send|ship|do|start|review|check|update|move|keep|talk|discuss|write|call|schedule|plan|try|see|confirm|proceed|open|close|run|share|prepare|finalize)\b))/gi,
+        "$1"
+      )
+      .replace(/(^|[\n\r]+)\s*basically\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1")
+      .replace(/[，,、]\s*basically\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, " ")
+      .replace(
+        /([。！？.!?;:：；])\s*basically\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi,
+        "$1 "
+      )
+      .replace(/([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*basically\s*(?=$|[。.!！!；;：:])/gi, "$1")
+      .replace(
+        /(^|[\n\r]+)\s*basically\s+(?=(?:(?:i|we|you|he|she|they)\s+(?:should|need|have|has|had|can|could|would|will|want|think|am|are|is|was|were|do|does|did|don't|doesn't|didn't|dont|doesnt|didnt|may|might|must)\b|(?:can|could|should|would|will|do|does|did|is|are|am|was|were|have|has|had|what|when|where|why|how)\b|please\b|let(?:'s|s)\s+(?:go|get|make|send|ship|do|start|review|check|update|move|keep|talk|discuss|write|call|schedule|plan|try|see|confirm|proceed|open|close|run|share|prepare|finalize)\b))/gi,
+        "$1"
+      )
+      .replace(
+        /(^|[\n\r]+)\s*well\s+(?=(?:(?:i|we|you|he|she|they)\s+(?:should|need|have|has|had|can|could|would|will|want|think|am|are|is|was|were|do|does|did|don't|doesn't|didn't|dont|doesnt|didnt|may|might|must)\b|(?:can|could|should|would|will|do|does|did|is|are|am|was|were|have|has|had|what|when|where|why|how)\b|please\b|let(?:'s|s)\s+(?:go|get|make|send|ship|do|start|review|check|update|move|keep|talk|discuss|write|call|schedule|plan|try|see|confirm|proceed|open|close|run|share|prepare|finalize)\b))/gi,
+        "$1"
+      )
+      .replace(/(^|[\n\r]+)\s*like\s*[，,、]\s*(?!this\b|that\b|these\b|those\b)/gi, "$1")
+      .replace(/[，,、]\s*like\s*[，,、]\s*(?!this\b|that\b|these\b|those\b)/gi, " ")
+      .replace(/([。！？.!?;:：；])\s*like\s*[，,、]\s*(?!this\b|that\b|these\b|those\b)/gi, "$1 ")
+      .replace(/([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*like\s*(?=$|[。.!！!；;：:])/gi, "$1")
+      .replace(
+        /(^|[\n\r]+)\s*like\s+(?=(?:(?:i|we|you|he|she|they)\s+(?:should|need|have|has|had|can|could|would|will|want|think|am|are|is|was|were|do|does|did|don't|doesn't|didn't|dont|doesnt|didnt|may|might|must)\b|(?:can|could|should|would|will|do|does|did|is|are|am|was|were|have|has|had|what|when|where|why|how)\b|please\b|let(?:'s|s)\s+(?:go|get|make|send|ship|do|start|review|check|update|move|keep|talk|discuss|write|call|schedule|plan|try|see|confirm|proceed|open|close|run|share|prepare|finalize)\b))/gi,
+        "$1"
+      )
+      .replace(/(^|[\n\r]+)\s*i\s+mean\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1")
+      .replace(/[，,、]\s*i\s+mean\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, " ")
+      .replace(/([。！？.!?;:：；])\s*i\s+mean\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1 ")
+      .replace(/([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*i\s+mean\s*(?=$|[。.!！!；;：:])/gi, "$1")
+      .replace(
+        /(^|[\n\r]+)\s*i\s+mean\s+(?=(?:(?:i|we|you|he|she|they)\s+(?:should|need|have|has|had|can|could|would|will|want|think|am|are|is|was|were|do|does|did|don't|doesn't|didn't|dont|doesnt|didnt|may|might|must)\b|(?:can|could|should|would|will|do|does|did|is|are|am|was|were|have|has|had|what|when|where|why|how)\b|please\b|let(?:'s|s)\s+(?:go|get|make|send|ship|do|start|review|check|update|move|keep|talk|discuss|write|call|schedule|plan|try|see|confirm|proceed|open|close|run|share|prepare|finalize)\b))/gi,
+        "$1"
+      )
+      .replace(
+        /([\u4e00-\u9fffA-Za-z])\s*[，,、]\s*(?:mm+|Mm+)\s*([\u4e00-\u9fffA-Za-z0-9])/g,
+        (_match, left, right) => bridgeFillerNeighbors(left, right)
+      )
+      .replace(/(^|[\n\r]+)\s*mm+\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1")
+      .replace(/[，,、]\s*mm+\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, " ")
+      .replace(/([。！？.!?;:：；])\s*mm+\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1 ")
+      .replace(/([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*mm+\s*(?=$|[。.!！!；;：:])/gi, "$1")
+      .replace(/(^|[\n\r]+)\s*(?:mm+|Mm+)\s+(?=[\u4e00-\u9fffA-Za-z]|$)/g, "$1")
+      .replace(
+        /([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*(um+|uh+|er+|ah+|hmm+)\s*([\u4e00-\u9fffA-Za-z0-9])/gi,
+        (match, left, token, right) =>
+          ENGLISH_FILLER_LEXICAL_ACRONYM_RE.test(token)
+            ? match
+            : bridgeFillerNeighbors(left, right)
+      )
+      .replace(ENGLISH_FILLER_WORD_RE, (match, token) =>
+        ENGLISH_FILLER_LEXICAL_ACRONYM_RE.test(token) ? token : ""
+      )
+      .replace(
+        /\b((?:i|we|you|he|she|they|it|this|that|there|here|the|a|an|my|your|our|their|to|for|of|in|on|at)\s+[a-z']+(?:\s+[a-z']+){0,2})\b(?:\s*(?:[，,、.;:!?-]\s*)?\1\b)+/gi,
+        "$1"
+      )
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
       .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")
