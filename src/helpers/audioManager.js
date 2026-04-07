@@ -56,7 +56,7 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
 const YOU_KNOW_LEXICAL_FOLLOW_RE =
-  /^\s+(?:that|if|whether|how|when|where|why|who|which|whom)\b/i;
+  /^\s+(?:that|if|whether|how|when|where|why|who|which|whom|what(?!\s*[,，、]))\b/i;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
