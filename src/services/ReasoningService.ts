@@ -415,7 +415,64 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         "$1"
       )
       .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
-      .replace(/\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi, "")
+      .replace(/(^|[\n\r]+)\s*(?:um+|uh+|er+|ah+|hmm+)\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1")
+      .replace(/[，,、]\s*(?:um+|uh+|er+|ah+|hmm+)\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, " ")
+      .replace(/([。！？.!?;:：；])\s*(?:um+|uh+|er+|ah+|hmm+)\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1 ")
+      .replace(/([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*(?:um+|uh+|er+|ah+|hmm+)\s*(?=$|[。.!！!；;：:])/gi, "$1")
+      .replace(/\b(um+|uh+|er+|ah+|hmm+)\b/gi, (matched: string) => {
+        // Preserve lexical uppercase abbreviations like "ER" that share surface forms with fillers.
+        if (/^ER$/.test(matched)) {
+          return matched;
+        }
+        return "";
+      })
+      .replace(/(^|[\n\r]+)\s*m{2,}\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1")
+      .replace(/[，,、]\s*m{2,}\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, " ")
+      .replace(/([。！？.!?;:：；])\s*m{2,}\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1 ")
+      .replace(/([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*m{2,}\s*(?=$|[。.!！!；;：:])/gi, "$1")
+      .replace(/(^|[\n\r]+)\s*(?:就是|那个)\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/g, "$1")
+      .replace(/([\u4e00-\u9fff])\s*[，,、]\s*(?:就是|那个)\s*[，,、]\s*(?=[\u4e00-\u9fff]|$)/g, "$1")
+      .replace(
+        /([。！？.!?;:])\s*(?:就是|那个)\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/g,
+        "$1 "
+      )
+      .replace(/([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*(?:就是|那个)\s*(?=$|[。.!！!；;：:])/g, "$1")
+      .replace(/(^|[\n\r]+)\s*你\s*懂\s*(?:吗|嗎)\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/g, "$1")
+      .replace(
+        /([\u4e00-\u9fff])\s*[，,、]\s*你\s*懂\s*(?:吗|嗎)\s*[，,、]\s*(?=[\u4e00-\u9fff]|$)/g,
+        "$1"
+      )
+      .replace(
+        /([。！？.!?;:：；])\s*你\s*懂\s*(?:吗|嗎)\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/g,
+        "$1 "
+      )
+      .replace(
+        /([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*你\s*懂\s*(?:吗|嗎)\s*(?=$|[。.!！!；;：:])/g,
+        "$1"
+      )
+      .replace(/(^|[\n\r]+)\s*you\s+know\s*[，,、]\s*(?!that\b)/gi, "$1")
+      .replace(/[，,、]\s*you\s+know\s*[，,、]\s*(?!that\b)/gi, " ")
+      .replace(/([。！？.!?;:：；])\s*you\s+know\s*[，,、]\s*(?!that\b)/gi, "$1 ")
+      .replace(
+        /([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*you\s+know\s*(?=$|[。.!！!；;：:])/gi,
+        "$1"
+      )
+      .replace(/(^|[\n\r]+)\s*i\s+mean\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1")
+      .replace(/[，,、]\s*i\s+mean\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, " ")
+      .replace(/([。！？.!?;:：；])\s*i\s+mean\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1 ")
+      .replace(/([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*i\s+mean\s*(?=$|[。.!！!；;：:])/gi, "$1")
+      .replace(/(^|[\n\r]+)\s*basically\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1")
+      .replace(/[，,、]\s*basically\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, " ")
+      .replace(/([。！？.!?;:：；])\s*basically\s*[，,、]\s*(?=[\u4e00-\u9fffA-Za-z0-9]|$)/gi, "$1 ")
+      .replace(/([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*basically\s*(?=$|[。.!！!；;：:])/gi, "$1")
+      .replace(/(^|[\n\r]+)\s*like\s*[，,、]\s*(?!this\b|that\b|these\b|those\b)/gi, "$1")
+      .replace(/[，,、]\s*like\s*[，,、]\s*(?!this\b|that\b|these\b|those\b)/gi, " ")
+      .replace(/([。！？.!?;:：；])\s*like\s*[，,、]\s*(?!this\b|that\b|these\b|those\b)/gi, "$1 ")
+      .replace(/([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*like\s*(?=$|[。.!！!；;：:])/gi, "$1")
+      .replace(
+        /\b((?:i|we|you|he|she|they|it|this|that|there|here|the|a|an|my|your|our|their|to|for|of|in|on|at)\s+[a-z']+(?:\s+[a-z']+){0,2})\b(?:\s*(?:[，,.;:!?-]\s*)?\1\b)+/gi,
+        "$1"
+      )
       .replace(/([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g, "$1")
       .replace(/([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g, "$1$2$3")
       .replace(
@@ -430,6 +487,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .replace(/(^|[\n])\s*[，,、]+\s*/g, "$1")
       .replace(/[ \t]{2,}/g, " ")
       .replace(/\n{3,}/g, "\n\n")
+      .replace(/[，,、]+\s*$/g, "")
       .trim();
   }
 
