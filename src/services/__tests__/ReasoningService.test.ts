@@ -94,6 +94,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("preserves do-you-know interrogative phrasing during strict fallback cleanup", async () => {
+    const source = "do you know where the file is";
+    const candidate = "Sure, what is the file location?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("still removes sentence-initial you-know filler during strict fallback cleanup", async () => {
+    const source = "you know we should ship today";
+    const candidate = "Sure, what should we ship today?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
   it("falls back when Chinese assistant wrapper question appears in strict mode", async () => {
     const source = "这个要改吗";
     const candidate = "好的，这个要改吗？";
