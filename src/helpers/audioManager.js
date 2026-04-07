@@ -374,6 +374,20 @@ const countDictionaryTokens = (value) => {
   return count;
 };
 
+const extractNormalizedDictionaryTokens = (value) => {
+  if (typeof value !== "string" || !value) return [];
+
+  DICTIONARY_TOKEN_RE.lastIndex = 0;
+  const tokens = [];
+  let match;
+  while ((match = DICTIONARY_TOKEN_RE.exec(value)) !== null) {
+    const normalized = normalizeDictionaryKey(match[0]);
+    if (normalized) tokens.push(normalized);
+  }
+
+  return tokens;
+};
+
 const editDistance = (a, b) => {
   const m = a.length;
   const n = b.length;
@@ -403,6 +417,102 @@ const getMaxAllowedDictionaryDistance = (sourceKey, targetKey) => {
   return 3;
 };
 
+const ASCII_ALNUM_RE = /^[a-z0-9]+$/;
+const ENGLISH_INFLECTIONAL_SUFFIX_RE = /^(?:s|es|ed|er|ers|ing)$/;
+
+const hasInflectionalSuffixBeyondCanonical = (sourceKey, canonicalKey, canonicalTokenCount) => {
+  if (canonicalTokenCount > 1) return false;
+  if (!sourceKey || !canonicalKey || sourceKey === canonicalKey) return false;
+  if (!ASCII_ALNUM_RE.test(sourceKey) || !ASCII_ALNUM_RE.test(canonicalKey)) return false;
+  if (!sourceKey.startsWith(canonicalKey)) return false;
+  const suffix = sourceKey.slice(canonicalKey.length);
+  return ENGLISH_INFLECTIONAL_SUFFIX_RE.test(suffix);
+};
+
+const hasAttachedLexicalAffixBeyondCanonical = (sourceKey, canonicalKey, canonicalTokenCount) => {
+  if (canonicalTokenCount > 1) return false;
+  if (!sourceKey || !canonicalKey || sourceKey === canonicalKey) return false;
+  if (!ASCII_ALNUM_RE.test(sourceKey) || !ASCII_ALNUM_RE.test(canonicalKey)) return false;
+
+  const canonicalIndex = sourceKey.indexOf(canonicalKey);
+  if (canonicalIndex < 0) return false;
+
+  const prefix = sourceKey.slice(0, canonicalIndex);
+  const suffix = sourceKey.slice(canonicalIndex + canonicalKey.length);
+  if (!prefix && !suffix) return false;
+  if (!prefix && ENGLISH_INFLECTIONAL_SUFFIX_RE.test(suffix)) return false;
+  // Preserve merged numeric/version affixes so spoken variants like
+  // "autodeepsearch2" are not over-canonicalized to the base term.
+  if (!/\d/.test(canonicalKey) && (/\d/.test(prefix) || /\d/.test(suffix))) return true;
+
+  // Keep one-character spillover permissive for minor boundary typos/noise.
+  if (prefix.length <= 1 && suffix.length <= 1) return false;
+
+  return true;
+};
+
+const hasSingleCharBoundaryAffixInMultiTokenWindow = (
+  sourceKey,
+  canonicalKey,
+  canonicalTokenCount,
+  windowSize
+) => {
+  if (canonicalTokenCount > 1 || windowSize <= 1) return false;
+  if (!sourceKey || !canonicalKey || sourceKey === canonicalKey) return false;
+  if (!ASCII_ALNUM_RE.test(sourceKey) || !ASCII_ALNUM_RE.test(canonicalKey)) return false;
+
+  const canonicalIndex = sourceKey.indexOf(canonicalKey);
+  if (canonicalIndex < 0) return false;
+
+  const prefix = sourceKey.slice(0, canonicalIndex);
+  const suffix = sourceKey.slice(canonicalIndex + canonicalKey.length);
+  const affixLength = prefix.length + suffix.length;
+  if (affixLength !== 1) return false;
+
+  const affix = (prefix || suffix).toLowerCase();
+  if (!/^[a-z]$/.test(affix)) return false;
+  if (!prefix && ENGLISH_INFLECTIONAL_SUFFIX_RE.test(suffix)) return false;
+
+  return true;
+};
+
+const hasDivergentMiddleTokenInContiguousWindow = (
+  sourceTokenKeys,
+  canonicalWindowTokenKeys,
+  canonicalTokenCount,
+  windowSize
+) => {
+  if (canonicalTokenCount > 1 || windowSize <= 2) return false;
+  if (!Array.isArray(sourceTokenKeys) || !Array.isArray(canonicalWindowTokenKeys)) return false;
+  if (sourceTokenKeys.length !== windowSize || canonicalWindowTokenKeys.length !== windowSize) {
+    return false;
+  }
+
+  const lastIndex = windowSize - 1;
+  if (sourceTokenKeys[0] !== canonicalWindowTokenKeys[0]) return false;
+  if (sourceTokenKeys[lastIndex] !== canonicalWindowTokenKeys[lastIndex]) return false;
+
+  for (let i = 1; i < lastIndex; i += 1) {
+    const sourceToken = sourceTokenKeys[i];
+    const canonicalToken = canonicalWindowTokenKeys[i];
+    if (!sourceToken || !canonicalToken || sourceToken === canonicalToken) continue;
+    if (!ASCII_ALNUM_RE.test(sourceToken) || !ASCII_ALNUM_RE.test(canonicalToken)) return true;
+
+    const distance = editDistance(sourceToken, canonicalToken);
+    if (distance > 1) return true;
+    if (
+      distance > 0 &&
+      sourceToken.length >= 4 &&
+      canonicalToken.length >= 4 &&
+      sourceToken[0] !== canonicalToken[0]
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 const buildDictionaryCanonicalEntries = (dictionary) => {
   const words = Array.isArray(dictionary) ? dictionary : [];
   const entries = [];
@@ -415,6 +525,7 @@ const buildDictionaryCanonicalEntries = (dictionary) => {
     const canonicalKey = normalizeDictionaryKey(canonical);
     if (!canonicalKey || seenCanonical.has(canonicalKey)) continue;
     seenCanonical.add(canonicalKey);
+    const canonicalWindowTokenKeys = extractNormalizedDictionaryTokens(splitCamelCase(canonical));
 
     const aliasKeys = new Set([canonicalKey]);
     const camelSplitKey = normalizeDictionaryKey(splitCamelCase(canonical));
@@ -440,6 +551,7 @@ const buildDictionaryCanonicalEntries = (dictionary) => {
       canonical,
       canonicalKey,
       canonicalTokenCount: countDictionaryTokens(canonical),
+      canonicalWindowTokenKeys,
       aliasKeys: Array.from(aliasKeys),
     });
   }
@@ -485,13 +597,64 @@ const applyDictionaryCanonicalization = (text, entries) => {
       if (!sourceKey) continue;
       const sourceKeyVariants = expandDictionaryKeyVariants(sourceKey);
       sourceKeyVariants.add(sourceKey);
+      const sourceWindowTokenKeys = [];
+      for (let offset = 0; offset < windowSize; offset += 1) {
+        sourceWindowTokenKeys.push(normalizeDictionaryKey(tokens[tokenIndex + offset].value));
+      }
 
       for (const entry of entries) {
         // Prevent over-expansion: do not force fewer spoken tokens into a much longer dictionary term
         // unless the compact lexical content is already nearly identical (spacing/minor typo cases).
         const missingCanonicalChars = entry.canonicalKey.length - sourceKey.length;
         const isTokenExpansion = entry.canonicalTokenCount > windowSize;
-        if (isTokenExpansion && sourceKey !== entry.canonicalKey && missingCanonicalChars > 1) {
+        const isContiguousCanonicalExpansion =
+          entry.canonicalTokenCount <= 1 && windowSize > 1;
+        const isLargeSingleTokenContiguousGap =
+          entry.canonicalTokenCount <= 1 && windowSize <= 1 && missingCanonicalChars > 2;
+        if (
+          sourceKey !== entry.canonicalKey &&
+          missingCanonicalChars > 1 &&
+          (isTokenExpansion || isContiguousCanonicalExpansion || isLargeSingleTokenContiguousGap)
+        ) {
+          continue;
+        }
+        if (
+          hasDivergentMiddleTokenInContiguousWindow(
+            sourceWindowTokenKeys,
+            entry.canonicalWindowTokenKeys,
+            entry.canonicalTokenCount,
+            windowSize
+          )
+        ) {
+          continue;
+        }
+
+        if (
+          hasInflectionalSuffixBeyondCanonical(
+            sourceKey,
+            entry.canonicalKey,
+            entry.canonicalTokenCount
+          )
+        ) {
+          continue;
+        }
+        if (
+          hasAttachedLexicalAffixBeyondCanonical(
+            sourceKey,
+            entry.canonicalKey,
+            entry.canonicalTokenCount
+          )
+        ) {
+          continue;
+        }
+        if (
+          hasSingleCharBoundaryAffixInMultiTokenWindow(
+            sourceKey,
+            entry.canonicalKey,
+            entry.canonicalTokenCount,
+            windowSize
+          )
+        ) {
           continue;
         }
 

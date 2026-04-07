@@ -108,6 +108,10 @@ const IDIOM_PROTECTIONS = [
   "一来二去",
   "一知半解",
   "一点一滴",
+  "一时半点",
+  "一分半点",
+  "一点半点",
+  "一点半点儿",
   "两点一线",
   "三点一线",
   "二话不说",
@@ -135,6 +139,10 @@ const ORAL_ONE_NEXT_RE = /^[下些样起直会]/;
 const ORAL_ONE_PREV_RE = /[这那哪每另前后上下同某]/;
 const EXPLICIT_CLOCK_TAIL_RE = /^(?:半|一刻|三刻|[零〇一二两三四五六七八九十百千万萬\d])/;
 const TIME_CONTEXT_PREV_RE = /[上下早晚晨午夜今明昨零〇一二两三四五六七八九十百千万萬\d]/;
+const LEXICAL_YIDIAN_PROBLEM_NEGATIVE_RE =
+  /^(?:问题|問題)\s*(?:都|也)\s*(?:(?:并|並)\s*)?(?:不|没|沒|無|无|未)/;
+const LEXICAL_ERHUA_YIDIAN_PROBLEM_NEGATIVE_RE =
+  /^[儿兒]\s*(?:问题|問題)\s*(?:都|也)\s*(?:(?:并|並)\s*)?(?:不|没|沒|無|无|未)/;
 const MINUTE_LIKE_TIME_FOLLOWUP_RE =
   /^(?:开会|开始|结束|出发|见面|集合|提醒|闹钟|上课|下课|下班|上线|起床|睡觉|发车|起飞|到达|截止|截至)/;
 const MINUTE_LIKE_TIME_APPROX_FOLLOWUP_RE =
@@ -261,19 +269,69 @@ const shouldSkipShortNumberSegment = ({
   offset: number;
 }) => {
   if (segment.length > 2) return false;
+  // Preserve repeated phrasing like "...一点一点..." / "...一点儿一点..." when
+  // evaluating the minute-like tail segment (for example "...一点十五分"), so
+  // repetition does not collapse into mixed numeric clock text.
+  if (
+    previousChar === "点" &&
+    /(?:一点|一点[儿兒])一点$/.test(sourceText.slice(Math.max(0, offset - 6), offset))
+  ) {
+    return true;
+  }
   if (previousChar === "第") return true;
   if (segment === "一" && ORAL_ONE_NEXT_RE.test(nextChar || "")) return true;
   if (segment === "一" && ORAL_ONE_PREV_RE.test(previousChar || "")) return true;
   if (segment === "一" && nextChar === "点") {
+    // Preserve the second repeated segment in "...一点一点..." / "...一点儿一点..."
+    // so repeated spoken phrasing does not split into mixed numeric hybrids.
+    const repeatedPrefix = sourceText.slice(Math.max(0, offset - 3), offset);
+    if (/(?:一点|一点[儿兒])$/.test(repeatedPrefix)) return true;
+
     const tail = sourceText.slice(offset + segment.length + 1).trim();
+    const lexicalTail = tail.replace(/^[\s，,、；;:：]+/, "");
+    const erhuaLexicalTail = lexicalTail.replace(/^([儿兒])\s*[，,、；;:：]\s*/, "$1");
+    // Preserve lexical "一点点" ("a little bit") in all contexts so it does not
+    // drift into unnatural clock-like hybrids such as "1点点".
+    if (lexicalTail.startsWith("点")) return true;
+    // Preserve lexical degree phrase "一点都..." ("not at all") even when preceded
+    // by temporal context characters like "凌/晨/夜"; this is not a clock expression.
+    if (lexicalTail.startsWith("都")) return true;
+    // Preserve lexical degree phrase "一点不/没/沒/无/未..." ("not at all"), including
+    // adverb-prefixed forms like "一点并不/并没/并未...", which can
+    // otherwise be misread as clock time in temporal-prefix contexts.
+    // Keep "一点不要..." eligible for time normalization because it is often
+    // imperative scheduling phrasing ("at one o'clock, don't ...").
+    if (/^(?:(?:并|並)\s*)?(?:不(?!要)|没|沒|無|无|未)/.test(lexicalTail)) return true;
+    // Preserve lexical degree phrase "一点也不/没/沒/无..." ("not at all"), including
+    // adverb-prefixed forms like "一点也并不/也并没/也并未...", which can
+    // otherwise be misread as a clock expression in temporal-prefix contexts.
+    if (/^也\s*(?:(?:并|並)\s*)?(?:不|没|沒|無|无|未)/.test(lexicalTail)) return true;
+    // Preserve lexical object phrase "一点问题都/也不(没)..." ("not any problem at all")
+    // so temporal-prefix context does not force clock-like rewrites.
+    if (LEXICAL_YIDIAN_PROBLEM_NEGATIVE_RE.test(lexicalTail)) return true;
+    // Preserve lexical degree phrasing with erhua ("一点儿都/也..." / "一点兒都/也..."), which can
+    // otherwise be misread as a clock expression in temporal-prefix contexts.
+    if (/^[儿兒]\s*(?:都|也)/.test(erhuaLexicalTail)) return true;
+    // Preserve erhua lexical object phrase "一点儿问题都/也不(没)..."
+    // under temporal prefixes for the same reason.
+    if (LEXICAL_ERHUA_YIDIAN_PROBLEM_NEGATIVE_RE.test(erhuaLexicalTail)) return true;
+    // Preserve lexical degree phrasing like "一点儿不/没/沒/无..." ("not at all"), including
+    // adverb-prefixed forms like "一点儿并不/并没/并未...", which can
+    // otherwise be misread as clock time in temporal-prefix contexts.
+    if (/^[儿兒]\s*(?:(?:并|並)\s*)?(?:不|没|沒|無|无|未)/.test(erhuaLexicalTail)) return true;
+    // Preserve repeated colloquial erhua phrasing like "一点儿一点...".
+    // Even when a clock-like tail follows, converting the repeated segments independently
+    // can produce unnatural hybrids such as "1点儿1点一刻".
+    if (/^[儿兒]\s*一点/.test(erhuaLexicalTail)) {
+      return true;
+    }
+    // Preserve repeated colloquial phrasing like "一点一点...".
+    // This avoids over-normalizing acceptable spoken repetition into "1点1点..." hybrids.
+    if (lexicalTail.startsWith("一点")) {
+      return true;
+    }
     // Preserve colloquial "早一点/晚一点" phrasing unless the tail clearly encodes a clock time.
     if (previousChar === "早" || previousChar === "晚") {
-      // Preserve repeated colloquial phrasing like "早一点一点..." / "晚一点一点..." unless
-      // the second "一点" itself clearly starts an explicit clock-tail expression.
-      if (tail.startsWith("一点")) {
-        const repeatedTail = tail.slice("一点".length).trimStart();
-        if (!EXPLICIT_CLOCK_TAIL_RE.test(repeatedTail)) return true;
-      }
       if (!EXPLICIT_CLOCK_TAIL_RE.test(tail)) {
         return true;
       }
@@ -417,7 +475,12 @@ const applyLowAmbiguityPunctuationRules = (
 
   next = next.replace(
     /([零〇一二两三四五六七八九十百千万萬]{1,3})\s*点\s*([零〇一二两三四五六七八九十百千万萬]{1,3})\s*分/g,
-    (_match, hourText, minuteText) => {
+    (match, hourText, minuteText, offset, sourceText) => {
+      const safeOffset = typeof offset === "number" ? offset : 0;
+      const leadingText = sourceText.slice(0, safeOffset).trimEnd();
+      if (/(?:一点|一点[儿兒])$/.test(leadingText)) {
+        return match;
+      }
       stats.numberReplacements += 1;
       return `${toArabicNumeral(hourText)}点${toArabicNumeral(minuteText)}分`;
     }
