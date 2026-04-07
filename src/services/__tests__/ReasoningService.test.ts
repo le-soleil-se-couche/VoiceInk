@@ -174,4 +174,28 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(candidate);
   });
+
+  it("keeps numeric millimeter unit mm during strict fallback cleanup", async () => {
+    const source = "Use 5 mm screws for the bracket";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("removes sentence-initial mm hesitation filler during strict fallback cleanup", async () => {
+    const source = "mm we should ship today";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
 });
