@@ -174,4 +174,37 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(candidate);
   });
+
+  it("preserves lexical as-you-know phrasing during strict short-input fallback cleanup", async () => {
+    const source = "as you know we should ship today";
+    const candidate = "rewritten output";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("as you know we should ship today");
+  });
+
+  it("preserves lexical you-know-that clause during strict short-input fallback cleanup", async () => {
+    const source = "you know that we should ship today";
+    const candidate = "rewritten output";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("you know that we should ship today");
+  });
+
+  it("removes bare sentence-initial you-know hesitation filler during strict short-input fallback cleanup", async () => {
+    const source = "you know we should ship today";
+    const candidate = "rewritten output";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
 });
