@@ -106,6 +106,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(candidate);
   });
 
+  it("keeps lexical Chinese you-want-what question phrasing instead of treating it as answer-like", async () => {
+    const source = "你想要什么颜色";
+    const candidate = "你想要什么颜色？";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("still blocks assistant-style Chinese you-want testing prompts", async () => {
+    const source = "这个要改吗";
+    const candidate = "你想要测试什么句子？";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats find-out-if dictation as question intent and blocks direct answers", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "We should ship this today.";
