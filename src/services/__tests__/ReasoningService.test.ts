@@ -880,6 +880,18 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe("we should ship today");
   });
 
+  it("collapses adjacent repeated English fragment with ideographic comma in strict short-input fallback", async () => {
+    const source = "we should、we should ship today";
+    const candidate = "We should ship today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 80,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
   it("keeps content-led repeated phrase in strict short-input fallback", async () => {
     const source = "very good very good point";
     const candidate = "Very good point.";
