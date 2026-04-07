@@ -53,8 +53,8 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /\b(you can try).{0,20}(sentence|example)\b/i,
 ];
 
-const ENGLISH_FILLER_WORD_RE =
-  /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
+const ENGLISH_FILLER_WORD_RE = /\b(?:um+|uh+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
+const ENGLISH_ER_HESITATION_RE = /\b(?:er+|Er+)\b/g;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -1654,6 +1654,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(/^[\u200B-\u200D\uFEFF]+/g, "")
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
+      .replace(ENGLISH_ER_HESITATION_RE, "")
       .replace(ENGLISH_FILLER_WORD_RE, "")
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
