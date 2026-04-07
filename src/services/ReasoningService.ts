@@ -13,6 +13,8 @@ import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
+const COMMA_BRIDGE_RE =
+  /([A-Za-z0-9\u4e00-\u9fff])[，,、]\s*[，,、]\s*([A-Za-z0-9\u4e00-\u9fff])/g;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
   "了",
@@ -158,7 +160,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const zhQuestionPatterns = [
       /[吗么呢吧]$/,
-      /\b(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否)\b/,
+      /(?:请问|什么时候|什么时间|什么|谁|哪(?:里|儿|个|些|种)?|为什么|为何|怎么|怎样|几时|几点|多少|几(?:点|号|天|月|年|次|个)?|是否|可否|能否|会否)/,
       /(?:是不是|能不能|可不可以|要不要|会不会|有没有)/,
       /(?:行不行|对不对|好不好|可不可以|能不能|要不要|有没有|是不是)$/,
     ];
@@ -415,7 +417,54 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         "$1"
       )
       .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
-      .replace(/\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi, "")
+      .replace(/\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi, (match, offset, fullText) => {
+        const compact = match.replace(/\s+/g, "");
+        const lowered = compact.toLowerCase();
+        const before = fullText.slice(0, offset);
+        const after = fullText.slice(offset + match.length);
+        const beforeTrimmed = before.replace(/[\s\u200B-\u200D\uFEFF]+$/g, "");
+        const afterTrimmed = after.replace(/^[\s\u200B-\u200D\uFEFF]+/g, "");
+        // Preserve acronym-like all-caps tokens (e.g. HMM) that can otherwise collide with filler patterns.
+        if (/^[A-Z]{3,}$/.test(compact)) {
+          return match;
+        }
+        // Preserve uppercase ER abbreviation (for example, Emergency Room) in lexical dictation.
+        if (compact === "ER") {
+          return match;
+        }
+        // Preserve lexical metric-unit tokens (e.g. "5 mm") in technical dictation.
+        if (/^mm+$/i.test(compact)) {
+          if (/\b\d+(?:\.\d+)?\s*$/u.test(before)) {
+            return match;
+          }
+        }
+        // Preserve lexical phrase "as you know" and interrogative "do/did/does you know"
+        // while still stripping standalone filler usage.
+        if (lowered === "youknow") {
+          if (/\bas$/i.test(beforeTrimmed)) {
+            return match;
+          }
+          if (/\b(?:do|did|does)\s*$/i.test(beforeTrimmed)) {
+            return match;
+          }
+          if (/\bif\s*$/i.test(beforeTrimmed)) {
+            return match;
+          }
+        }
+        // Keep content-bearing "basically" unless it is comma-marked parenthetical filler.
+        if (lowered === "basically") {
+          const commaMarked = /[,，、]$/.test(beforeTrimmed) || /^[,，、]/.test(afterTrimmed);
+          if (!commaMarked) {
+            return match;
+          }
+        }
+        return "";
+      })
+      .replace(COMMA_BRIDGE_RE, (_match, beforeChar: string, afterChar: string) => {
+        const shouldPreserveSpacing =
+          /[A-Za-z0-9]/.test(beforeChar) && /[A-Za-z0-9]/.test(afterChar);
+        return shouldPreserveSpacing ? `${beforeChar} ${afterChar}` : `${beforeChar}${afterChar}`;
+      })
       .replace(/([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g, "$1")
       .replace(/([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g, "$1$2$3")
       .replace(

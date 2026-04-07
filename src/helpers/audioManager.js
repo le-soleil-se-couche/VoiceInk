@@ -76,6 +76,58 @@ const isAnswerLikeTranscriptionOutput = (text) => {
   return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
 };
 
+const stripEnglishFillerMatch = (match, offset, fullText) => {
+  const compact = (match || "").replace(/\s+/g, "");
+  const lowered = compact.toLowerCase();
+  const safeOffset = typeof offset === "number" ? offset : 0;
+  const sourceText = typeof fullText === "string" ? fullText : "";
+  const before = sourceText.slice(0, safeOffset);
+  const after = sourceText.slice(safeOffset + match.length);
+  const beforeTrimmed = before.replace(/[\s\u200B-\u200D\uFEFF]+$/g, "");
+  const afterTrimmed = after.replace(/^[\s\u200B-\u200D\uFEFF]+/g, "");
+  // Preserve acronym-like all-caps tokens (e.g. HMM) that can collide with filler patterns.
+  if (/^[A-Z]{3,}$/.test(compact)) {
+    return match;
+  }
+  // Preserve uppercase ER abbreviation (for example, Emergency Room) in lexical dictation.
+  if (compact === "ER") {
+    return match;
+  }
+  // Preserve lexical metric-unit tokens in numeric context (e.g. "5 mm").
+  if (/^mm+$/i.test(compact)) {
+    if (/\b\d+(?:\.\d+)?\s*$/u.test(before)) {
+      return match;
+    }
+  }
+  // Preserve lexical phrase "as you know" while still stripping standalone filler usage.
+  if (lowered === "youknow") {
+    if (/\bas$/i.test(beforeTrimmed)) {
+      return match;
+    }
+    // Preserve interrogative lexical phrase "do/did/does you know ...".
+    if (/\b(?:do|did|does)\s*$/i.test(beforeTrimmed)) {
+      return match;
+    }
+    // Preserve lexical conditional clause "if you know ...".
+    if (/\bif\s*$/i.test(beforeTrimmed)) {
+      return match;
+    }
+  }
+  // Keep content-bearing "basically" unless it is comma-marked parenthetical filler.
+  if (lowered === "basically") {
+    const commaMarked = /[,，、]$/.test(beforeTrimmed) || /^[,，、]/.test(afterTrimmed);
+    if (!commaMarked) {
+      return match;
+    }
+  }
+  return "";
+};
+
+const collapseDoubleCommaBridge = (_match, beforeChar, afterChar) => {
+  const shouldPreserveSpacing = /[A-Za-z0-9]/.test(beforeChar) && /[A-Za-z0-9]/.test(afterChar);
+  return shouldPreserveSpacing ? `${beforeChar} ${afterChar}` : `${beforeChar}${afterChar}`;
+};
+
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // Split by script family so mixed tokens like "readme在" become ["readme", "在"].
 const DICTIONARY_TOKEN_RE =
@@ -1654,7 +1706,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(/^[\u200B-\u200D\uFEFF]+/g, "")
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
-      .replace(ENGLISH_FILLER_WORD_RE, "")
+      .replace(ENGLISH_FILLER_WORD_RE, stripEnglishFillerMatch)
+      // Remove doubled comma bridges left by parenthetical filler stripping: "we should, um, ship" -> "we should ship".
+      .replace(
+        /([A-Za-z0-9\u4e00-\u9fff])[，,、]\s*[，,、]\s*([A-Za-z0-9\u4e00-\u9fff])/g,
+        collapseDoubleCommaBridge
+      )
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
       .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")
