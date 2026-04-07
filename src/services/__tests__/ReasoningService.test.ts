@@ -83,6 +83,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("keeps ordinary first-person cannot statements in cleanup output", async () => {
+    const source = "i can't attend today's meeting";
+    const candidate = "I can't attend today's meeting.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("falls back when cleanup output is an assistant refusal statement", async () => {
+    const source = "please summarize this paragraph";
+    const candidate = "I can't help with that request.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when Chinese assistant wrapper question appears in strict mode", async () => {
     const source = "这个要改吗";
     const candidate = "好的，这个要改吗？";
