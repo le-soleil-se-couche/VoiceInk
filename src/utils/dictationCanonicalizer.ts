@@ -250,6 +250,7 @@ const shouldSkipShortNumberSegment = ({
   if (segment === "一" && ORAL_ONE_PREV_RE.test(previousChar || "")) return true;
   if (segment === "一" && nextChar === "点") {
     const tail = sourceText.slice(offset + segment.length + 1).trim();
+    if (/^一(?:点|點)/.test(tail)) return true;
     if (TIME_CONTEXT_PREV_RE.test(previousChar || "")) return false;
     if (/^[零〇一二两三四五六七八九十百千万萬\d]+(?:分|时|秒|鐘|钟)/.test(tail)) return false;
     if (CHINESE_SPOKEN_NUMBER_RE.test(tail)) return false;
@@ -406,6 +407,12 @@ const normalizeResidualChineseDecimals = (
     decimalPass += 1;
     next = next.replace(DECIMAL_SPOKEN_RE, (match, left, right, offset, sourceText) => {
       const safeOffset = typeof offset === "number" ? offset : 0;
+      const lexicalWindow = sourceText.slice(safeOffset, safeOffset + 4);
+      const isLexicalYidianReduplication =
+        lexicalWindow === "一点一点" || lexicalWindow === "1点一点";
+      if ((left === "一" || left === "1") && right === "一" && isLexicalYidianReduplication) {
+        return match;
+      }
       const charAfter = sourceText[safeOffset + match.length] || "";
       if (charAfter && "分时秒钟".includes(charAfter)) {
         return match;

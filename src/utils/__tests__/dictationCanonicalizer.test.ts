@@ -54,6 +54,13 @@ const CASES: CanonCase[] = [
   { name: "多位小数点归一", input: "一二点三四", expected: "12.34" },
   { name: "时间表达优先归一", input: "十二点二十七分", expected: "12点27分" },
   { name: "口语一点保留汉字", input: "干净一点", expected: "干净一点" },
+  { name: "口语一点一点保留汉字", input: "一点一点", expected: "一点一点" },
+  {
+    name: "句中口语一点一点保留汉字",
+    input: "慢慢来一点一点改",
+    expected: "慢慢来一点一点改",
+  },
+  { name: "一点一点外的真实小数继续归一", input: "一点一", expected: "1.1" },
   { name: "口语一下保留汉字", input: "转一下", expected: "转一下" },
   { name: "这一层保留汉字", input: "这一层", expected: "这一层" },
   { name: "第一层保留汉字", input: "第一层", expected: "第一层" },
