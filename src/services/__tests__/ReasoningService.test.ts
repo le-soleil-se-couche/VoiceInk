@@ -424,6 +424,54 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe("send update today");
   });
 
+  it("removes sentence-initial discourse filler you know without punctuation in strict short-input fallback", async () => {
+    const source = "you know we should ship today";
+    const candidate = "You know we should ship today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 80,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes sentence-initial discourse filler you know before modal question without punctuation in strict short-input fallback", async () => {
+    const source = "you know can we ship today";
+    const candidate = "You know can we ship today?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 80,
+    });
+
+    expect(result).toBe("can we ship today");
+  });
+
+  it("removes sentence-initial discourse filler you know before imperative please without punctuation in strict short-input fallback", async () => {
+    const source = "you know please send the update today";
+    const candidate = "You know please send the update today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 80,
+    });
+
+    expect(result).toBe("please send the update today");
+  });
+
+  it("removes sentence-initial discourse filler you know before let's action lead-in without punctuation in strict short-input fallback", async () => {
+    const source = "you know let's review this section";
+    const candidate = "You know let's review this section.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 80,
+    });
+
+    expect(result).toBe("let's review this section");
+  });
+
   it("removes parenthetical discourse filler you know in strict short-input fallback", async () => {
     const source = "we should, you know, ship";
     const candidate = "We should, you know, ship.";
@@ -511,6 +559,18 @@ describe("ReasoningService strict mode", () => {
   it("keeps lexical as you know phrase in strict short-input fallback", async () => {
     const source = "as you know we are shipping friday";
     const candidate = "As you know, we are shipping Friday.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 80,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps lexical sentence-initial you know that usage in strict short-input fallback", async () => {
+    const source = "You know that we should ship today";
+    const candidate = "You know that we should ship today.";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
       strictMode: true,
