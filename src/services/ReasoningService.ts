@@ -470,7 +470,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .replace(/([。！？.!?;:：；])\s*like\s*[，,、]\s*(?!this\b|that\b|these\b|those\b)/gi, "$1 ")
       .replace(/([\u4e00-\u9fffA-Za-z0-9])\s*[，,、]\s*like\s*(?=$|[。.!！!；;：:])/gi, "$1")
       .replace(
-        /\b((?:i|we|you|he|she|they|it|this|that|there|here|the|a|an|my|your|our|their|to|for|of|in|on|at)\s+[a-z']+(?:\s+[a-z']+){0,2})\b(?:\s*(?:[，,.;:!?-]\s*)?\1\b)+/gi,
+        /\b((?:i|we|you|he|she|they|it|this|that|there|here|the|a|an|my|your|our|their|to|for|of|in|on|at)\s+[a-z']+(?:\s+[a-z']+){0,2})\b(?:\s*(?:[，,、.;:!?-]\s*)?\1\b)+/gi,
         "$1"
       )
       .replace(/([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g, "$1")
