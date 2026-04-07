@@ -254,6 +254,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("preserves lexical battery-capacity Ah unit during strict short-input fallback cleanup", async () => {
+    const source = "bring a 5 Ah battery pack";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("still removes sentence-initial mm hesitation filler during strict short-input fallback cleanup", async () => {
     const source = "mm, we should ship today";
     const candidate = "Sure, that works.";
@@ -265,8 +276,96 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe("we should ship today");
   });
 
+  it("still removes sentence-initial ah hesitation filler during strict short-input fallback cleanup", async () => {
+    const source = "ah, we should ship today";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes comma-led one-sided mm hesitation filler without closing comma during strict short-input fallback cleanup", async () => {
+    const source = "we should, mm ship today";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes comma-led one-sided Mm hesitation filler without closing comma during strict short-input fallback cleanup", async () => {
+    const source = "we should，Mm ship today";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("preserves uppercase MM lexical token during strict short-input fallback cleanup", async () => {
+    const source = "rollout, MM module is blocked";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("preserves lexical as-you-know phrase during strict short-input fallback cleanup", async () => {
     const source = "as you know we should ship today";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves sentence-initial lexical you-know-that clause during strict short-input fallback cleanup", async () => {
+    const source = "You know that we should ship today";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical let-you-know phrase during strict short-input fallback cleanup", async () => {
+    const source = "I'll let you know tomorrow";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical make-sure-you-know directive phrase during strict short-input fallback cleanup", async () => {
+    const source = "make sure you know the rollback steps";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical ensure-you-know directive phrase during strict short-input fallback cleanup", async () => {
+    const source = "ensure you know the risks";
     const candidate = "Sure, that works.";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
@@ -298,8 +397,250 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("preserves contracted interrogative don't-you-know phrase during strict short-input fallback cleanup", async () => {
+    const source = "don't you know where the file is";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves contracted interrogative didn't-you-know phrase during strict short-input fallback cleanup", async () => {
+    const source = "didn't you know we already shipped";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("preserves lexical if-you-know clause during strict short-input fallback cleanup", async () => {
     const source = "if you know the answer tell me";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical unless-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "unless you know the password you cannot login";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical that-you-know relative clause during strict short-input fallback cleanup", async () => {
+    const source = "share that you know about the outage";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical i-know-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "I know you know the plan";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical we-know-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "we know you know this already";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical what-you-know relative clause during strict short-input fallback cleanup", async () => {
+    const source = "tell me what you know about this";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical how-you-know relative clause during strict short-input fallback cleanup", async () => {
+    const source = "tell me how you know this";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical whether-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "tell me whether you know the answer";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical who-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "tell me who you know at the company";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical which-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "share which you know is stable";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical whatever-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "tell me whatever you know about this";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical whoever-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "show me whoever you know at the company";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical whichever-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "share whichever you know is stable";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical whenever-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "tell me whenever you know the timeline";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical wherever-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "tell me wherever you know we can host";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical whom-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "tell me whom you know at the company";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical when-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "explain when you know the answer";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical where-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "tell me where you know this from";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical why-you-know clause during strict short-input fallback cleanup", async () => {
+    const source = "explain why you know this";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical everything-you-know object clause during strict short-input fallback cleanup", async () => {
+    const source = "tell me everything you know about this";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical anything-you-know object clause during strict short-input fallback cleanup", async () => {
+    const source = "share anything you know about the outage";
     const candidate = "Sure, that works.";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
@@ -318,6 +659,44 @@ describe("ReasoningService strict mode", () => {
     });
 
     expect(result).toBe("we should ship today");
+  });
+
+  it("removes comma-led english hesitation filler without closing comma during strict short-input fallback cleanup", async () => {
+    const source = "we should, um ship today";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes comma-led chinese hesitation filler without closing comma during strict short-input fallback cleanup", async () => {
+    const source = "我们，呃 今天发版";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("我们今天发版");
+  });
+
+  it("preserves lexical words that begin with filler syllables after commas during strict short-input fallback cleanup", async () => {
+    const candidate = "Sure, that works.";
+
+    const errorSource = "we should, error handling is fine";
+    const errorResult = await ReasoningService.enforceStrictMode(errorSource, candidate, {
+      strictMode: true,
+    });
+    expect(errorResult).toBe(errorSource);
+
+    const umbrellaSource = "we should, umbrella plan works";
+    const umbrellaResult = await ReasoningService.enforceStrictMode(umbrellaSource, candidate, {
+      strictMode: true,
+    });
+    expect(umbrellaResult).toBe(umbrellaSource);
   });
 
   it("removes parenthetical um filler without leaving comma artifacts during strict short-input fallback cleanup", async () => {
@@ -366,6 +745,28 @@ describe("ReasoningService strict mode", () => {
 
   it("preserves content-bearing basically during strict short-input fallback cleanup", async () => {
     const source = "basically impossible to reproduce";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("removes sentence-initial bare basically filler during strict short-input fallback cleanup", async () => {
+    const source = "basically we should ship today";
+    const candidate = "Sure, that works.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("preserves sentence-initial lexical basically phrasing during strict short-input fallback cleanup", async () => {
+    const source = "Basically this is the final draft";
     const candidate = "Sure, that works.";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {

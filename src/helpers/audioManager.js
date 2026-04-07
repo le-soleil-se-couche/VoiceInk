@@ -57,6 +57,10 @@ const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
+const COMMA_LED_ONE_SIDED_ENGLISH_HESITATION_RE =
+  /([A-Za-z0-9\u4e00-\u9fff])[，,、]\s*(?:um+|uh+|er+|ah+|hmm+)\b\s*([A-Za-z0-9\u4e00-\u9fff])/gi;
+const COMMA_LED_ONE_SIDED_CHINESE_HESITATION_RE =
+  /([\u4e00-\u9fff])[，,、]\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
 const ENGLISH_STUTTER_RE =
   /\b(i|we|you|he|she|they|it|the|a|an|to|and|but)\b(?:\s+\1\b)+/gi;
@@ -99,17 +103,59 @@ const stripEnglishFillerMatch = (match, offset, fullText) => {
       return match;
     }
   }
-  // Preserve lexical phrase "as you know" while still stripping standalone filler usage.
+  // Preserve lexical battery-capacity unit tokens in numeric context (e.g. "5 Ah").
+  if (/^ah+$/i.test(compact)) {
+    if (/\b\d+(?:\.\d+)?\s*$/u.test(before)) {
+      return match;
+    }
+  }
+  // Preserve lexical phrase contexts for "you know" while still stripping standalone filler usage.
   if (lowered === "youknow") {
+    // Preserve lexical sentence/content clause phrasing "you know that ...".
+    if (/^that\b/i.test(afterTrimmed)) {
+      return match;
+    }
+    // Preserve lexical phrase "let you know ...".
+    if (/\blet\s*$/i.test(beforeTrimmed)) {
+      return match;
+    }
+    // Preserve lexical directive phrasing "make sure/ensure you know ...".
+    if (/\b(?:make\s+sure|ensure)\s*$/i.test(beforeTrimmed)) {
+      return match;
+    }
     if (/\bas$/i.test(beforeTrimmed)) {
       return match;
     }
-    // Preserve interrogative lexical phrase "do/did/does you know ...".
-    if (/\b(?:do|did|does)\s*$/i.test(beforeTrimmed)) {
+    // Preserve lexical relative-clause phrase "that you know ...".
+    if (/\bthat\s*$/i.test(beforeTrimmed)) {
+      return match;
+    }
+    // Preserve lexical clause phrasing "know you know ...".
+    if (/\bknow\s*$/i.test(beforeTrimmed)) {
+      return match;
+    }
+    // Preserve lexical WH/whether relative-clause phrasing (for example, "what/how/when/where/why/whether/who/which/whom/wh-ever you know ...").
+    if (
+      /\b(?:whatever|whoever|whichever|whenever|wherever|what|how|when|where|why|whether|who|which|whom)\s*$/i.test(
+        beforeTrimmed
+      )
+    ) {
+      return match;
+    }
+    // Preserve lexical object-clause phrasing "all/everything/anything/something/nothing you know ...".
+    if (/\b(?:all|everything|anything|something|nothing)\s*$/i.test(beforeTrimmed)) {
+      return match;
+    }
+    // Preserve interrogative lexical phrase "do/did/does (n't) you know ...".
+    if (/\b(?:do|did|does)(?:n['’]?t)?\s*$/i.test(beforeTrimmed)) {
       return match;
     }
     // Preserve lexical conditional clause "if you know ...".
     if (/\bif\s*$/i.test(beforeTrimmed)) {
+      return match;
+    }
+    // Preserve lexical conditional clause "unless you know ...".
+    if (/\bunless\s*$/i.test(beforeTrimmed)) {
       return match;
     }
   }
@@ -1704,6 +1750,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     return text
       .replace(/^[\s\u200B-\u200D\uFEFF]*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*[，,、]?\s*/g, "")
       .replace(/^[\u200B-\u200D\uFEFF]+/g, "")
+      .replace(COMMA_LED_ONE_SIDED_CHINESE_HESITATION_RE, collapseDoubleCommaBridge)
+      .replace(COMMA_LED_ONE_SIDED_ENGLISH_HESITATION_RE, collapseDoubleCommaBridge)
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
       .replace(ENGLISH_FILLER_WORD_RE, stripEnglishFillerMatch)

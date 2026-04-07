@@ -154,6 +154,34 @@ describe("canonicalizeDictationText", () => {
       punctuationEnabled: false,
     });
     expect(numberOnly.text).toBe("我有30个任务句号");
+
+    const punctuationOnlyDecimal = canonicalizeDictationText("版本三点二句号", {
+      preferredLanguage: "zh-CN",
+      numberEnabled: false,
+      punctuationEnabled: true,
+    });
+    expect(punctuationOnlyDecimal.text).toBe("版本三点二。");
+
+    const numberOnlyDecimal = canonicalizeDictationText("版本三点二句号", {
+      preferredLanguage: "zh-CN",
+      numberEnabled: true,
+      punctuationEnabled: false,
+    });
+    expect(numberOnlyDecimal.text).toBe("版本3.2句号");
+
+    const punctuationOnlyTime = canonicalizeDictationText("会议在十二点二十七分句号", {
+      preferredLanguage: "zh-CN",
+      numberEnabled: false,
+      punctuationEnabled: true,
+    });
+    expect(punctuationOnlyTime.text).toBe("会议在十二点二十七分。");
+
+    const numberOnlyTime = canonicalizeDictationText("会议在十二点二十七分句号", {
+      preferredLanguage: "zh-CN",
+      numberEnabled: true,
+      punctuationEnabled: false,
+    });
+    expect(numberOnlyTime.text).toBe("会议在12点27分句号");
   });
 
   it("is idempotent for already-normalized strings", () => {

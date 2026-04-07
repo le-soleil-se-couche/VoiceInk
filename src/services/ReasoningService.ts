@@ -15,6 +15,15 @@ const CHINESE_WORD_REPEAT_STUTTER_RE =
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const COMMA_BRIDGE_RE =
   /([A-Za-z0-9\u4e00-\u9fff])[，,、]\s*[，,、]\s*([A-Za-z0-9\u4e00-\u9fff])/g;
+const COMMA_LED_ENGLISH_HESITATION_RE =
+  /([A-Za-z0-9\u4e00-\u9fff])[，,、]\s*(?:um+|uh+|er+|ah+|hmm+)\b\s*([A-Za-z0-9\u4e00-\u9fff])/gi;
+const COMMA_LED_ONE_SIDED_MM_HESITATION_RE =
+  /([A-Za-z\u4e00-\u9fff])[，,、]\s*(?:mm+|Mm+)\s*([A-Za-z0-9\u4e00-\u9fff])/g;
+const COMMA_LED_CHINESE_HESITATION_RE =
+  /([\u4e00-\u9fff])[，,、]\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g;
+const SENTENCE_INITIAL_TRAILING_RE = /(?:^|[.!?。！？])$/;
+const BARE_BASICALLY_FILLER_CONTINUATION_RE =
+  /^(?:i|we|you|he|she|they|it|can|could|should|would|do|does|did|is|are|am|was|were|have|has|had|will|please|let(?:'s|s)?|what|when|where|why|how|who|which)\b/i;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
   "了",
@@ -52,6 +61,11 @@ const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "呃",
   "额",
 ]);
+
+const collapseCommaBridge = (_match: string, beforeChar: string, afterChar: string) => {
+  const shouldPreserveSpacing = /[A-Za-z0-9]/.test(beforeChar) && /[A-Za-z0-9]/.test(afterChar);
+  return shouldPreserveSpacing ? `${beforeChar} ${afterChar}` : `${beforeChar}${afterChar}`;
+};
 
 class ReasoningService extends BaseReasoningService {
   private apiKeyCache: SecureCache<string>;
@@ -412,6 +426,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
   private localCleanupFallback(text: string): string {
     return text
+      .replace(COMMA_LED_CHINESE_HESITATION_RE, collapseCommaBridge)
+      .replace(COMMA_LED_ENGLISH_HESITATION_RE, collapseCommaBridge)
+      .replace(COMMA_LED_ONE_SIDED_MM_HESITATION_RE, collapseCommaBridge)
       .replace(
         /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g,
         "$1"
@@ -432,38 +449,80 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         if (compact === "ER") {
           return match;
         }
+        // Preserve uppercase MM lexical tokens (for example, module/code identifiers) in strict fallback.
+        if (compact === "MM") {
+          return match;
+        }
         // Preserve lexical metric-unit tokens (e.g. "5 mm") in technical dictation.
         if (/^mm+$/i.test(compact)) {
           if (/\b\d+(?:\.\d+)?\s*$/u.test(before)) {
             return match;
           }
         }
-        // Preserve lexical phrase "as you know" and interrogative "do/did/does you know"
+        // Preserve lexical battery-capacity unit tokens in numeric context (e.g. "5 Ah").
+        if (/^ah+$/i.test(compact)) {
+          if (/\b\d+(?:\.\d+)?\s*$/u.test(before)) {
+            return match;
+          }
+        }
+        // Preserve lexical phrase contexts and interrogative "do/did/does (n't) you know"
         // while still stripping standalone filler usage.
         if (lowered === "youknow") {
+          if (/^that\b/i.test(afterTrimmed)) {
+            return match;
+          }
+          if (/\blet\s*$/i.test(beforeTrimmed)) {
+            return match;
+          }
+          if (/\b(?:make\s+sure|ensure)\s*$/i.test(beforeTrimmed)) {
+            return match;
+          }
           if (/\bas$/i.test(beforeTrimmed)) {
             return match;
           }
-          if (/\b(?:do|did|does)\s*$/i.test(beforeTrimmed)) {
+          if (/\bthat\s*$/i.test(beforeTrimmed)) {
+            return match;
+          }
+          if (/\bknow\s*$/i.test(beforeTrimmed)) {
+            return match;
+          }
+          if (
+            /\b(?:whatever|whoever|whichever|whenever|wherever|what|how|when|where|why|whether|who|which|whom)\s*$/i.test(
+              beforeTrimmed
+            )
+          ) {
+            return match;
+          }
+          if (/\b(?:all|everything|anything|something|nothing)\s*$/i.test(beforeTrimmed)) {
+            return match;
+          }
+          if (/\b(?:do|did|does)(?:n['’]?t)?\s*$/i.test(beforeTrimmed)) {
             return match;
           }
           if (/\bif\s*$/i.test(beforeTrimmed)) {
+            return match;
+          }
+          if (/\bunless\s*$/i.test(beforeTrimmed)) {
             return match;
           }
         }
         // Keep content-bearing "basically" unless it is comma-marked parenthetical filler.
         if (lowered === "basically") {
           const commaMarked = /[,，、]$/.test(beforeTrimmed) || /^[,，、]/.test(afterTrimmed);
-          if (!commaMarked) {
-            return match;
+          if (commaMarked) {
+            return "";
           }
+          const sentenceInitial =
+            beforeTrimmed.length === 0 || SENTENCE_INITIAL_TRAILING_RE.test(beforeTrimmed);
+          if (sentenceInitial && BARE_BASICALLY_FILLER_CONTINUATION_RE.test(afterTrimmed)) {
+            return "";
+          }
+          return match;
         }
         return "";
       })
       .replace(COMMA_BRIDGE_RE, (_match, beforeChar: string, afterChar: string) => {
-        const shouldPreserveSpacing =
-          /[A-Za-z0-9]/.test(beforeChar) && /[A-Za-z0-9]/.test(afterChar);
-        return shouldPreserveSpacing ? `${beforeChar} ${afterChar}` : `${beforeChar}${afterChar}`;
+        return collapseCommaBridge(_match, beforeChar, afterChar);
       })
       .replace(/([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g, "$1")
       .replace(/([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g, "$1$2$3")

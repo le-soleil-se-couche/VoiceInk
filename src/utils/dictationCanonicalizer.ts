@@ -382,6 +382,10 @@ const applyLowAmbiguityPunctuationRules = (
     return `.${tld.toLowerCase()}`;
   });
 
+  if (!stats.numberEnabled) {
+    return next;
+  }
+
   next = next.replace(
     /([零〇一二两三四五六七八九十百千万萬]{1,3})\s*点\s*([零〇一二两三四五六七八九十百千万萬]{1,3})\s*分/g,
     (_match, hourText, minuteText) => {
