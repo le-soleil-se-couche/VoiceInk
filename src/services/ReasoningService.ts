@@ -123,9 +123,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const normalized = text.trim();
     const englishAcknowledgementRe =
-      /^(?:sure|yes|yeah|yep|no|nope|nah|okay|ok|alright|certainly|of\s+course|absolutely|definitely|no\s+problem|got\s+it|understood)\b/i;
+      /^(?:sure|yes|yeah|yep|no|nope|nah|okay|ok|alright|certainly|of\s+course|absolutely|definitely|totally|exactly|precisely|indeed|agreed|correct|no\s+problem|got\s+it|understood|you(?:'re|\s+are)(?:\s+(?:absolutely|totally))?\s+(?:right|correct)|that(?:['’]s|\s+is)(?:\s+(?:absolutely|totally))?\s+(?:right|correct))\b/i;
     const chineseAcknowledgementRe =
-      /^(?:好的|好|当然|没问题|可以|行|收到|明白了)(?=[，,。！？:：\s]|$|[\u4e00-\u9fff])/u;
+      /^(?:好的|好|当然|没问题|可以|行|收到|明白了|你说得对)(?=[，,。！？:：\s]|$|[\u4e00-\u9fff])/u;
 
     return englishAcknowledgementRe.test(normalized) || chineseAcknowledgementRe.test(normalized);
   }
@@ -153,7 +153,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const normalized = text.trim().replace(/[’]/g, "'");
     const englishRecommendationRe =
-      /^(?:(?:i|we)\s+(?:would\s+)?(?:recommend|suggest)|(?:i|we)'d\s+(?:recommend|suggest)|my\s+recommendation\s+is)\b/i;
+      /^(?:(?:i|we)\s+(?:would\s+)?(?:(?:strongly|highly)\s+)?(?:recommend|suggest)\b|(?:i|we)'d\s+(?:(?:strongly|highly)\s+)?(?:recommend|suggest)\b|my\s+recommendation(?:\s+(?:is|would\s+be))?\b(?:\s*[:：-])?)/i;
     const chineseRecommendationRe =
       /^(?:我建议|建议(?:是|先|可以|直接)?|建议你|我的建议是)(?=[，,。！？:：\s]|$|[\u4e00-\u9fff])/u;
 
@@ -169,7 +169,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const normalized = text.trim();
     const englishAnswerStatementRe =
-      /^(?:(?:the|this|my|our)\s+)?(?:final\s+)?answer\s+(?:is|would\s+be)\b/i;
+      /^(?:(?:the|this|my|our)\s+)?(?:(?:final|short)\s+)?answer\s+(?:is|would\s+be)\b/i;
     const chineseAnswerStatementRe =
       /^(?:答案(?:就是|是)|最终答案(?:是|就是))(?=[，,。！？:：\s]|$|[\u4e00-\u9fff])/u;
 
@@ -183,9 +183,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const normalizedCandidate = candidate.trim();
     const acknowledgementPrefaceWithPunctuationRe =
-      /^(?:(?:sure|yes|yeah|yep|no|nope|nah|okay|ok|alright|certainly|of\s+course|absolutely|definitely|no\s+problem|got\s+it|understood)\b|(?:好的|好|当然|没问题|可以|行|收到|明白了)(?=[，,。！？:：\s]|$))\s*[，,。！？.!?:：-]+\s*\S+/iu;
+      /^(?:(?:sure|yes|yeah|yep|no|nope|nah|okay|ok|alright|certainly|of\s+course|absolutely|definitely|totally|exactly|precisely|indeed|agreed|correct|no\s+problem|got\s+it|understood|you(?:'re|\s+are)(?:\s+(?:absolutely|totally))?\s+(?:right|correct)|that(?:['’]s|\s+is)(?:\s+(?:absolutely|totally))?\s+(?:right|correct))\b|(?:好的|好|当然|没问题|可以|行|收到|明白了|你说得对)(?=[，,。！？:：\s]|$))\s*[，,。！？.!?:：-]+\s*\S+/iu;
     const acknowledgementPrefaceWithoutPunctuationRe =
-      /^(?:(?:sure|yes|yeah|yep|no|nope|nah|okay|ok|alright|certainly|of\s+course|absolutely|definitely|no\s+problem|got\s+it|understood)\b\s+\S+|(?:好的|好|当然|没问题|可以|行|收到|明白了)(?:\s+\S+|(?=[\u4e00-\u9fff])\S+))/iu;
+      /^(?:(?:sure|yes|yeah|yep|no|nope|nah|okay|ok|alright|certainly|of\s+course|absolutely|definitely|totally|exactly|precisely|indeed|agreed|correct|no\s+problem|got\s+it|understood|you(?:'re|\s+are)(?:\s+(?:absolutely|totally))?\s+(?:right|correct)|that(?:['’]s|\s+is)(?:\s+(?:absolutely|totally))?\s+(?:right|correct))\b\s+\S+|(?:好的|好|当然|没问题|可以|行|收到|明白了|你说得对)(?:\s+\S+|(?=[\u4e00-\u9fff])\S+))/iu;
     if (
       !acknowledgementPrefaceWithPunctuationRe.test(normalizedCandidate) &&
       !acknowledgementPrefaceWithoutPunctuationRe.test(normalizedCandidate)
@@ -229,7 +229,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const normalizedCandidate = candidate.trim().replace(/[’]/g, "'");
     const recommendationPrefaceRe =
-      /^(?:(?:(?:i|we)\s+(?:would\s+)?(?:recommend|suggest)|(?:i|we)'d\s+(?:recommend|suggest)|my\s+recommendation\s+is)\b|(?:我建议|建议(?:是|先|可以|直接)?|建议你|我的建议是)(?=[，,。！？:：\s]|$|[\u4e00-\u9fff]))(?:\s*[，,。！？.!?:：-]+\s*|\s+|(?=[\u4e00-\u9fff]))\S+/iu;
+      /^(?:(?:(?:i|we)\s+(?:would\s+)?(?:(?:strongly|highly)\s+)?(?:recommend|suggest)\b|(?:i|we)'d\s+(?:(?:strongly|highly)\s+)?(?:recommend|suggest)\b|my\s+recommendation(?:\s+(?:is|would\s+be))?\b)|(?:我建议|建议(?:是|先|可以|直接)?|建议你|我的建议是)(?=[，,。！？:：\s]|$|[\u4e00-\u9fff]))(?:\s*[，,。！？.!?:：-]+\s*|\s+|(?=[\u4e00-\u9fff]))\S+/iu;
     if (!recommendationPrefaceRe.test(normalizedCandidate)) {
       return false;
     }
@@ -250,7 +250,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const normalizedCandidate = candidate.trim();
     const answerStatementPrefaceRe =
-      /^(?:(?:(?:the|this|my|our)\s+)?(?:final\s+)?answer\s+(?:is|would\s+be)\b|(?:答案(?:就是|是)|最终答案(?:是|就是))(?=[，,。！？:：\s]|$|[\u4e00-\u9fff]))(?:\s*[，,。！？.!?:：-]+\s*|\s+|(?=[\u4e00-\u9fff]))\S+/iu;
+      /^(?:(?:(?:the|this|my|our)\s+)?(?:(?:final|short)\s+)?answer\s+(?:is|would\s+be)\b|(?:答案(?:就是|是)|最终答案(?:是|就是))(?=[，,。！？:：\s]|$|[\u4e00-\u9fff]))(?:\s*[，,。！？.!?:：-]+\s*|\s+|(?=[\u4e00-\u9fff]))\S+/iu;
     if (!answerStatementPrefaceRe.test(normalizedCandidate)) {
       return false;
     }

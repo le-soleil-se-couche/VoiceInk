@@ -140,6 +140,163 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when totally-preface is added before non-question cleanup", async () => {
+    const source = "we should update the api docs before launch this week";
+    const candidate = "Totally, we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when exactly-preface is added before non-question cleanup", async () => {
+    const source = "we should update the api docs before launch this week";
+    const candidate = "Exactly, we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when precisely-preface is added before non-question cleanup", async () => {
+    const source = "we should update the api docs before launch this week";
+    const candidate = "Precisely, we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when indeed-preface is added before non-question cleanup", async () => {
+    const source = "we should update the api docs before launch this week";
+    const candidate = "Indeed, we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when agreed-preface is added before non-question cleanup", async () => {
+    const source = "we should update the api docs before launch this week";
+    const candidate = "Agreed, we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when correct-preface is added before non-question cleanup", async () => {
+    const source = "we should update the api docs before launch this week";
+    const candidate = "Correct, we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when that's-correct preface is added before non-question cleanup", async () => {
+    const source = "we should update the api docs before launch this week";
+    const candidate = "That's correct, we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when that-is-right preface is added before non-question cleanup", async () => {
+    const source = "we should update the api docs before launch this week";
+    const candidate = "That is right, we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when you're-right preface is added before non-question cleanup", async () => {
+    const source = "we should update the api docs before launch this week";
+    const candidate = "You're right, we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when you're-correct preface is added before non-question cleanup", async () => {
+    const source = "we should update the api docs before launch this week";
+    const candidate = "You're correct, we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when you're-absolutely-right preface is added before non-question cleanup", async () => {
+    const source = "we should update the api docs before launch this week";
+    const candidate =
+      "You're absolutely right, we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when you're-totally-right preface is added before non-question cleanup", async () => {
+    const source = "we should update the api docs before launch this week";
+    const candidate = "You're totally right, we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when Chinese agreement preface is added before non-question cleanup", async () => {
+    const source = "我们明天把版本说明发给测试组再上线";
+    const candidate = "你说得对，我们明天把版本说明发给测试组再上线。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when recommendation preface is added before non-question cleanup", async () => {
     const source =
       "we should schedule the release planning meeting with marketing and product for friday morning after qa review";
@@ -154,9 +311,49 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when strongly-recommend preface is added before non-question cleanup", async () => {
+    const source =
+      "we should schedule the release planning meeting with marketing and product for friday morning after qa review";
+    const candidate =
+      "I strongly recommend we schedule the release planning meeting with marketing and product for Friday morning after QA review.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when my-recommendation-label preface is added before non-question cleanup", async () => {
+    const source =
+      "we should schedule the release planning meeting with marketing and product for friday morning after qa review";
+    const candidate =
+      "My recommendation: we should schedule the release planning meeting with marketing and product for Friday morning after QA review.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when answer-statement preface is added before non-question cleanup", async () => {
     const source = "we should update the api docs before launch this week";
     const candidate = "The answer is we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when short-answer-statement preface is added before non-question cleanup", async () => {
+    const source = "we should update the api docs before launch this week";
+    const candidate = "The short answer is we should update the API docs before launch this week.";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
       strictMode: true,
@@ -223,6 +420,150 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(candidate);
   });
 
+  it("keeps dictated totally openings when they are present in source content", async () => {
+    const source = "totally we should ship this today";
+    const candidate = "Totally, we should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps dictated exactly openings when they are present in source content", async () => {
+    const source = "exactly we should ship this today";
+    const candidate = "Exactly, we should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps dictated precisely openings when they are present in source content", async () => {
+    const source = "precisely we should ship this today";
+    const candidate = "Precisely, we should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps dictated indeed openings when they are present in source content", async () => {
+    const source = "indeed we should ship this today";
+    const candidate = "Indeed, we should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps dictated agreed openings when they are present in source content", async () => {
+    const source = "agreed we should ship this today";
+    const candidate = "Agreed, we should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps dictated correct openings when they are present in source content", async () => {
+    const source = "correct we should ship this today";
+    const candidate = "Correct, we should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps dictated that's-correct openings when they are present in source content", async () => {
+    const source = "that's correct we should ship this today";
+    const candidate = "That's correct, we should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps dictated that's-right openings when they are present in source content", async () => {
+    const source = "that's right we should ship this today";
+    const candidate = "That's right, we should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps dictated you're-right openings when they are present in source content", async () => {
+    const source = "you're right we should ship this today";
+    const candidate = "You're right, we should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps dictated you're-correct openings when they are present in source content", async () => {
+    const source = "you're correct we should ship this today";
+    const candidate = "You're correct, we should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps dictated you're-absolutely-right openings when they are present in source content", async () => {
+    const source = "you're absolutely right we should ship this today";
+    const candidate = "You're absolutely right, we should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps dictated you're-totally-right openings when they are present in source content", async () => {
+    const source = "you're totally right we should ship this today";
+    const candidate = "You're totally right, we should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
   it("keeps dictated recommendation openings when they are present in source content", async () => {
     const source =
       "i recommend we schedule the release planning meeting with marketing and product for friday morning after qa review";
@@ -237,9 +578,49 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(candidate);
   });
 
+  it("keeps dictated strongly-recommend openings when they are present in source content", async () => {
+    const source =
+      "i strongly recommend we schedule the release planning meeting with marketing and product for friday morning after qa review";
+    const candidate =
+      "I strongly recommend we schedule the release planning meeting with marketing and product for Friday morning after QA review.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps dictated my-recommendation-label openings when they are present in source content", async () => {
+    const source =
+      "my recommendation we should schedule the release planning meeting with marketing and product for friday morning after qa review";
+    const candidate =
+      "My recommendation: we should schedule the release planning meeting with marketing and product for Friday morning after QA review.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
   it("keeps dictated answer-statement openings when they are present in source content", async () => {
     const source = "the answer is we should update the api docs before launch this week";
     const candidate = "The answer is we should update the API docs before launch this week.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps dictated short-answer-statement openings when they are present in source content", async () => {
+    const source = "the short answer is we should update the api docs before launch this week";
+    const candidate = "The short answer is we should update the API docs before launch this week.";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
       strictMode: true,
