@@ -409,13 +409,51 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
   }
 
   private localCleanupFallback(text: string): string {
+    const protectedUppercaseErToken = "__VOICEINK_PROTECT_UPPERCASE_ER__";
+    const protectedUppercaseHmmToken = "__VOICEINK_PROTECT_UPPERCASE_HMM__";
+    const stripEnglishFillerMatch = (match: string, offset: number, fullText: string): string => {
+      if (/^you\s+know$/i.test(match)) {
+        const leadingText = fullText.slice(0, offset);
+        if (/\b(?:as|do|did|does)\s+$/i.test(leadingText)) {
+          return match;
+        }
+      }
+
+      if (/^basically$/i.test(match)) {
+        const leadingTrimmed = fullText.slice(0, offset).replace(/[ \t]+$/g, "");
+        const trailingTrimmed = fullText
+          .slice(offset + match.length)
+          .replace(/^[ \t]+/g, "");
+        const commaMarked =
+          /[，,、]$/.test(leadingTrimmed) || /^[，,、]/.test(trailingTrimmed);
+        if (!commaMarked) {
+          return match;
+        }
+      }
+
+      return "";
+    };
+
     return text
+      .replace(/\bER\b/g, protectedUppercaseErToken)
+      .replace(/\bHMM\b/g, protectedUppercaseHmmToken)
+      .replace(/^\s*mm+\s*[，,、]\s*/i, "")
+      .replace(/[，,、]\s*mm+\s*$/i, "")
+      .replace(/^\s*(?:um+|uh+|er+|ah+|hmm+)\s*[，,、]\s*/i, "")
+      .replace(/[，,、]\s*(?:um+|uh+|er+|ah+|hmm+)\s*[，,、]\s*/gi, " ")
+      .replace(/[，,、]\s*(?:um+|uh+|er+|ah+|hmm+)\s*$/i, "")
+      .replace(/^\s*you\s+know\s*[，,、]\s*/i, "")
+      .replace(/[，,、]\s*you\s+know\s*[，,、]\s*/gi, " ")
+      .replace(/[，,、]\s*you\s+know\s*$/i, "")
+      .replace(/^\s*basically\s*[，,、]\s*/i, "")
+      .replace(/[，,、]\s*basically\s*[，,、]\s*/gi, " ")
+      .replace(/[，,、]\s*basically\s*$/i, "")
       .replace(
         /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g,
         "$1"
       )
       .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
-      .replace(/\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi, "")
+      .replace(/\b(?:um+|uh+|er+|ah+|hmm+|you\s+know|basically)\b/gi, stripEnglishFillerMatch)
       .replace(/([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g, "$1")
       .replace(/([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g, "$1$2$3")
       .replace(
@@ -427,9 +465,13 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .replace(/\s+([,.!?;:])/g, "$1")
       .replace(/\s+([，。！？、])/g, "$1")
       .replace(/([,.!?;:，。！？、])\1+/g, "$1")
+      .replace(/([，,、])([。！？!?.;:；：])/g, "$2")
+      .replace(/([。！？!?.;:；：])[，,、]+/g, "$1")
       .replace(/(^|[\n])\s*[，,、]+\s*/g, "$1")
       .replace(/[ \t]{2,}/g, " ")
       .replace(/\n{3,}/g, "\n\n")
+      .replace(new RegExp(protectedUppercaseErToken, "g"), "ER")
+      .replace(new RegExp(protectedUppercaseHmmToken, "g"), "HMM")
       .trim();
   }
 

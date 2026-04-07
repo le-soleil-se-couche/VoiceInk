@@ -1649,12 +1649,40 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
   basicDictationCleanup(text) {
     if (typeof text !== "string") return "";
+    const stripEnglishFillerMatch = (match, offset, fullText) => {
+      if (/^you\s+know$/i.test(match)) {
+        const leadingText = fullText.slice(0, offset);
+        if (/\b(?:as|do|did|does)\s+$/i.test(leadingText)) {
+          return match;
+        }
+      }
+
+      if (/^basically$/i.test(match)) {
+        const leadingTrimmed = fullText.slice(0, offset).replace(/[ \t]+$/g, "");
+        const trailingTrimmed = fullText
+          .slice(offset + match.length)
+          .replace(/^[ \t]+/g, "");
+        const commaMarked =
+          /[，,、]$/.test(leadingTrimmed) || /^[，,、]/.test(trailingTrimmed);
+        if (!commaMarked) {
+          return match;
+        }
+      }
+      return "";
+    };
+
     return text
       .replace(/^[\s\u200B-\u200D\uFEFF]*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*[，,、]?\s*/g, "")
       .replace(/^[\u200B-\u200D\uFEFF]+/g, "")
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
-      .replace(ENGLISH_FILLER_WORD_RE, "")
+      .replace(/^\s*(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know)\s*[，,、]\s*/i, "")
+      .replace(/[，,、]\s*(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know)\s*[，,、]\s*/gi, " ")
+      .replace(/[，,、]\s*(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know)\s*$/i, "")
+      .replace(/^\s*basically\s*[，,、]\s*/i, "")
+      .replace(/[，,、]\s*basically\s*[，,、]\s*/gi, " ")
+      .replace(/[，,、]\s*basically\s*$/i, "")
+      .replace(ENGLISH_FILLER_WORD_RE, stripEnglishFillerMatch)
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
       .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")
@@ -1668,8 +1696,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(/\s+,/g, ",")
       .replace(/[，、]\s+/g, (match) => match.trim())
       .replace(/([A-Za-z0-9]),\s*([A-Za-z])/g, "$1, $2")
-      .replace(/([，,、])([。！？!?])/g, "$2")
-      .replace(/([。！？!?])[，,、]+/g, "$1")
+      .replace(/([，,、])([。！？!?.;:；：])/g, "$2")
+      .replace(/([。！？!?.;:；：])[，,、]+/g, "$1")
       .replace(/[，,、](?=$|[\n])/g, "")
       .replace(/[ \t]{2,}/g, " ")
       .replace(/\n{3,}/g, "\n\n")

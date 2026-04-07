@@ -174,4 +174,257 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(candidate);
   });
+
+  it("preserves lexical as-you-know phrase during strict short-input fallback cleanup", async () => {
+    const source = "as you know we should ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves interrogative do-you-know phrase during strict short-input fallback cleanup", async () => {
+    const source = "do you know where the file is";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves interrogative did-you-know phrase during strict short-input fallback cleanup", async () => {
+    const source = "did you know we should ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves interrogative does-you-know phrase during strict short-input fallback cleanup", async () => {
+    const source = "does you know where this setting is";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves content-bearing basically during strict short-input fallback cleanup", async () => {
+    const source = "basically impossible to reproduce";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("still removes comma-marked basically hesitation filler during strict short-input fallback cleanup", async () => {
+    const source = "basically, we should ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes parenthetical comma-marked basically hesitation filler without comma artifacts in strict fallback", async () => {
+    const source = "we should, basically, ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("preserves lexical mm measurement units in strict short-input fallback", async () => {
+    const source = "use a 5 mm drill bit";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves lexical uppercase abbreviation ER in strict short-input fallback", async () => {
+    const source = "should we go to ER now";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves all-caps technical acronym HMM in strict short-input fallback", async () => {
+    const source = "HMM model works";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("still removes lowercase hmm hesitation filler in strict fallback", async () => {
+    const source = "hmm, model works";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("model works");
+  });
+
+  it("still removes lowercase er hesitation filler in strict fallback", async () => {
+    const source = "er, should we ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("should we ship today");
+  });
+
+  it("removes sentence-initial comma-marked mm hesitation filler in strict fallback", async () => {
+    const source = "mm, send update today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("send update today");
+  });
+
+  it("removes sentence-final comma-appended mm hesitation filler in strict fallback", async () => {
+    const source = "ship today, mm";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("ship today");
+  });
+
+  it("removes parenthetical comma-marked you know hesitation filler without comma artifacts in strict fallback", async () => {
+    const source = "we should, you know, ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes sentence-final comma-appended you know hesitation filler in strict fallback", async () => {
+    const source = "we should ship today, you know";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes sentence-initial comma-marked generic hesitation filler in strict fallback", async () => {
+    const source = "um, send update today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("send update today");
+  });
+
+  it("removes parenthetical comma-marked generic hesitation filler without comma artifacts", async () => {
+    const source = "we should, um, ship";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship");
+  });
+
+  it("removes sentence-final comma-appended generic hesitation filler in strict fallback", async () => {
+    const source = "we should ship today, um";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes dangling comma artifacts when sentence-final you-know filler precedes a question mark", async () => {
+    const source = "we should ship today, you know?";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today?");
+  });
+
+  it("removes dangling comma artifacts when sentence-final generic filler precedes an exclamation mark", async () => {
+    const source = "we should ship today, um!";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today!");
+  });
+
+  it("removes dangling comma artifacts when sentence-final you-know filler precedes a period", async () => {
+    const source = "we should ship today, you know.";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today.");
+  });
+
+  it("removes dangling comma artifacts when sentence-final generic filler precedes a semicolon", async () => {
+    const source = "we should ship today, um;";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today;");
+  });
 });
