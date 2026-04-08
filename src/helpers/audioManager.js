@@ -56,7 +56,9 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
 const NUMERIC_MILLIMETER_CONTEXT_RE = /(?:^|[\s([{（【])[-+]?\d+(?:[.,]\d+)?\s*$/u;
-const HYPHENATED_UH_OH_SUFFIX_RE = /^\s*[-‐‑–—]\s*oh\b/i;
+const HYPHENATED_UH_LEXICAL_SUFFIX_RE = /^\s*[-‐‑–—]\s*(?:oh|huh)\b/i;
+const HYPHENATED_MM_HMM_SUFFIX_RE = /^\s*[-‐‑–—]\s*hmm+\b/i;
+const HYPHENATED_MM_HMM_PREFIX_RE = /\bmm+\s*[-‐‑–—]\s*$/i;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -1658,12 +1660,21 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
       .replace(ENGLISH_FILLER_WORD_RE, (match, offset, sourceText) => {
         const compactMatch = match.toLowerCase();
-        if (compactMatch === "mm" && NUMERIC_MILLIMETER_CONTEXT_RE.test(sourceText.slice(0, offset))) {
+        const beforeMatch = sourceText.slice(0, offset);
+        const afterMatch = sourceText.slice(offset + match.length);
+        if (
+          compactMatch === "mm" &&
+          (NUMERIC_MILLIMETER_CONTEXT_RE.test(beforeMatch) ||
+            HYPHENATED_MM_HMM_SUFFIX_RE.test(afterMatch))
+        ) {
+          return match;
+        }
+        if (compactMatch.startsWith("hmm") && HYPHENATED_MM_HMM_PREFIX_RE.test(beforeMatch)) {
           return match;
         }
         if (
           compactMatch === "uh" &&
-          HYPHENATED_UH_OH_SUFFIX_RE.test(sourceText.slice(offset + match.length))
+          HYPHENATED_UH_LEXICAL_SUFFIX_RE.test(afterMatch)
         ) {
           return match;
         }
