@@ -338,7 +338,7 @@ const protectLiteralMentions = (
   const termGroup = LITERAL_TERMS.join("|");
   const literalPatterns = [
     new RegExp(
-      `(?:这个词是|这个字是|这个符号是|这个标点是|念作|读作|写作)\\s*(?:“)?(?:${termGroup})(?:”)?`,
+      `(?:这个(?:词|字|符号|标点)(?:是|就是)|念作|读作|写作)\\s*(?:“)?(?:${termGroup})(?:”)?`,
       "g"
     ),
     new RegExp(

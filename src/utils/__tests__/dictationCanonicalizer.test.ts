@@ -95,6 +95,17 @@ const CASES: CanonCase[] = [
   { name: "这个标点是字面保护-问号", input: "这个标点是问号", expected: "这个标点是问号" },
   { name: "这个标点是字面保护-逗号", input: "这个标点是逗号", expected: "这个标点是逗号" },
   { name: "这个标点是字面保护-感叹号", input: "这个标点是感叹号", expected: "这个标点是感叹号" },
+  {
+    name: "这个标点就是字面保护-问号",
+    input: "这个标点就是问号",
+    expected: "这个标点就是问号",
+  },
+  {
+    name: "这个符号就是字面保护-句号",
+    input: "这个符号就是句号",
+    expected: "这个符号就是句号",
+  },
+  { name: "这个词就是字面保护-逗号", input: "这个词就是逗号", expected: "这个词就是逗号" },
   { name: "行内逗号提示不替换", input: "这里加个逗号然后继续", expected: "这里加个逗号然后继续" },
   { name: "换行结尾标点转换", input: "换行后问号\n", expected: "换行后？\n" },
   { name: "行内顿号提示不替换", input: "列表第一项顿号第二项", expected: "列表第一项顿号第二项" },
