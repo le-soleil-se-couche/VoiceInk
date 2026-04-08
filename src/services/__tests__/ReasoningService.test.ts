@@ -231,6 +231,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("preserves interrogative do-you-know clauses during strict short-input fallback cleanup", async () => {
+    const source = "do you know which branch to cherry-pick";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves interrogative don't-you-know clauses during strict short-input fallback cleanup", async () => {
+    const source = "don't you know where this goes";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("still removes sentence-initial you know filler lead-ins during strict short-input fallback cleanup", async () => {
     const source = "you know we should ship today";
 

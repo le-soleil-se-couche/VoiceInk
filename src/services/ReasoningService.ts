@@ -15,6 +15,8 @@ const CHINESE_WORD_REPEAT_STUTTER_RE =
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NUMERIC_AH_UNIT_PREFIX_RE = /\b\d+(?:[.,]\d+)?\s*(?:[-‐‑–—]\s*)?$/;
 const LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE = /^\s+whose\b/i;
+const LEXICAL_YOU_KNOW_INTERROGATIVE_PREFIX_RE =
+  /\b(?:do|did|does|do(?:n't|nt)|does(?:n't|nt))\s*$/i;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
   "了",
@@ -53,7 +55,7 @@ const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "额",
 ]);
 
-const shouldPreserveLexicalYouKnowWhose = (
+const shouldPreserveLexicalYouKnow = (
   match: string,
   offset: number,
   source: string
@@ -62,7 +64,13 @@ const shouldPreserveLexicalYouKnowWhose = (
     return false;
   }
 
-  return LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE.test(source.slice(offset + match.length));
+  const trailingText = source.slice(offset + match.length);
+  if (LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE.test(trailingText)) {
+    return true;
+  }
+
+  const leadingText = source.slice(0, offset);
+  return LEXICAL_YOU_KNOW_INTERROGATIVE_PREFIX_RE.test(leadingText);
 };
 
 class ReasoningService extends BaseReasoningService {
@@ -432,7 +440,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       )
       .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
       .replace(/\b(?:um+|uh+|er+|hmm+|mm+|you\s+know|basically)\b/gi, (match, offset, source) =>
-        shouldPreserveLexicalYouKnowWhose(match, offset, source) ? match : ""
+        shouldPreserveLexicalYouKnow(match, offset, source) ? match : ""
       )
       .replace(/\bah+\b/gi, (match, offset, source) =>
         NUMERIC_AH_UNIT_PREFIX_RE.test(source.slice(0, offset)) ? match : ""

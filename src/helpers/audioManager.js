@@ -60,6 +60,8 @@ const ENGLISH_FILLER_WORD_RE =
 const AH_FILLER_RE = /\bah+\b/gi;
 const NUMERIC_AH_UNIT_PREFIX_RE = /\b\d+(?:[.,]\d+)?\s*(?:[-‐‑–—]\s*)?$/;
 const LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE = /^\s+whose\b/i;
+const LEXICAL_YOU_KNOW_INTERROGATIVE_PREFIX_RE =
+  /\b(?:do|did|does|do(?:n't|nt)|does(?:n't|nt))\s*$/i;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -85,6 +87,11 @@ const stripEnglishFillerMatch = (match, offset, source) => {
   if (/^\s*you\s+know\s*$/i.test(match)) {
     const trailingText = source.slice(offset + match.length);
     if (LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE.test(trailingText)) {
+      return match;
+    }
+
+    const leadingText = source.slice(0, offset);
+    if (LEXICAL_YOU_KNOW_INTERROGATIVE_PREFIX_RE.test(leadingText)) {
       return match;
     }
   }
