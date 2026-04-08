@@ -151,7 +151,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return false;
     }
 
-    const normalized = text.trim().toLowerCase();
+    const normalized = text.trim().toLowerCase().replace(/[’‘]/g, "'");
     if (/[?？]$/.test(normalized)) {
       return true;
     }
@@ -183,7 +183,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /^(?:please\s+)?(?:find\s+out|see)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
       /^(?:please\s+)?let\s+(?:me|us)\s+know\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
       /^(?:please\s+)?tell\s+(?:me|us)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
-      /^(?:i\s+(?:wonder|(?:am|'m|was)\s+wondering))\b.{0,24}\b(?:if|whether)\b/i,
+      /^(?:i\s+(?:wonder|(?:am|'m|was)\s+wondering|(?:have|'ve)\s+been\s+wondering))\b.{0,24}\b(?:if|whether)\b/i,
     ];
     if (enIndirectQuestionPatterns.some((re) => re.test(normalized))) {
       return true;

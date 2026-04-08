@@ -45,6 +45,7 @@ describe("getAnswerLikeRetryPrompt", () => {
     expect(prompt).toContain("let me/us know if/whether");
     expect(prompt).toContain("tell me/us if/whether");
     expect(prompt).toContain("i wonder if/whether");
+    expect(prompt).toContain("i have/I've been wondering if/whether");
     expect(prompt).toContain("Do not add assistant wrappers");
   });
 
@@ -78,6 +79,7 @@ describe("getAnswerLikeRetryPrompt", () => {
     expect(prompt).toContain("let me/us know if/whether");
     expect(prompt).toContain("tell me/us if/whether");
     expect(prompt).toContain("i wonder if/whether");
+    expect(prompt).toContain("i have/I've been wondering if/whether");
     expect(prompt).toContain("do not rewrite them into direct answers");
   });
 
