@@ -61,6 +61,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a contraction-led English question is rewritten into an answer", async () => {
+    const source = "isn't this migration build ready for production today";
+    const candidate = "This migration build is ready for production today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when an apostrophe-free contraction-led question is rewritten into an answer", async () => {
+    const source = "dont we need to run this migration build today";
+    const candidate = "We need to run this migration build today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a Chinese yes-no dictation ending is rewritten into a statement", async () => {
     const source = "这个方案行不行";
     const candidate = "这个方案可行。";
@@ -108,6 +130,17 @@ describe("ReasoningService strict mode", () => {
   it("falls back when assistant-style wrapper uses ought-started question in strict mode", async () => {
     const source = "ought we ship this migration build to production today";
     const candidate = "Sure, ought we ship this migration build to production today?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when assistant-style wrapper uses contraction-led question in strict mode", async () => {
+    const source = "isn't this migration build ready for production today";
+    const candidate = "Sure, isn't this migration build ready for production today?";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
       strictMode: true,
