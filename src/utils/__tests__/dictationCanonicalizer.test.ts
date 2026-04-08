@@ -55,6 +55,7 @@ const CASES: CanonCase[] = [
   { name: "时间表达优先归一", input: "十二点二十七分", expected: "12点27分" },
   { name: "口语一点保留汉字", input: "干净一点", expected: "干净一点" },
   { name: "口语一点一点保留汉字", input: "一点一点", expected: "一点一点" },
+  { name: "口语一点一滴保留汉字", input: "一点一滴", expected: "一点一滴" },
   {
     name: "终句语气词-一点都没有耶保留汉字",
     input: "今晨一点消息都没有耶",
@@ -74,6 +75,11 @@ const CASES: CanonCase[] = [
     name: "句中口语一点一点保留汉字",
     input: "慢慢来一点一点改",
     expected: "慢慢来一点一点改",
+  },
+  {
+    name: "句中口语一点一滴保留汉字",
+    input: "我们一点一滴积累经验",
+    expected: "我们一点一滴积累经验",
   },
   {
     name: "非终句语气词时间表达继续归一",
