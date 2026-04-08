@@ -35,6 +35,10 @@ const TECH_TOOL_PATTERNS: Array<{ context: ReasoningContext; re: RegExp; signal:
   { context: "code", re: /\b(express|fastify|koa|hapi|nest|django|flask|rails|spring|gin)\b/i, signal: "tool:server" },
   { context: "code", re: /\b(mongodb|postgres|mysql|redis|sqlite|prisma|typeorm|sequelize)\b/i, signal: "tool:database" },
   { context: "code", re: /\b(aws|azure|gcp|cloudflare|vercel|netlify|heroku|digitalocean)\b/i, signal: "tool:cloud" },
+  { context: "code", re: /\b(jest|vitest|mocha|cypress|jasmine|chai|sinon)\b/i, signal: "tool:testing" },
+  { context: "code", re: /\b(eslint|prettier|stylelint|tslint)\b/i, signal: "tool:linting" },
+  { context: "code", re: /\b(pm2|supervisor|systemd|forever)\b/i, signal: "tool:process" },
+  { context: "code", re: /\b(jenkins|circleci|travis|github actions|gitlab ci)\b/i, signal: "tool:cicd" },
   { context: "code", re: /\b(github|gitlab|bitbucket|jira|confluence|slack|notion)\b/i, signal: "tool:productivity" },
 ];
 

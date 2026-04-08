@@ -396,3 +396,115 @@ describe("classifyContext software environment detection", () => {
     expect(result.signals).toContain("tool:runtime");
   });
 });
+
+describe("classifyContext extended technical patterns", () => {
+  it("classifies jest testing framework as code context", () => {
+    const result = classifyContext({
+      text: "run jest test suite",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:testing");
+  });
+
+  it("classifies vitest as code context", () => {
+    const result = classifyContext({
+      text: "vitest run coverage",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:testing");
+  });
+
+  it("classifies cypress e2e testing as code context", () => {
+    const result = classifyContext({
+      text: "run cypress e2e tests",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:testing");
+  });
+
+  it("classifies eslint linting as code context", () => {
+    const result = classifyContext({
+      text: "eslint fix all files",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:linting");
+  });
+
+  it("classifies prettier formatting as code context", () => {
+    const result = classifyContext({
+      text: "prettier write config",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:linting");
+  });
+
+  it("classifies pm2 process management as code context", () => {
+    const result = classifyContext({
+      text: "pm2 start application",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:process");
+  });
+
+  it("classifies jenkins CI/CD as code context", () => {
+    const result = classifyContext({
+      text: "jenkins build pipeline",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:cicd");
+  });
+
+  it("classifies circleci as code context", () => {
+    const result = classifyContext({
+      text: "circleci config workflow",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:cicd");
+  });
+
+  it("classifies github actions as code context", () => {
+    const result = classifyContext({
+      text: "github actions workflow",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:cicd");
+  });
+
+  it("classifies gitlab CI as code context", () => {
+    const result = classifyContext({
+      text: "gitlab CI pipeline",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:cicd");
+  });
+});
