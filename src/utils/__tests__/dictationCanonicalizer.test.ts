@@ -20,6 +20,8 @@ const CASES: CanonCase[] = [
   { name: "反斜杠高置信转换", input: "C反斜杠D", expected: "C\\D" },
   { name: "口述域名转换", input: "open点com", expected: "open.com" },
   { name: "字面提及-这个词是", input: "这个词是问号", expected: "这个词是问号" },
+  { name: "字面提及-这个标点称为", input: "这个标点称为问号", expected: "这个标点称为问号" },
+  { name: "字面提及-这个符号称为", input: "这个符号称为冒号", expected: "这个符号称为冒号" },
   { name: "字面提及-X这个字", input: "问号这个字", expected: "问号这个字" },
   { name: "字面提及-引号词", input: "“句号”", expected: "“句号”" },
   { name: "行内解释不替换", input: "句号是中文标点", expected: "句号是中文标点" },
