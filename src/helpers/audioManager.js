@@ -52,6 +52,11 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
   /\b(you can try).{0,20}(sentence|example)\b/i,
 ];
+const ASR_SHORT_ANSWER_LIKE_PATTERNS = [
+  /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
+];
+const ASR_SHORT_ANSWER_LIKE_MIN_LENGTH = 6;
+const ASR_DEFAULT_ANSWER_LIKE_MIN_LENGTH = 20;
 
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
@@ -86,7 +91,10 @@ const stripEnglishFillerMatch = (match, offset, input) => {
 const isAnswerLikeTranscriptionOutput = (text) => {
   if (typeof text !== "string") return false;
   const trimmed = text.trim();
-  if (trimmed.length < 20) return false;
+  if (trimmed.length < ASR_SHORT_ANSWER_LIKE_MIN_LENGTH) return false;
+  if (trimmed.length < ASR_DEFAULT_ANSWER_LIKE_MIN_LENGTH) {
+    return ASR_SHORT_ANSWER_LIKE_PATTERNS.some((re) => re.test(trimmed));
+  }
   return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
 };
 
