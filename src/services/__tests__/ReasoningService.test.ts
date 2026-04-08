@@ -209,6 +209,39 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe("we should ship today");
   });
 
+  it("preserves lexical you know whose clauses during strict short-input fallback cleanup", async () => {
+    const source = "you know whose idea this was";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("preserves comma-led lexical you know whose clauses during strict short-input fallback cleanup", async () => {
+    const source = "and, you know whose code broke";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("still removes sentence-initial you know filler lead-ins during strict short-input fallback cleanup", async () => {
+    const source = "you know we should ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
   it("keeps short Chinese restart-question cleanup when overlap stays anchored", async () => {
     const source = "那个就是我的电我电脑上能跑吗";
     const candidate = "那个就是我的电脑上能跑吗？";

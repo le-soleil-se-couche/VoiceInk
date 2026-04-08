@@ -59,6 +59,7 @@ const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|hmm+|mm+|you\s+know|basically)\b/gi;
 const AH_FILLER_RE = /\bah+\b/gi;
 const NUMERIC_AH_UNIT_PREFIX_RE = /\b\d+(?:[.,]\d+)?\s*(?:[-‐‑–—]\s*)?$/;
+const LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE = /^\s+whose\b/i;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -78,6 +79,17 @@ const isAnswerLikeTranscriptionOutput = (text) => {
   const trimmed = text.trim();
   if (trimmed.length < 20) return false;
   return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
+};
+
+const stripEnglishFillerMatch = (match, offset, source) => {
+  if (/^\s*you\s+know\s*$/i.test(match)) {
+    const trailingText = source.slice(offset + match.length);
+    if (LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE.test(trailingText)) {
+      return match;
+    }
+  }
+
+  return "";
 };
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -1658,7 +1670,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(/^[\u200B-\u200D\uFEFF]+/g, "")
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
-      .replace(ENGLISH_FILLER_WORD_RE, "")
+      .replace(ENGLISH_FILLER_WORD_RE, stripEnglishFillerMatch)
       .replace(AH_FILLER_RE, (match, offset, source) =>
         NUMERIC_AH_UNIT_PREFIX_RE.test(source.slice(0, offset)) ? match : ""
       )

@@ -14,6 +14,7 @@ const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NUMERIC_AH_UNIT_PREFIX_RE = /\b\d+(?:[.,]\d+)?\s*(?:[-‐‑–—]\s*)?$/;
+const LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE = /^\s+whose\b/i;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
   "了",
@@ -51,6 +52,18 @@ const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "呃",
   "额",
 ]);
+
+const shouldPreserveLexicalYouKnowWhose = (
+  match: string,
+  offset: number,
+  source: string
+): boolean => {
+  if (!/^\s*you\s+know\s*$/i.test(match)) {
+    return false;
+  }
+
+  return LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE.test(source.slice(offset + match.length));
+};
 
 class ReasoningService extends BaseReasoningService {
   private apiKeyCache: SecureCache<string>;
@@ -418,7 +431,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         "$1"
       )
       .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
-      .replace(/\b(?:um+|uh+|er+|hmm+|mm+|you\s+know|basically)\b/gi, "")
+      .replace(/\b(?:um+|uh+|er+|hmm+|mm+|you\s+know|basically)\b/gi, (match, offset, source) =>
+        shouldPreserveLexicalYouKnowWhose(match, offset, source) ? match : ""
+      )
       .replace(/\bah+\b/gi, (match, offset, source) =>
         NUMERIC_AH_UNIT_PREFIX_RE.test(source.slice(0, offset)) ? match : ""
       )
