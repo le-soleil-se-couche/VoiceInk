@@ -116,6 +116,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(candidate);
   });
 
+  it("keeps lexical don't-worry statements in strict mode", async () => {
+    const source = "don't worry about the migration plan tonight";
+    const candidate = "Don't worry about the migration plan tonight.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("still falls back when don't-worry text includes assistant helper intent", async () => {
+    const source = "don't worry i can help with that";
+    const candidate = "Don't worry, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("still falls back when assistant helper prompt appears in strict mode", async () => {
     const source = "what can i do for you today";
     const candidate = "What can I do for you today?";
