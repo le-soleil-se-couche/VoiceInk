@@ -50,6 +50,8 @@ const CASES: CanonCase[] = [
   { name: "句尾编号归一", input: "编号是二零四六号", expected: "编号是2046号" },
   { name: "年份归一", input: "今年二零二六", expected: "今年2026" },
   { name: "两位年份默认保留", input: "二零", expected: "二零" },
+  { name: "标点词协调-还有句号", input: "我们学习逗号还有句号", expected: "我们学习逗号还有句号" },
+  { name: "标点词协调-还有分号", input: "这里有冒号还有分号", expected: "这里有冒号还有分号" },
   { name: "小数点归一", input: "三点五", expected: "3.5" },
   { name: "多位小数点归一", input: "一二点三四", expected: "12.34" },
   { name: "时间表达优先归一", input: "十二点二十七分", expected: "12点27分" },
