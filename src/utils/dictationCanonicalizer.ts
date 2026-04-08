@@ -81,6 +81,7 @@ const PUNCTUATION_WORD_TO_SYMBOL: Record<string, string> = {
   分号: "；",
   顿号: "、",
 };
+const PUNCTUATION_TERM_GROUP = Object.keys(PUNCTUATION_WORD_TO_SYMBOL).join("|");
 
 const LITERAL_TERMS = [
   "句号",
@@ -336,9 +337,14 @@ const protectLiteralMentions = (
   stats: DictationCanonicalizerStats
 ) => {
   const termGroup = LITERAL_TERMS.join("|");
+  const punctuationTermGroup = PUNCTUATION_TERM_GROUP;
   const literalPatterns = [
     new RegExp(`(?:这个词是|这个字是|这个符号是|念作|读作|写作)\\s*(?:“)?(?:${termGroup})(?:”)?`, "g"),
     new RegExp(`(?:不是)\\s*(?:“)?(?:${termGroup})(?:”)?(?=(?:\\s|$|\\n))`, "g"),
+    new RegExp(
+      `(?:${punctuationTermGroup})\\s*(?:还有)\\s*(?:“)?(?:${punctuationTermGroup})(?:”)?(?=(?:\\s|$|\\n))`,
+      "g"
+    ),
     new RegExp(`(?:“)?(?:${termGroup})(?:”)?\\s*(?:这个字|这个词|这个符号)`, "g"),
     new RegExp(`["“”'](?:${termGroup})["“”']`, "g"),
   ];
