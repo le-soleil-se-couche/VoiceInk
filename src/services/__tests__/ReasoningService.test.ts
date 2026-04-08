@@ -296,6 +296,50 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("removes sentence-initial punctuation-delimited actually filler during strict fallback cleanup", async () => {
+    const source = "actually, we should ship today";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes parenthetical punctuation-delimited actually filler during strict fallback cleanup", async () => {
+    const source = "we should, actually, ship today";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("preserves lexical adverb actually phrasing during strict fallback cleanup", async () => {
+    const source = "this actually works for production";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("removes terminal punctuation-delimited actually filler during strict fallback cleanup", async () => {
+    const source = "we should, actually.";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should.");
+  });
+
   it("removes parenthetical punctuation-delimited like filler during strict fallback cleanup", async () => {
     const source = "we should, like, ship today";
     const candidate = "As an AI assistant, I can help with that.";
