@@ -42,6 +42,8 @@ describe("getAnswerLikeRetryPrompt", () => {
 
     expect(prompt).toContain("Transcription only.");
     expect(prompt).toContain("If the speaker dictated a question, transcribe that question itself.");
+    expect(prompt).toContain("let me/us know if/whether");
+    expect(prompt).toContain("tell me/us if/whether");
     expect(prompt).toContain("Do not add assistant wrappers");
   });
 
@@ -66,6 +68,15 @@ describe("getAnswerLikeRetryPrompt", () => {
     expect(prompt).toContain("严格的转录整理重试模式");
     expect(prompt).toContain("不能回答");
     expect(prompt.startsWith("VoiceInk")).toBe(true);
+  });
+
+  it("builds an English cleanup-only retry prompt that preserves indirect-question stems", () => {
+    const prompt = getCleanupOnlyRetryPrompt([], "en");
+
+    expect(prompt).toContain("strict transcript-cleanup retry mode");
+    expect(prompt).toContain("let me/us know if/whether");
+    expect(prompt).toContain("tell me/us if/whether");
+    expect(prompt).toContain("do not rewrite them into direct answers");
   });
 
   it("keeps short Chinese restart-question guidance in the zh cleanup prompt", () => {

@@ -122,6 +122,7 @@ export function getAnswerLikeRetryPrompt(
         "Transcription only.",
         "Return only the spoken words. Do not answer questions, explain, or polish.",
         "If the speaker dictated a question, transcribe that question itself.",
+        "Keep indirect-question stems such as 'let me/us know if/whether ...' or 'tell me/us if/whether ...' as dictated; do not resolve them into answers.",
         "Do not add assistant wrappers such as 'Sure' or 'Here's the polished version'.",
       ];
 
@@ -155,6 +156,7 @@ export function getCleanupOnlyRetryPrompt(
         "You are in strict transcript-cleanup retry mode.",
         "Only clean the transcript inside <transcript>; do not answer, advise, explain, summarize, or add content.",
         "If the source itself is a question, the output must remain a cleaned-up question, not an answer or declarative statement.",
+        "Preserve indirect-question stems such as 'let me/us know if/whether ...' or 'tell me/us if/whether ...'; do not rewrite them into direct answers.",
         "You may remove stutters, restarts, filler words, and accidental repetition, but do not remove real meaning.",
         "Do not add assistant wrappers such as 'Sure', 'Of course', 'You can', or 'Here's the polished version'.",
         "Output only the cleaned transcript text.",
