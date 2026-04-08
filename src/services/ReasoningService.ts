@@ -17,6 +17,8 @@ const NUMERIC_AH_UNIT_PREFIX_RE = /\b\d+(?:[.,]\d+)?\s*(?:[-‐‑–—]\s*)?$/
 const LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE = /^\s+whose\b/i;
 const LEXICAL_YOU_KNOW_INTERROGATIVE_PREFIX_RE =
   /\b(?:do|did|does|do(?:n't|nt)|does(?:n't|nt))\s*$/i;
+const SENTENCE_INITIAL_BARE_WELL_FORMAL_FOLLOW_RE =
+  /^[\s\u200B-\u200D\uFEFF]*well(?:\s*[，,、]?\s+)(?=(?:(?:we|i|you|they|he|she|it)\s+(?:should|can|could|would|will|must|need(?:\s+to)?|have\s+to)\b|(?:can|could|would|should|will|do|did|does|is|are|am|have|has|had)\b|(?:please|let(?:'s|\s+us))\b))/i;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
   "了",
@@ -439,6 +441,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         "$1"
       )
       .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
+      .replace(SENTENCE_INITIAL_BARE_WELL_FORMAL_FOLLOW_RE, "")
       .replace(/\b(?:um+|uh+|er+|hmm+|mm+|you\s+know|basically)\b/gi, (match, offset, source) =>
         shouldPreserveLexicalYouKnow(match, offset, source) ? match : ""
       )

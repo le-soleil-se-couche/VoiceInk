@@ -209,6 +209,39 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe("we should ship today");
   });
 
+  it("removes sentence-initial bare well before modal lead-ins during strict short-input fallback cleanup", async () => {
+    const source = "well we should ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes sentence-initial bare well before question lead-ins during strict short-input fallback cleanup", async () => {
+    const source = "well can we ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("can we ship today");
+  });
+
+  it("preserves lexical sentence-initial Well demonstrative phrasing during strict short-input fallback cleanup", async () => {
+    const source = "Well this rollout seems stable";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("preserves lexical you know whose clauses during strict short-input fallback cleanup", async () => {
     const source = "you know whose idea this was";
 
