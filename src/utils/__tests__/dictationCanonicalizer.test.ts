@@ -80,6 +80,8 @@ const CASES: CanonCase[] = [
   { name: "念作字面保护", input: "念作句号", expected: "念作句号" },
   { name: "读作字面保护", input: "读作斜杠", expected: "读作斜杠" },
   { name: "写作字面保护", input: "写作问号", expected: "写作问号" },
+  { name: "命名为字面保护", input: "这个标点命名为问号", expected: "这个标点命名为问号" },
+  { name: "被命名为字面保护", input: "这个符号被命名为句号", expected: "这个符号被命名为句号" },
   { name: "引号词字面保护", input: "“问号”这个词", expected: "“问号”这个词" },
   { name: "这个字是字面保护", input: "这个字是点", expected: "这个字是点" },
   { name: "这个符号是字面保护", input: "这个符号是斜杠", expected: "这个符号是斜杠" },
