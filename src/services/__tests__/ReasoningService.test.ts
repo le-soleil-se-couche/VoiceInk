@@ -94,6 +94,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when Chinese assistant wrapper question omits comma in strict mode", async () => {
+    const source = "这个要改吗";
+    const candidate = "好的这个要改吗？";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats find-out-if dictation as question intent and blocks direct answers", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "We should ship this today.";

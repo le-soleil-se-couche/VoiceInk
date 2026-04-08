@@ -45,12 +45,17 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
   /(不用担心|别担心|我会尽力|我可以帮你|请告诉我|请问你|[你您]想要).{0,40}/,
   /^(?:好的|好|是的|对|對|嗯)[，,、]\s*.+(?:吗|麼|么|[?？])$/u,
+  /^(?:好的)\s*(?:请问|这个|那个|这|那|你|您|我们|是否|要|需要|能|可以|会|怎么|如何|为什么|什么|哪).*(?:吗|麼|么|[?？])$/u,
   /\b(as an ai|as a language model)\b/i,
   /\b(i(?:'m| am)\s+here\s+to\s+help(?:\s+with\s+that)?)\b/i,
   /\b(i\s*(can't|cannot|am unable|won't))\b/i,
   /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
   /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
   /\b(you can try).{0,20}(sentence|example)\b/i,
+];
+
+const SHORT_ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
+  /^(?:好的)\s*(?:请问|这个|那个|这|那|你|您|我们|是否|要|需要|能|可以|会|怎么|如何|为什么|什么|哪).*(?:吗|麼|么|[?？])$/u,
 ];
 
 const ENGLISH_FILLER_WORD_RE =
@@ -72,7 +77,9 @@ const CHINESE_WORD_REPEAT_STUTTER_RE =
 const isAnswerLikeTranscriptionOutput = (text) => {
   if (typeof text !== "string") return false;
   const trimmed = text.trim();
-  if (trimmed.length < 20) return false;
+  if (trimmed.length < 20) {
+    return SHORT_ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
+  }
   return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
 };
 
