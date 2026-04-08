@@ -152,6 +152,18 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("preserves lexical mm units during strict fallback cleanup", async () => {
+    const source = "use a 5 mm screw for the mount";
+    const candidate = "Sure, what screw size should we use?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("still removes sentence-initial mm hesitation filler during strict fallback cleanup", async () => {
     const source = "mm prepare the release notes today";
     const candidate = "Sure, what should we prioritize?";

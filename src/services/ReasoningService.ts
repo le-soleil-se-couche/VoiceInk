@@ -61,7 +61,7 @@ const stripEnglishFillerMatch = (
   if (match === "ER") {
     return match;
   }
-  if (match === "mM") {
+  if (/^mm$/i.test(match)) {
     const prefix = typeof sourceText === "string" ? sourceText.slice(0, offset) : "";
     if (MM_NUMERIC_PREFIX_RE.test(prefix)) {
       return match;
