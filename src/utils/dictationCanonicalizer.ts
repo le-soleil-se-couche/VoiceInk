@@ -342,7 +342,7 @@ const protectLiteralMentions = (
     new RegExp(`(?:这个词是|这个字是|这个符号是|念作|读作|写作)\\s*(?:“)?(?:${termGroup})(?:”)?`, "g"),
     new RegExp(`(?:不是)\\s*(?:“)?(?:${termGroup})(?:”)?(?=(?:\\s|$|\\n))`, "g"),
     new RegExp(
-      `(?:${punctuationTermGroup})\\s*(?:还有)\\s*(?:“)?(?:${punctuationTermGroup})(?:”)?(?=(?:\\s|$|\\n))`,
+      `(?:${punctuationTermGroup})\\s*(?:还有|并|而且)\\s*(?:“)?(?:${punctuationTermGroup})(?:”)?(?=(?:\\s|$|\\n))`,
       "g"
     ),
     new RegExp(`(?:“)?(?:${termGroup})(?:”)?\\s*(?:这个字|这个词|这个符号)`, "g"),
