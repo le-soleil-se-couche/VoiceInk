@@ -130,3 +130,77 @@ describe("chat context protection", () => {
     expect(prompt).not.toContain("CHAT PROTECTION");
   });
 });
+
+describe("code context protection", () => {
+  it("includes code protection instructions when context is code", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["text:product-name"],
+      targetApp: {
+        appName: "Visual Studio Code",
+        processId: 1234,
+        platform: "darwin" as const,
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).toContain("PRODUCT NAME & MODULE IDENTIFIER PROTECTION");
+    expect(prompt).toContain("Preserve product names");
+    expect(prompt).toContain("TypeScript, JavaScript, React, Vue, Angular, Node.js, Electron");
+    expect(prompt).toContain("module identifiers, function names, and component names");
+    expect(prompt).toContain("useEffect, useState, MyClass");
+    expect(prompt).toContain("technical terms, library names, or API references");
+    expect(prompt).toContain("camelCase, PascalCase, and dot-notation identifiers");
+  });
+
+  it("does not include code protection when context is not code", () => {
+    const context = {
+      context: "general" as const,
+      intent: "cleanup" as const,
+      confidence: 0.6,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: {
+        appName: null,
+        processId: null,
+        platform: "darwin" as const,
+        source: "renderer-fallback" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).not.toContain("PRODUCT NAME & MODULE IDENTIFIER PROTECTION");
+  });
+
+  it("includes product name and module identifier preservation in focus hints for code context", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["text:product-name"],
+      targetApp: {
+        appName: "VSCode",
+        processId: 1234,
+        platform: "darwin" as const,
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).toContain("product names, and module identifiers exactly");
+  });
+});

@@ -28,6 +28,16 @@ const CONTENT_CONTEXT_RULES: Array<{ context: ReasoningContext; re: RegExp; sign
     signal: "text:code",
   },
   {
+    context: "code",
+    re: /\b(?:Visual\s+Studio\s+Code|TypeScript|JavaScript|React|Vue|Angular|Node\.?js|Electron|Expo|Next\.?js|Webpack|Vite|Babel|ESLint|Prettier)\b/i,
+    signal: "text:product-name",
+  },
+  {
+    context: "code",
+    re: /\b[A-Z][a-zA-Z0-9]*(?:\.[A-Z][a-zA-Z0-9]*)+\b|\b(?:use[A-Z][a-zA-Z0-9]*|[a-z]+[A-Z][a-zA-Z0-9]*)\b/,
+    signal: "text:module-identifier",
+  },
+  {
     context: "email",
     re: /(^|\n)\s*(subject:|dear\s+|hi\s+\w+|best regards|sincerely|thanks,)/i,
     signal: "text:email",

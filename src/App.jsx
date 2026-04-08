@@ -160,6 +160,32 @@ export default function App() {
     return () => setWindowInteractivity(false);
   }, [setWindowInteractivity]);
 
+  // Flush any pending transcriptions from previous session (crash recovery)
+  useEffect(() => {
+    const flushPending = async () => {
+      try {
+        // Import AudioManager dynamically to access pending transcription methods
+        const AudioManagerModule = await import('./helpers/audioManager');
+        const AudioManager = AudioManagerModule.default;
+        // Create a temporary instance just to access the flush method
+        const tempInstance = new AudioManager();
+        const result = await tempInstance.flushPendingTranscriptions();
+        if (result.flushed > 0) {
+          toast({
+            title: t("app.persistence.recoveredTitle", { count: result.flushed }),
+            description: t("app.persistence.recoveredDescription", { count: result.flushed }),
+            variant: "default",
+            duration: 5000,
+          });
+        }
+      } catch (error) {
+        // Silently fail - pending transcriptions will retry on next app start
+        console.error("Failed to flush pending transcriptions:", error);
+      }
+    };
+    flushPending();
+  }, [toast, t]);
+
   useEffect(() => {
     const unsubscribeFallback = window.electronAPI?.onHotkeyFallbackUsed?.((data) => {
       const fallbackHotkey = typeof data?.fallback === "string" ? data.fallback.trim() : "";

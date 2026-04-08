@@ -139,4 +139,83 @@ describe("isAnswerLikeText", () => {
 
     expect(isAnswerLikeText(candidate, 20)).toBe(false);
   });
+
+  // New tests for strengthened answer-like detection patterns
+  it("flags english 'I've prepared' assistant wrapper output", () => {
+    const candidate = "I've prepared the polished version: What is the capital of France?";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
+  it("flags english 'I have created' assistant wrapper output", () => {
+    const candidate = "I have created a rewritten version of your text.";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
+  it("flags english 'I've drafted' assistant wrapper output", () => {
+    const candidate = "I've drafted the cleaned-up message for you.";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
+  it("flags english 'Here's what I have prepared' assistant introduction", () => {
+    const candidate = "Here's what I have prepared for your dictation.";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
+  it("flags english 'Here is how we have written' assistant introduction", () => {
+    const candidate = "Here is how we have written the polished text.";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
+  it("flags chinese '我已经准备好' assistant promise output", () => {
+    const candidate = "我已经准备好修改后的版本了。";
+
+    expect(isAnswerLikeText(candidate, 10)).toBe(true);
+  });
+
+  it("flags chinese '我已帮你写好' assistant promise output", () => {
+    const candidate = "我已帮你写好整理好的内容。";
+
+    expect(isAnswerLikeText(candidate, 10)).toBe(true);
+  });
+
+  it("flags chinese '我替你整理好' assistant promise output", () => {
+    const candidate = "我替你整理好润色后的文本了。";
+
+    expect(isAnswerLikeText(candidate, 10)).toBe(true);
+  });
+
+  it("flags english 'Below you will find' assistant wrapper output", () => {
+    const candidate = "Below you will find the polished version of your text.";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
+  it("flags english 'Below is what' assistant wrapper output", () => {
+    const candidate = "Below is what I have prepared for your review.";
+
+    expect(isAnswerLikeText(candidate, 20)).toBe(true);
+  });
+
+  it("flags chinese '以下是我准备' assistant wrapper output", () => {
+    const candidate = "以下是我准备修改后的内容：";
+
+    expect(isAnswerLikeText(candidate, 10)).toBe(true);
+  });
+
+  it("flags chinese '下面是我为您整理' assistant wrapper output", () => {
+    const candidate = "下面是我为您整理的版本：";
+
+    expect(isAnswerLikeText(candidate, 10)).toBe(true);
+  });
+
+  it("flags chinese '以下是我润色好的' assistant wrapper output", () => {
+    const candidate = "以下是我润色好的文本。";
+
+    expect(isAnswerLikeText(candidate, 10)).toBe(true);
+  });
 });

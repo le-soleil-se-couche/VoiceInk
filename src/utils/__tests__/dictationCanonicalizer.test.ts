@@ -107,7 +107,153 @@ const CASES: CanonCase[] = [
     expected: "open dot com",
     preferredLanguage: "zh-CN",
   },
+
+  // English tech term protection cases
+  { name: "混输-API", input: "调用这个 API 接口", expected: "调用这个 API 接口" },
+  { name: "混输-SDK", input: "使用这个 SDK 构建应用", expected: "使用这个 SDK 构建应用" },
+  { name: "混输-IDE", input: "在 IDE 中配置设置", expected: "在 IDE 中配置设置" },
+  { name: "混输-VSCode", input: "用 VSCode 打开文件", expected: "用 VSCode 打开文件" },
+  { name: "混输-GitHub", input: "推送到 GitHub 仓库", expected: "推送到 GitHub 仓库" },
+  { name: "混输-Docker", input: "运行 Docker 容器", expected: "运行 Docker 容器" },
+  { name: "混输-TypeScript", input: "检查 TypeScript 类型", expected: "检查 TypeScript 类型" },
+  { name: "混输-React", input: "导入 React 组件", expected: "导入 React 组件" },
+  { name: "混输-HTTP", input: "发送 HTTP 请求", expected: "发送 HTTP 请求" },
+  { name: "混输-JSON", input: "解析 JSON 数据", expected: "解析 JSON 数据" },
+  { name: "混输-AWS", input: "部署到 AWS 云端", expected: "部署到 AWS 云端" },
+  { name: "混输-npm", input: "用 npm 安装依赖", expected: "用 npm 安装依赖" },
+  { name: "混输-URL", input: "检查 URL 地址", expected: "检查 URL 地址" },
+  { name: "混输-REST API", input: "通过 REST API 查询", expected: "通过 REST API 查询" },
+  { name: "混输-GraphQL", input: "使用 GraphQL 查询", expected: "使用 GraphQL 查询" },
+  { name: "混输-Webpack", input: "用 Webpack 打包三百个文件", expected: "用 Webpack 打包300个文件" },
+  { name: "混输-Jest", input: "用 Jest 运行测试", expected: "用 Jest 运行测试" },
+  { name: "混输-Python", input: "用 Python 编写脚本", expected: "用 Python 编写脚本" },
+  { name: "混输-Kubernetes", input: "用 Kubernetes 部署", expected: "用 Kubernetes 部署" },
+  { name: "混输-Azure", input: "部署到 Azure 云平台", expected: "部署到 Azure 云平台" },
 ];
+
+describe("English tech term protection", () => {
+  it("preserves API acronym in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("调用这个 API 接口", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("调用这个 API 接口");
+    expect(result.stats.literalProtections).toBeGreaterThan(0);
+  });
+
+  it("preserves SDK acronym in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("使用这个 SDK 构建应用", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("使用这个 SDK 构建应用");
+    expect(result.stats.literalProtections).toBeGreaterThan(0);
+  });
+
+  it("preserves multiple tech acronyms in one sentence", () => {
+    const result = canonicalizeDictationText("通过 HTTP 请求获取 JSON 数据", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("通过 HTTP 请求获取 JSON 数据");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+
+  it("preserves IDE and editor names", () => {
+    const result = canonicalizeDictationText("在 VSCode 或 IDE 中打开", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("在 VSCode 或 IDE 中打开");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+
+  it("preserves framework and library names", () => {
+    const result = canonicalizeDictationText("使用 React 和 TypeScript 开发", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("使用 React 和 TypeScript 开发");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+
+  it("preserves cloud platform names", () => {
+    const result = canonicalizeDictationText("部署到 AWS 或 Azure", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("部署到 AWS 或 Azure");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+
+  it("preserves tool names while still normalizing numbers", () => {
+    const result = canonicalizeDictationText("用 Webpack 打包三百个文件", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 Webpack 打包300个文件");
+    expect(result.stats.literalProtections).toBeGreaterThan(0);
+    expect(result.stats.numberReplacements).toBeGreaterThan(0);
+  });
+
+  it("preserves npm and package manager names", () => {
+    const result = canonicalizeDictationText("用 npm 安装依赖", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 npm 安装依赖");
+    expect(result.stats.literalProtections).toBeGreaterThan(0);
+  });
+
+  it("preserves Docker and Kubernetes names", () => {
+    const result = canonicalizeDictationText("用 Docker 和 Kubernetes 部署", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 Docker 和 Kubernetes 部署");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+
+  it("preserves language names like Python Java Go", () => {
+    const result = canonicalizeDictationText("用 Python Java 和 Go 编写", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 Python Java 和 Go 编写");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(3);
+  });
+
+  it("preserves testing framework names", () => {
+    const result = canonicalizeDictationText("用 Jest 和 Vitest 测试", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 Jest 和 Vitest 测试");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+
+  it("preserves URL and web tech terms", () => {
+    const result = canonicalizeDictationText("检查 URL 和 HTTP 状态", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("检查 URL 和 HTTP 状态");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+});
+
 
 describe("canonicalizeDictationText", () => {
   it("covers the fixed Chinese canonicalization corpus", () => {

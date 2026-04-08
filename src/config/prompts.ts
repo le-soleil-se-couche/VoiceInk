@@ -44,7 +44,7 @@ function getContextInstruction(context?: ContextClassification): string {
 
   const focusHints: Record<ContextClassification["context"], string> = {
     general: "Keep output natural and concise.",
-    code: "Preserve syntax, symbols, casing, and code blocks exactly where possible.",
+    code: "Preserve syntax, symbols, casing, code blocks, product names, and module identifiers exactly.",
     email: "Preserve recipient intent and structure it like a clear, professional email.",
     chat: "Keep it concise and conversational, but still polished.",
     document: "Preserve headings, bullets, and list structure when they aid readability.",
@@ -67,7 +67,14 @@ function getContextInstruction(context?: ContextClassification): string {
 
   const emailProtectionSuffix = context.context === "email" ? emailProtection : "";
   const chatProtectionSuffix = context.context === "chat" ? chatProtection : "";
-  return `Context hint: ${contextLabels[context.context]}.${appSuffix} ${focusHints[context.context]} ${intentHint}${emailProtectionSuffix}${chatProtectionSuffix}`;
+  
+  const codeProtection =
+    context.context === "code"
+      ? "\n\nPRODUCT NAME & MODULE IDENTIFIER PROTECTION:\n- Preserve product names (TypeScript, JavaScript, React, Vue, Angular, Node.js, Electron, etc.) exactly as spoken.\n- Preserve module identifiers, function names, and component names (useEffect, useState, MyClass, etc.) without translation.\n- Do not rewrite technical terms, library names, or API references.\n- Keep camelCase, PascalCase, and dot-notation identifiers intact."
+      : "";
+  
+  const codeProtectionSuffix = context.context === "code" ? codeProtection : "";
+  return `Context hint: ${contextLabels[context.context]}.${appSuffix} ${focusHints[context.context]} ${intentHint}${emailProtectionSuffix}${chatProtectionSuffix}${codeProtectionSuffix}`;
 }
 
 function getDictionaryEnforcementInstruction(uiLanguage?: string): string {

@@ -29,6 +29,11 @@ class DatabaseManager {
         )
       `);
 
+      // Index for efficient pagination queries
+      this.db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_transcriptions_timestamp ON transcriptions(timestamp DESC)
+      `);
+
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS custom_dictionary (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -176,6 +181,69 @@ class DatabaseManager {
       return transcriptions;
     } catch (error) {
       debugLogger.error("Error getting transcriptions", { error: error.message }, "database");
+      throw error;
+    }
+  }
+
+  getTranscriptionsPage(limit = 50, beforeId = null) {
+    try {
+      if (!this.db) {
+        throw new Error("Database not initialized");
+      }
+      
+      // Validate limit
+      const actualLimit = Math.min(Math.max(1, limit), 100);
+      
+      // Validate beforeId if provided
+      if (beforeId != null && (!Number.isInteger(beforeId) || beforeId <= 0)) {
+        debugLogger.error("Invalid beforeId parameter", { beforeId }, "database");
+        beforeId = null;
+      }
+      
+      let transcriptions;
+      let hasMore = false;
+      
+      if (beforeId == null) {
+        // First page: get the most recent items
+        // Use timestamp DESC with id DESC as tiebreaker for consistent ordering
+        const stmt = this.db.prepare(
+          "SELECT * FROM transcriptions ORDER BY timestamp DESC, id DESC LIMIT ?"
+        );
+        transcriptions = stmt.all(actualLimit + 1);
+      } else {
+        // Subsequent pages: get items older than the last seen (timestamp, id) combination
+        // First, get the timestamp of the beforeId item to use as cursor
+        const cursorStmt = this.db.prepare("SELECT timestamp FROM transcriptions WHERE id = ?");
+        const cursorRow = cursorStmt.get(beforeId);
+        
+        if (cursorRow) {
+          // Use cursor-based pagination with both timestamp and id for consistency
+          // Get items with (timestamp < cursorTimestamp) OR (timestamp = cursorTimestamp AND id < cursorId)
+          const stmt = this.db.prepare(`
+            SELECT * FROM transcriptions 
+            WHERE timestamp < ? OR (timestamp = ? AND id < ?)
+            ORDER BY timestamp DESC, id DESC 
+            LIMIT ?
+          `);
+          transcriptions = stmt.all(cursorRow.timestamp, cursorRow.timestamp, beforeId, actualLimit + 1);
+        } else {
+          // beforeId not found, fall back to first page behavior
+          const stmt = this.db.prepare(
+            "SELECT * FROM transcriptions ORDER BY timestamp DESC, id DESC LIMIT ?"
+          );
+          transcriptions = stmt.all(actualLimit + 1);
+        }
+      }
+      
+      // Check if there are more items
+      if (transcriptions.length > actualLimit) {
+        hasMore = true;
+        transcriptions = transcriptions.slice(0, actualLimit);
+      }
+      
+      return { transcriptions, hasMore };
+    } catch (error) {
+      debugLogger.error("Error getting transcriptions page", { error: error.message }, "database");
       throw error;
     }
   }

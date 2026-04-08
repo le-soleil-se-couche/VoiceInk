@@ -222,7 +222,8 @@
       "dateGroups": {
         "today": "今天",
         "yesterday": "昨天"
-      }
+      },
+      "loadMore": "加载更多"
     },
     "cloudMigration": {
       "title": "欢迎使用 VoiceInk Pro",
@@ -944,7 +945,11 @@
         "enterprise": {
           "name": "企业版",
           "price": "自定义",
-          "features": ["云端同步", "团队功能（即将推出）", "SSO 与合规"],
+          "features": [
+            "云端同步",
+            "团队功能（即将推出）",
+            "SSO 与合规"
+          ],
           "cta": "联系我们"
         },
         "currentPlan": "当前套餐"
