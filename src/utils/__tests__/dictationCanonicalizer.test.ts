@@ -62,6 +62,8 @@ const CASES: CanonCase[] = [
   { name: "多位小数点归一", input: "一二点三四", expected: "12.34" },
   { name: "时间表达优先归一", input: "十二点二十七分", expected: "12点27分" },
   { name: "口语一点保留汉字", input: "干净一点", expected: "干净一点" },
+  { name: "口语一点零食保留汉字", input: "我想要一点零食", expected: "我想要一点零食" },
+  { name: "口语一点零件保留汉字", input: "先拿一点零件", expected: "先拿一点零件" },
   { name: "口语一下保留汉字", input: "转一下", expected: "转一下" },
   { name: "这一层保留汉字", input: "这一层", expected: "这一层" },
   { name: "第一层保留汉字", input: "第一层", expected: "第一层" },
@@ -70,6 +72,7 @@ const CASES: CanonCase[] = [
   { name: "已是阿拉伯长数字保持", input: "20260328", expected: "20260328" },
   { name: "已是阿拉伯金额保持", input: "300元", expected: "300元" },
   { name: "版本号归一", input: "版本二点零点一", expected: "版本2.0.1" },
+  { name: "版本一点零保持小数归一", input: "版本一点零发布", expected: "版本1.0发布" },
   {
     name: "IP 归一",
     input: "IP 一九二点一六八点零点一",

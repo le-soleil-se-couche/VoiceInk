@@ -130,6 +130,8 @@ const IDIOM_PROTECTIONS = [
 const ORAL_ONE_NEXT_RE = /^[下些样起直会]/;
 const ORAL_ONE_PREV_RE = /[这那哪每另前后上下同某]/;
 const TIME_CONTEXT_PREV_RE = /[上下早晚晨午夜今明昨零〇一二两三四五六七八九十百千万萬\d]/;
+const CHINESE_NUMERAL_CHAR_RE = /[零〇一二两三四五六七八九十百千万萬\d]/;
+const VERSION_CONTEXT_PREFIX_RE = /(?:版本|版号|[vV])\s*$/;
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -414,6 +416,16 @@ const normalizeResidualChineseDecimals = (
     next = next.replace(DECIMAL_SPOKEN_RE, (match, left, right, offset, sourceText) => {
       const safeOffset = typeof offset === "number" ? offset : 0;
       const charAfter = sourceText[safeOffset + match.length] || "";
+      const prefixText = sourceText.slice(0, safeOffset);
+      const lexicalYidianZeroNoun =
+        (left === "一" || left === "1") &&
+        (right === "零" || right === "0") &&
+        HAN_CHAR_SINGLE_RE.test(charAfter) &&
+        !CHINESE_NUMERAL_CHAR_RE.test(charAfter) &&
+        !VERSION_CONTEXT_PREFIX_RE.test(prefixText);
+      if (lexicalYidianZeroNoun) {
+        return match;
+      }
       if (charAfter && "分时秒钟".includes(charAfter)) {
         return match;
       }
