@@ -62,6 +62,8 @@ const NUMERIC_AH_UNIT_PREFIX_RE = /\b\d+(?:[.,]\d+)?\s*(?:[-‐‑–—]\s*)?$/
 const LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE = /^\s+whose\b/i;
 const LEXICAL_YOU_KNOW_INTERROGATIVE_PREFIX_RE =
   /\b(?:do|did|does|do(?:n't|nt)|does(?:n't|nt))\s*$/i;
+const SENTENCE_INITIAL_BARE_WELL_FORMAL_FOLLOW_RE =
+  /^[\s\u200B-\u200D\uFEFF]*well(?:\s*[，,、]?\s+)(?=(?:(?:we|i|you|they|he|she|it)\s+(?:should|can|could|would|will|must|need(?:\s+to)?|have\s+to)\b|(?:can|could|would|should|will|do|did|does|is|are|am|have|has|had)\b|(?:please|let(?:'s|\s+us))\b))/i;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -1675,6 +1677,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     return text
       .replace(/^[\s\u200B-\u200D\uFEFF]*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*[，,、]?\s*/g, "")
       .replace(/^[\u200B-\u200D\uFEFF]+/g, "")
+      .replace(SENTENCE_INITIAL_BARE_WELL_FORMAL_FOLLOW_RE, "")
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
       .replace(ENGLISH_FILLER_WORD_RE, stripEnglishFillerMatch)
