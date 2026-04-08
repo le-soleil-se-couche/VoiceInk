@@ -83,6 +83,39 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("keeps lexical please-tell-me question dictation without forcing strict fallback", async () => {
+    const source = "please tell me when the meeting starts";
+    const candidate = "Please tell me when the meeting starts?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps lexical what-can-i question dictation without forcing strict fallback", async () => {
+    const source = "what can i do about this bug";
+    const candidate = "What can I do about this bug?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("still falls back for assistant helper-wrapper phrasing in strict mode", async () => {
+    const source = "please tell me when the meeting starts";
+    const candidate = "Please tell me what you need help with.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("preserves lexical as-you-know phrasing during strict fallback cleanup", async () => {
     const source = "as you know the deploy is blocked";
     const candidate = "As an AI assistant, I can help with that.";
