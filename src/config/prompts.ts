@@ -73,7 +73,9 @@ function getContextInstruction(context?: ContextClassification): string {
       "\n\nCODE CONTEXT PROTECTION:\n" +
       "- Preserve command names, module names, product names, function names, and technical identifiers exactly as spoken.\n" +
       "- Do not rewrite code snippets, paths, or CLI commands into natural language.\n" +
-      "- Keep technical terminology intact even if it sounds like regular words.";
+      "- Keep technical terminology intact even if it sounds like regular words.\n" +
+      "- Preserve structured content (JSON, YAML, XML, CSV, TOML, INI) formatting and syntax exactly.\n" +
+      "- Do not convert code blocks, fenced markdown, or data structures into prose.";
   }
 
 

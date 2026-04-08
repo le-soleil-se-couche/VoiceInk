@@ -357,7 +357,7 @@ const protectEnglishTechTerms = (
   stats: DictationCanonicalizerStats
 ) => {
   let protectedText = value;
-  const pattern = /\b(API|SDK|IDE|CLI|URL|HTTP|HTTPS|JSON|XML|CSS|HTML|DOM|npm|VSCode|GitHub|GitLab|Docker|Kubernetes|AWS|Azure|GCP|REST|GraphQL|gRPC|TCP|IP|DNS|SSH|SSL|TLS|JWT|OAuth|SAML|LDAP|SMTP|IMAP|POP3|FTP|SFTP|WebSocket|WebRTC|WebAssembly|TypeScript|JavaScript|Python|Java|Go|Rust|Ruby|Swift|Kotlin|React|Vue|Angular|Next\.js|Nuxt\.js|Electron|Vite|Webpack|Babel|ESLint|Prettier|Jest|Vitest|Playwright|Cypress|Cursor|Copilot|Claude|DeepSeek|Qwen|ChatGPT)\b/gi;
+  const pattern = /\b(API|SDK|IDE|CLI|URL|HTTP|HTTPS|JSON|XML|CSS|HTML|DOM|npm|VSCode|GitHub|GitLab|Docker|Kubernetes|AWS|Azure|GCP|REST|GraphQL|gRPC|TCP|IP|DNS|SSH|SSL|TLS|JWT|OAuth|SAML|LDAP|SMTP|IMAP|POP3|FTP|SFTP|WebSocket|WebRTC|WebAssembly|TypeScript|JavaScript|Python|Java|Go|Rust|Ruby|Swift|Kotlin|React|Vue|Angular|Next\.js|Nuxt\.js|Electron|Vite|Webpack|Babel|ESLint|Prettier|Jest|Vitest|Playwright|Cypress|Cursor|Copilot|Claude|DeepSeek|Qwen|ChatGPT|error|bug|function|class|interface|value|config|build|test|pass|fail|review|commit|merge|branch|log|deps|package|module|import|export|const|let|var|async|await|promise|callback|return|throw|catch|try|if|else|for|while|switch|case|break|continue|true|false|null|undefined|void|typeof|instanceof|new|this|super|extends|static|public|private|protected|readonly|optional|default|from|as|get|set|yield|delete|in|of)\b/gi;
   protectedText = protectByRegex({
     value: protectedText,
     regex: pattern,

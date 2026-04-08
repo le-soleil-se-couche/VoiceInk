@@ -342,4 +342,139 @@ describe("English tech term protection", () => {
     });
     expect(result.text).toBe("用 Claude 处理300个文件");
   });
+
+  it("preserves common programming term error in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("这个 error 需要修复", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("这个 error 需要修复");
+  });
+
+  it("preserves common programming term bug in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("遇到 bug 了", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("遇到 bug 了");
+  });
+
+  it("preserves common programming term function in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("写一个 function", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("写一个 function");
+  });
+
+  it("preserves common programming term class in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("实现 class", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("实现 class");
+  });
+
+  it("preserves common programming term interface in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("定义 interface", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("定义 interface");
+  });
+
+  it("preserves common programming term config in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("检查 config 文件", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("检查 config 文件");
+  });
+
+  it("preserves common programming term build in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("运行 build 命令", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("运行 build 命令");
+  });
+
+  it("preserves common programming term commit in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("提交 commit", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("提交 commit");
+  });
+
+  it("preserves common programming term branch in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("创建 branch", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("创建 branch");
+  });
+
+  it("preserves common programming term log in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("查看 log", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("查看 log");
+  });
+
+  it("preserves multiple common programming terms in one sentence", () => {
+    const result = canonicalizeDictationText("这个 error 和 bug 需要修复", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("这个 error 和 bug 需要修复");
+  });
+
+  it("preserves common programming terms while still normalizing numbers", () => {
+    const result = canonicalizeDictationText("这个 error 有三百个", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("这个 error 有300个");
+  });
+
+  it("preserves JavaScript keywords in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("使用 async await 和 promise", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("使用 async await 和 promise");
+  });
+
+  it("preserves TypeScript keywords in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("定义 interface 和 type", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("定义 interface 和 type");
+  });
+
+  it("preserves git terms in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("执行 git commit 和 merge", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("执行 git commit 和 merge");
+  });
 });

@@ -6,6 +6,18 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /\b(i\s*(can't|cannot|am unable|won't))\b/i,
   /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
   /\b(you can try).{0,20}(sentence|example)\b/i,
+  // Summary-style patterns for non-code document contexts
+  /\b(in summary|to summarize|here's? a summary)\b/i,
+  /\bhere('s| is)? (the|your|this|what) (you )?(clean|polished|formatted|revised|cleaned|organized|dictated)\b/i,
+  /\b(below is (the|your)|the following is (the|your))\b/i,
+  /\b(i('?ve| have) (clean|polish|format|organize|revis|summariz)(ed|d|ing|ted) (up )?(your|the|my) )\b/i,
+  // Additional answer-like patterns: let-me constructions and conclusion markers
+  /\b(let me (summarize|review|explain|clarify|rephrase|rewrite|clean|polish|format|organize))\b/i,
+  /\b(i will (summarize|review|explain|clarify|rephrase|rewrite|clean|polish|format|organize))\b/i,
+  /\b(i'll (summarize|review|explain|clarify|rephrase|rewrite|clean|polish|format|organize))\b/i,
+  /\b(in conclusion|to conclude|to wrap up|to sum up)\b/i,
+  /\b(my (response|answer|suggestion|recommendation) (is|would be))\b/i,
+  /\b(based on (your|the) (input|dictation|notes|text|content))\b/i,
 ];
 
 const CHINESE_QUESTION_RE =
@@ -225,4 +237,79 @@ export function shouldBlockQuestionAnswerization(
     normalizeForQuestionIntentCompare(normalizedInput) !==
     normalizeForQuestionIntentCompare(normalizedOutput)
   );
+}
+
+// Code and structured content detection
+const CODE_FENCE_RE = /```[\s\S]*?```/;
+const INLINE_CODE_RE = /`[^`]+`/;
+const HTML_TAG_RE = /<\/?[a-zA-Z][a-zA-Z0-9-]*(?:\s+[^>]*?)?\s*\/?>/;
+const JSX_TAG_RE = /<\/?[a-zA-Z][a-zA-Z0-9]*(?:\s+[^>]*?)?\s*\/?>/;
+const CODE_KEYWORD_RE = /\b(const|let|var|function|return|if|else|for|while|class|import|export|from|async|await|def|import|package|public|private|protected|interface|type|enum|namespace|module|struct|impl|trait|fn|match|yield|try|catch|throw|new|this|super|extends|implements|typeof|instanceof|keyof|readonly|as|in|of|void|null|undefined|true|false|None|True|False|nil|TRUE|FALSE)\b/;
+const CODE_OPERATOR_RE = /(?:=>|===|!==|==|!=|<=|>=|&&|\|\||[+\-*/%]=?|&=|\|=|\^=|<<=|>>=|>>>=|~|\?\.|\?\?|::|->|<-|::=|:=)/;
+const CODE_BLOCK_INDICATORS_RE = /(?:^|\n)\s*(?:function\s+\w+|class\s+\w+|const\s+\w+\s*=|let\s+\w+\s*=|var\s+\w+\s*=|def\s+\w+|import\s+|export\s+|from\s+|require\(|\[\s*\]|\{\s*\}|\{\s*\n)/;
+const JSON_STRUCTURE_RE = /^\s*[\[\{]\s*(?:"[^"]+"\s*:|[^"\s])/;
+const YAML_STRUCTURE_RE = /^(?:---|\.\.\.|[\w-]+:\s*\S)/m;
+const SQL_KEYWORD_RE = /\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|ON|GROUP BY|ORDER BY|HAVING|LIMIT|OFFSET|UNION|ALL|AS|DISTINCT|COUNT|SUM|AVG|MIN|MAX|CREATE|TABLE|ALTER|DROP|INDEX|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|DEFAULT|NOT NULL|UNIQUE|CHECK|CASCADE|TRUNCATE|EXISTS|BETWEEN|IN|LIKE|IS NULL|IS NOT NULL)\b/i;
+const FILE_PATH_RE = /(?:^|\s)(?:[\/~][\w.\-\/]+|[A-Za-z]:\\[\w.\\\-]+)(?:\s|$)/;
+const URL_PATTERN_RE = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/i;
+
+export function hasCodeOrStructuredContent(text: string | null | undefined): boolean {
+  if (typeof text !== "string" || !text.trim()) {
+    return false;
+  }
+
+  const trimmed = text.trim();
+  
+  // Short text is unlikely to contain meaningful code/structured content
+  if (trimmed.length < 3) {
+    return false;
+  }
+
+  return (
+    CODE_FENCE_RE.test(trimmed) ||
+    INLINE_CODE_RE.test(trimmed) ||
+    HTML_TAG_RE.test(trimmed) ||
+    JSX_TAG_RE.test(trimmed) ||
+    CODE_KEYWORD_RE.test(trimmed) ||
+    CODE_OPERATOR_RE.test(trimmed) ||
+    CODE_BLOCK_INDICATORS_RE.test(trimmed) ||
+    JSON_STRUCTURE_RE.test(trimmed) ||
+    YAML_STRUCTURE_RE.test(trimmed) ||
+    SQL_KEYWORD_RE.test(trimmed) ||
+    FILE_PATH_RE.test(trimmed) ||
+    URL_PATTERN_RE.test(trimmed)
+  );
+}
+
+export function shouldBlockCodeOrStructuredContentRewrite(
+  source: string | null | undefined,
+  output: string | null | undefined
+): boolean {
+  // Only applies when source has code/structured content
+  if (!hasCodeOrStructuredContent(source)) {
+    return false;
+  }
+
+  // If output also has code/structured content, check if it's been rewritten into prose
+  if (typeof output !== "string" || !output.trim()) {
+    return true;
+  }
+
+  const sourceHasCode = hasCodeOrStructuredContent(source);
+  const outputHasCode = hasCodeOrStructuredContent(output);
+
+  // Source has code but output doesn't - likely rewritten into prose
+  if (sourceHasCode && !outputHasCode) {
+    return true;
+  }
+
+  // Both have code - check if code fence content was converted to inline
+  const sourceHasFence = CODE_FENCE_RE.test(source);
+  const outputHasFence = CODE_FENCE_RE.test(output);
+  
+  if (sourceHasFence && !outputHasFence) {
+    return true;
+  }
+
+  return false;
 }

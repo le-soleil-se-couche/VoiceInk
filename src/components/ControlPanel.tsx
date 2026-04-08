@@ -15,6 +15,9 @@ import {
   useTranscriptions,
   initializeTranscriptions,
   removeTranscription as removeFromStore,
+  loadMoreTranscriptions,
+  useHasMoreTranscriptions,
+  useIsLoadingMoreTranscriptions,
 } from "../stores/transcriptionStore";
 import ControlPanelSidebar, { type ControlPanelView } from "./ControlPanelSidebar";
 import WindowControls from "./WindowControls";
@@ -33,6 +36,8 @@ const UploadAudioView = React.lazy(() => import("./notes/UploadAudioView"));
 export default function ControlPanel() {
   const { t } = useTranslation();
   const history = useTranscriptions();
+  const hasMore = useHasMoreTranscriptions();
+  const isLoadingMore = useIsLoadingMoreTranscriptions();
   const [isLoading, setIsLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
@@ -487,6 +492,9 @@ export default function ControlPanel() {
               <HistoryView
                 history={history}
                 isLoading={isLoading}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                onLoadMore={() => loadMoreTranscriptions()}
                 hotkey={hotkey}
                 showCloudMigrationBanner={showCloudMigrationBanner}
                 setShowCloudMigrationBanner={setShowCloudMigrationBanner}

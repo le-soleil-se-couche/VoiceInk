@@ -7,6 +7,11 @@ export interface TranscriptionItem {
   created_at: string;
 }
 
+export interface TranscriptionPageRequest {
+  limit?: number;
+  beforeId?: number | null;
+}
+
 export interface NoteItem {
   id: number;
   title: string;
@@ -324,6 +329,9 @@ declare global {
 
       // Database operations
       saveTranscription: (text: string) => Promise<{ id: number; success: boolean }>;
+      getTranscriptionsPage?: (
+        options?: TranscriptionPageRequest
+      ) => Promise<TranscriptionItem[]>;
       getTranscriptions: (limit?: number) => Promise<TranscriptionItem[]>;
       clearTranscriptions: () => Promise<{ cleared: number; success: boolean }>;
       deleteTranscription: (id: number) => Promise<{ success: boolean }>;
@@ -852,40 +860,6 @@ declare global {
       notifyLimitReached?: (data: { wordsUsed: number; limit: number }) => void;
       onLimitReached?: (
         callback: (data: { wordsUsed: number; limit: number }) => void
-      ) => () => void;
-
-      // AssemblyAI Streaming
-      assemblyAiStreamingWarmup?: (options?: {
-        sampleRate?: number;
-        language?: string;
-      }) => Promise<{
-        success: boolean;
-        alreadyWarm?: boolean;
-        error?: string;
-        code?: string;
-      }>;
-      assemblyAiStreamingStart?: (options?: { sampleRate?: number; language?: string }) => Promise<{
-        success: boolean;
-        usedWarmConnection?: boolean;
-        error?: string;
-        code?: string;
-      }>;
-      assemblyAiStreamingSend?: (audioBuffer: ArrayBuffer) => void;
-      assemblyAiStreamingForceEndpoint?: () => void;
-      assemblyAiStreamingStop?: () => Promise<{
-        success: boolean;
-        text?: string;
-        error?: string;
-      }>;
-      assemblyAiStreamingStatus?: () => Promise<{
-        isConnected: boolean;
-        sessionId: string | null;
-      }>;
-      onAssemblyAiPartialTranscript?: (callback: (text: string) => void) => () => void;
-      onAssemblyAiFinalTranscript?: (callback: (text: string) => void) => () => void;
-      onAssemblyAiError?: (callback: (error: string) => void) => () => void;
-      onAssemblyAiSessionEnd?: (
-        callback: (data: { audioDuration?: number; text?: string }) => void
       ) => () => void;
 
       // Referral stats

@@ -962,8 +962,9 @@ class ClipboardManager {
           resolve();
         } else {
           this.accessibilityCache = { value: null, expiresAt: 0 };
-          const errorMsg = `Paste failed (code ${code}). Text is copied to clipboard - please paste manually with Cmd+V.`;
-          reject(new Error(errorMsg));
+          // Preserve clipboard content for manual paste fallback
+          this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
+          resolve();
         }
       });
 
@@ -971,19 +972,18 @@ class ClipboardManager {
         if (hasTimedOut) return;
         clearTimeout(timeoutId);
         pasteProcess.removeAllListeners();
-        const errorMsg = `Paste command failed: ${error.message}. Text is copied to clipboard - please paste manually with Cmd+V.`;
-        reject(new Error(errorMsg));
+        // Preserve clipboard content for manual paste fallback
+        this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
+        resolve();
       });
 
       const timeoutId = setTimeout(() => {
         hasTimedOut = true;
         killProcess(pasteProcess, "SIGKILL");
         pasteProcess.removeAllListeners();
-        reject(
-          new Error(
-            "Paste operation timed out. Text is copied to clipboard - please paste manually with Cmd+V."
-          )
-        );
+        // Preserve clipboard content for manual paste fallback
+        this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
+        resolve();
       }, 3000);
     });
   }
@@ -1206,11 +1206,9 @@ class ClipboardManager {
               elapsedMs: elapsed,
               stderr: errorOutput,
             });
-            reject(
-              new Error(
-                `Windows paste failed with code ${code}. Text is copied to clipboard - please paste manually with Ctrl+V.`
-              )
-            );
+            // Preserve clipboard content for manual paste fallback
+            this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
+            resolve();
           }
         });
 
@@ -1222,11 +1220,9 @@ class ClipboardManager {
             elapsedMs: elapsed,
             error: error.message,
           });
-          reject(
-            new Error(
-              `Windows paste failed: ${error.message}. Text is copied to clipboard - please paste manually with Ctrl+V.`
-            )
-          );
+          // Preserve clipboard content for manual paste fallback
+          this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
+          resolve();
         });
 
         const timeoutId = setTimeout(() => {
@@ -1235,11 +1231,9 @@ class ClipboardManager {
           this.safeLog(`⏱️ PowerShell paste timeout`, { elapsedMs: elapsed });
           killProcess(pasteProcess, "SIGKILL");
           pasteProcess.removeAllListeners();
-          reject(
-            new Error(
-              "Paste operation timed out. Text is copied to clipboard - please paste manually with Ctrl+V."
-            )
-          );
+          // Preserve clipboard content for manual paste fallback
+          this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
+          resolve();
         }, 5000);
       }, pasteDelay);
     });
@@ -1757,6 +1751,10 @@ class ClipboardManager {
       errorMsg +=
         "\n\nNote: ydotool is installed but the ydotoold daemon is not running. Start it with: sudo systemctl enable --now ydotool";
     }
+
+    // Keep dictation text in clipboard for manual paste fallback
+    // Do NOT restore originalClipboard - the user needs the dictated text to paste manually
+    this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
 
     const err = new Error(errorMsg + failureSummary);
     err.code = "PASTE_SIMULATION_FAILED";

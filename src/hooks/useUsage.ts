@@ -43,6 +43,24 @@ interface UseUsageResult {
 
 const USAGE_CACHE_TTL = CACHE_CONFIG.API_KEY_TTL; // 1 hour
 
+/**
+ * Fallback usage data when backend verification is unavailable.
+ * Ensures subscription-dependent features degrade gracefully to free tier defaults.
+ */
+const FALLBACK_USAGE_DATA: UsageData = {
+  wordsUsed: 0,
+  wordsRemaining: 2000,
+  limit: 2000,
+  plan: "free",
+  status: "offline",
+  isSubscribed: false,
+  isTrial: false,
+  trialDaysLeft: null,
+  currentPeriodEnd: null,
+  billingInterval: null,
+  resetAt: "rolling",
+};
+
 export function useUsage(): UseUsageResult | null {
   const { isSignedIn, isLoaded } = useAuth();
   const [data, setData] = useState<UsageData | null>(null);
@@ -84,7 +102,12 @@ export function useUsage(): UseUsageResult | null {
         }
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch usage");
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch usage";
+      setError(errorMessage);
+
+      // Fallback to free tier defaults when backend verification is unavailable
+      // This ensures subscription-dependent features degrade gracefully
+      setData(FALLBACK_USAGE_DATA);
     } finally {
       setIsLoading(false);
       setHasLoaded(true);

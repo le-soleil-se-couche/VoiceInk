@@ -269,6 +269,57 @@ describe("getSystemPrompt document context protection", () => {
   });
 });
 
+describe("getSystemPrompt structured content protection", () => {
+  const mockTargetApp: TargetAppInfo = {
+    appName: "VSCode",
+    processId: 12345,
+    platform: "darwin",
+    source: "renderer-fallback",
+    capturedAt: null,
+  };
+
+  const codeContext: ContextClassification = {
+    context: "code",
+    intent: "cleanup",
+    confidence: 0.85,
+    strictMode: true,
+    strictOverlapThreshold: 0.45,
+    signals: ["app:code"],
+    targetApp: mockTargetApp,
+  };
+
+  it("includes structured content protection in CODE CONTEXT PROTECTION", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", codeContext);
+    
+    expect(prompt).toContain("Preserve structured content (JSON, YAML, XML, CSV, TOML, INI) formatting and syntax exactly");
+    expect(prompt).toContain("Do not convert code blocks, fenced markdown, or data structures into prose");
+  });
+
+  it("includes all code context protection rules", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", codeContext);
+    
+    expect(prompt).toContain("Preserve command names, module names, product names, function names, and technical identifiers exactly as spoken");
+    expect(prompt).toContain("Do not rewrite code snippets, paths, or CLI commands into natural language");
+    expect(prompt).toContain("Keep technical terminology intact even if it sounds like regular words");
+  });
+
+  it("does not include structured content protection for general context", () => {
+    const generalContext: ContextClassification = {
+      context: "general",
+      intent: "cleanup",
+      confidence: 0.55,
+      strictMode: false,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: mockTargetApp,
+    };
+    
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", generalContext);
+    
+    expect(prompt).not.toContain("Preserve structured content");
+  });
+});
+
 describe("getSystemPrompt anti-answerization safety", () => {
   const mockTargetApp: TargetAppInfo = {
     appName: "VSCode",
