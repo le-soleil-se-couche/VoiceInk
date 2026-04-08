@@ -499,3 +499,118 @@ describe("getSystemPrompt context-specific focus hints", () => {
     expect(prompt).toContain("Likely direct instruction mode");
   });
 });
+
+describe("getSystemPrompt technical dictation protection", () => {
+  it("includes code context protection for npm commands", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["tool:package-manager"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "run npm install", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Preserve command names, module names, product names");
+    expect(prompt).toContain("technical identifiers exactly as spoken");
+  });
+
+  it("includes code context protection for git commands", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["tool:vcs"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "git add .", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Do not rewrite code snippets, paths, or CLI commands into natural language");
+  });
+
+  it("includes code context protection for docker commands", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["tool:container"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "docker build -t myapp", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Keep technical terminology intact");
+  });
+
+  it("includes code context protection for kubectl commands", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["tool:k8s"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "kubectl apply -f deployment.yaml", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+  });
+
+  it("includes code context protection for build error messages", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["text:code"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "error: module not found", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Preserve command names, module names, product names");
+  });
+
+  it("includes code context protection for file paths", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["text:code"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "check src/utils/contextClassifier.ts", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Do not rewrite code snippets, paths, or CLI commands into natural language");
+  });
+
+  it("includes code context protection for error codes", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["text:code"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "got ENOENT error", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Keep technical terminology intact");
+  });
+
+});
