@@ -15,6 +15,9 @@ const CHINESE_WORD_REPEAT_STUTTER_RE =
 const INTERROGATIVE_YOU_KNOW_RE = /\b((?:do|did|does)(?:n['’]t)?\s+)you\s+know\b/gi;
 const INTERROGATIVE_YOU_KNOW_PLACEHOLDER = "__VOICEINK_KEEP_INTERROGATIVE_YOU_KNOW__";
 const INTERROGATIVE_YOU_KNOW_PLACEHOLDER_RE = /__VOICEINK_KEEP_INTERROGATIVE_YOU_KNOW__/g;
+const UPPERCASE_ER_RE = /\bER\b/g;
+const UPPERCASE_ER_PLACEHOLDER = "__VOICEINK_KEEP_UPPERCASE_ER__";
+const UPPERCASE_ER_PLACEHOLDER_RE = /__VOICEINK_KEEP_UPPERCASE_ER__/g;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
@@ -422,8 +425,10 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         INTERROGATIVE_YOU_KNOW_RE,
         `$1${INTERROGATIVE_YOU_KNOW_PLACEHOLDER}`
       )
+      .replace(UPPERCASE_ER_RE, UPPERCASE_ER_PLACEHOLDER)
       .replace(/\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi, "")
       .replace(INTERROGATIVE_YOU_KNOW_PLACEHOLDER_RE, "you know")
+      .replace(UPPERCASE_ER_PLACEHOLDER_RE, "ER")
       .replace(/([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g, "$1")
       .replace(/([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g, "$1$2$3")
       .replace(

@@ -58,6 +58,9 @@ const ENGLISH_FILLER_WORD_RE =
 const INTERROGATIVE_YOU_KNOW_RE = /\b((?:do|did|does)(?:n['’]t)?\s+)you\s+know\b/gi;
 const INTERROGATIVE_YOU_KNOW_PLACEHOLDER = "__VOICEINK_KEEP_INTERROGATIVE_YOU_KNOW__";
 const INTERROGATIVE_YOU_KNOW_PLACEHOLDER_RE = /__VOICEINK_KEEP_INTERROGATIVE_YOU_KNOW__/g;
+const UPPERCASE_ER_RE = /\bER\b/g;
+const UPPERCASE_ER_PLACEHOLDER = "__VOICEINK_KEEP_UPPERCASE_ER__";
+const UPPERCASE_ER_PLACEHOLDER_RE = /__VOICEINK_KEEP_UPPERCASE_ER__/g;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -1661,8 +1664,10 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         INTERROGATIVE_YOU_KNOW_RE,
         `$1${INTERROGATIVE_YOU_KNOW_PLACEHOLDER}`
       )
+      .replace(UPPERCASE_ER_RE, UPPERCASE_ER_PLACEHOLDER)
       .replace(ENGLISH_FILLER_WORD_RE, "")
       .replace(INTERROGATIVE_YOU_KNOW_PLACEHOLDER_RE, "you know")
+      .replace(UPPERCASE_ER_PLACEHOLDER_RE, "ER")
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
       .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")
