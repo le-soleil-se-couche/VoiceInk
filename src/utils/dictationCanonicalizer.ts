@@ -341,6 +341,7 @@ const protectLiteralMentions = (
     new RegExp(`(?:“)?(?:${termGroup})(?:”)?\\s*(?:这个字|这个词|这个符号)`, "g"),
     new RegExp(`["“”'](?:${termGroup})["“”']`, "g"),
     new RegExp(`(?:${termGroup})\\s*还有\\s*(?:${termGroup})`, "g"),
+    new RegExp(`(?:${termGroup})\\s*并且\\s*(?:${termGroup})`, "g"),
   ];
 
   let protectedText = value;
