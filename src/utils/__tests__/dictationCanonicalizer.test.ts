@@ -87,6 +87,16 @@ const CASES: CanonCase[] = [
   { name: "换行结尾标点转换", input: "换行后问号\n", expected: "换行后？\n" },
   { name: "行内顿号提示不替换", input: "列表第一项顿号第二项", expected: "列表第一项顿号第二项" },
   {
+    name: "以及并列标点词保持字面",
+    input: "我们学习逗号以及句号",
+    expected: "我们学习逗号以及句号",
+  },
+  {
+    name: "以及并列冒号分号保持字面",
+    input: "这里有冒号以及分号",
+    expected: "这里有冒号以及分号",
+  },
+  {
     name: "空白文本保持",
     input: "   ",
     expected: "   ",
