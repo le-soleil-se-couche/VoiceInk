@@ -153,6 +153,8 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const normalized = text.trim().toLowerCase();
+    const normalizedWithoutPoliteLeadIn = normalized.replace(/^(?:(?:please|pls)\s+)+/, "");
+    const englishProbeText = normalizedWithoutPoliteLeadIn || normalized;
     if (/[?？]$/.test(normalized)) {
       return true;
     }
@@ -170,12 +172,12 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const enQuestionStart =
       /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/;
-    if (enQuestionStart.test(normalized)) {
+    if (enQuestionStart.test(englishProbeText)) {
       return true;
     }
 
     const enQuestionEnd = /\b(?:or\s+not|right|correct|okay|ok)\s*$/;
-    if (enQuestionEnd.test(normalized)) {
+    if (enQuestionEnd.test(englishProbeText)) {
       return true;
     }
 
@@ -183,11 +185,11 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /^(?:i\s+(?:need|want|would\s+like|'d\s+like)\s+to\s+(?:find\s+out|see))\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
       /^(?:please\s+)?(?:find\s+out|see)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
     ];
-    if (enIndirectQuestionPatterns.some((re) => re.test(normalized))) {
+    if (enIndirectQuestionPatterns.some((re) => re.test(englishProbeText))) {
       return true;
     }
 
-    return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
+    return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(englishProbeText);
   }
 
   private splitIntoClauses(text: string): string[] {
