@@ -152,6 +152,18 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when helper-wrapper will-question omits terminal question mark", async () => {
+    const source = "will we ship this today";
+    const candidate = "I'm here to help. Will we ship this today";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when helper-wrapper is-question appears in strict mode", async () => {
     const source = "is this migration ready";
     const candidate = "I am here to help with that. Is this migration ready?";
@@ -162,6 +174,30 @@ describe("ReasoningService strict mode", () => {
     });
 
     expect(result).toBe(source);
+  });
+
+  it("falls back when helper-wrapper what-question omits terminal question mark", async () => {
+    const source = "what should we ship today";
+    const candidate = "I'm here to help. What should we ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps lexical helper statement with auxiliary verb continuation", async () => {
+    const source = "i'm here to help. will coordinate with the migration team tonight";
+    const candidate = "I'm here to help. Will coordinate with the migration team tonight.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
   });
 
   it("preserves numeric mixed-case uH unit during strict fallback cleanup", async () => {
