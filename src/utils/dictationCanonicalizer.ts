@@ -168,11 +168,16 @@ const parseChineseNumberWords = (segment: string): string | null => {
   let currentDigit = 0;
   let seenNumberToken = false;
   let hasUnit = false;
+  let lastExplicitUnit = 0;
+  let hasZeroAfterLastExplicitUnit = false;
 
   for (const char of segment) {
     if (Object.prototype.hasOwnProperty.call(CHINESE_DIGIT_VALUES, char)) {
       currentDigit = CHINESE_DIGIT_VALUES[char];
       seenNumberToken = true;
+      if ((char === "零" || char === "〇") && lastExplicitUnit > 0) {
+        hasZeroAfterLastExplicitUnit = true;
+      }
       continue;
     }
 
@@ -180,6 +185,8 @@ const parseChineseNumberWords = (segment: string): string | null => {
       const unit = CHINESE_UNIT_VALUES[char];
       seenNumberToken = true;
       hasUnit = true;
+      lastExplicitUnit = unit;
+      hasZeroAfterLastExplicitUnit = false;
 
       if (unit >= 10000) {
         section += currentDigit;
@@ -214,7 +221,17 @@ const parseChineseNumberWords = (segment: string): string | null => {
     return String(Number(digits.join("")));
   }
 
-  return String(total + section + currentDigit);
+  let parsedValue = total + section + currentDigit;
+
+  // Colloquial shorthand like "一万二" usually means 12000 (not 10002).
+  // Promote the trailing digit to the next lower unit only when no explicit
+  // zero marker appears after the last high unit.
+  if (lastExplicitUnit >= 100 && currentDigit > 0 && !hasZeroAfterLastExplicitUnit) {
+    const inferredPlaceValue = lastExplicitUnit / 10;
+    parsedValue += currentDigit * (inferredPlaceValue - 1);
+  }
+
+  return String(parsedValue);
 };
 
 const toArabicNumeral = (value: string) => parseChineseNumberWords(value) ?? value;
