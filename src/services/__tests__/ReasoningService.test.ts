@@ -94,6 +94,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("keeps lexical reassurance dictation without assistant-help intent", async () => {
+    const source = "别担心我们明天发布这个版本";
+    const candidate = "别担心，我们明天发布这个版本。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("falls back when reassurance phrasing includes assistant-help offer", async () => {
+    const source = "这个要改吗";
+    const candidate = "不用担心，我可以帮你处理这个。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats find-out-if dictation as question intent and blocks direct answers", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "We should ship this today.";
