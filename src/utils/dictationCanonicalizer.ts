@@ -132,6 +132,7 @@ const ORAL_ONE_PREV_RE = /[这那哪每另前后上下同某]/;
 const TIME_CONTEXT_PREV_RE = /[上下早晚晨午夜今明昨零〇一二两三四五六七八九十百千万萬\d]/;
 const CHINESE_NUMERAL_CHAR_RE = /[零〇一二两三四五六七八九十百千万萬\d]/;
 const VERSION_CONTEXT_PREFIX_RE = /(?:版本|版号|[vV])\s*$/;
+const ZERO_FOLLOWED_BY_HAN_RE = /^[零〇0]([\u4e00-\u9fff])/;
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -252,10 +253,28 @@ const shouldSkipShortNumberSegment = ({
   if (segment === "一" && ORAL_ONE_PREV_RE.test(previousChar || "")) return true;
   if (segment === "一" && nextChar === "点") {
     const tail = sourceText.slice(offset + segment.length + 1).trim();
+    const prefixText = sourceText.slice(0, Math.max(0, offset));
+    const lexicalTailMatch = tail.match(ZERO_FOLLOWED_BY_HAN_RE);
+    const lexicalYidianZeroNoun =
+      lexicalTailMatch &&
+      !CHINESE_NUMERAL_CHAR_RE.test(lexicalTailMatch[1]) &&
+      !VERSION_CONTEXT_PREFIX_RE.test(prefixText);
+    if (lexicalYidianZeroNoun) return true;
     if (TIME_CONTEXT_PREV_RE.test(previousChar || "")) return false;
     if (/^[零〇一二两三四五六七八九十百千万萬\d]+(?:分|时|秒|鐘|钟)/.test(tail)) return false;
     if (CHINESE_SPOKEN_NUMBER_RE.test(tail)) return false;
     return true;
+  }
+  if ((segment === "零" || segment === "〇") && previousChar === "点") {
+    const beforePointChar = offset > 1 ? sourceText[offset - 2] : "";
+    const prefixText = sourceText.slice(0, Math.max(0, offset - 2));
+    const lexicalYidianZeroNoun =
+      (beforePointChar === "一" || beforePointChar === "1") &&
+      HAN_CHAR_SINGLE_RE.test(nextChar || "") &&
+      !CHINESE_NUMERAL_CHAR_RE.test(nextChar || "") &&
+      !"分时秒鐘钟".includes(nextChar || "") &&
+      !VERSION_CONTEXT_PREFIX_RE.test(prefixText);
+    if (lexicalYidianZeroNoun) return true;
   }
   if (previousChar === "第") return true;
   if (nextChar === ".") return false;
