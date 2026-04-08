@@ -174,4 +174,26 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(candidate);
   });
+
+  it("preserves copular lexical basically during strict short-input fallback cleanup", async () => {
+    const source = "this is basically impossible";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("removes sentence-initial basically filler during strict short-input fallback cleanup", async () => {
+    const source = "basically we should ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
 });
