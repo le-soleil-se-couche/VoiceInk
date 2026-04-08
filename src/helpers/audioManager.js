@@ -61,6 +61,7 @@ const MIN_ANSWER_LIKE_TRANSCRIPTION_LENGTH = 20;
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
 const COPULAR_ENGLISH_VERB_RE = /\b(?:is|are|was|were|be|been|being)\s*$/i;
+const NUMERIC_UNIT_PREFIX_RE = /\b\d+(?:[.,]\d+)?\s*(?:[-‐‑–—]\s*)?$/;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -89,8 +90,21 @@ const shouldPreserveLexicalBasically = (input, offset, matchLength) => {
   return /^\s+[A-Za-z]/.test(after);
 };
 
+const shouldPreserveLexicalUmUnit = (input, offset, match) => {
+  if (!/^uM$/.test(match)) {
+    return false;
+  }
+
+  const before = input.slice(0, offset);
+  return NUMERIC_UNIT_PREFIX_RE.test(before);
+};
+
 const stripEnglishFillerMatch = (match, offset, input) => {
   const normalized = match.replace(/\s+/g, "").toLowerCase();
+  if (normalized === "um" && shouldPreserveLexicalUmUnit(input, offset, match)) {
+    return match;
+  }
+
   if (normalized === "basically" && shouldPreserveLexicalBasically(input, offset, match.length)) {
     return match;
   }

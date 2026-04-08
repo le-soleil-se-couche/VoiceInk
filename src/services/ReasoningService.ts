@@ -15,6 +15,7 @@ const CHINESE_WORD_REPEAT_STUTTER_RE =
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
 const COPULAR_ENGLISH_VERB_RE = /\b(?:is|are|was|were|be|been|being)\s*$/i;
+const NUMERIC_UNIT_PREFIX_RE = /\b\d+(?:[.,]\d+)?\s*(?:[-‐‑–—]\s*)?$/;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
@@ -68,8 +69,21 @@ const shouldPreserveLexicalBasically = (input: string, offset: number, matchLeng
   return /^\s+[A-Za-z]/.test(after);
 };
 
+const shouldPreserveLexicalUmUnit = (input: string, offset: number, match: string): boolean => {
+  if (!/^uM$/.test(match)) {
+    return false;
+  }
+
+  const before = input.slice(0, offset);
+  return NUMERIC_UNIT_PREFIX_RE.test(before);
+};
+
 const stripEnglishFillerMatch = (match: string, offset: number, input: string): string => {
   const normalized = match.replace(/\s+/g, "").toLowerCase();
+  if (normalized === "um" && shouldPreserveLexicalUmUnit(input, offset, match)) {
+    return match;
+  }
+
   if (normalized === "basically" && shouldPreserveLexicalBasically(input, offset, match.length)) {
     return match;
   }

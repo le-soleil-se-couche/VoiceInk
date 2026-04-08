@@ -186,6 +186,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("preserves mixed-case uM concentration units during strict short-input fallback cleanup", async () => {
+    const source = "prepare a 5 uM solution before incubation";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("removes sentence-initial um hesitation filler during strict short-input fallback cleanup", async () => {
+    const source = "um prepare the release notes today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("prepare the release notes today");
+  });
+
   it("removes sentence-initial basically filler during strict short-input fallback cleanup", async () => {
     const source = "basically we should ship today";
 
