@@ -402,7 +402,8 @@ const getMaxAllowedDictionaryDistance = (sourceKey, targetKey) => {
 };
 
 const LATIN_ALNUM_KEY_RE = /^[a-z0-9]+$/;
-const INFLECTIONAL_SUFFIX_EXPANSION_RE = /^(?:s|es|ed|ing)$/;
+const INFLECTIONAL_SUFFIXES = ["ing", "ed", "es", "s"];
+const MAX_INFLECTIONAL_STEM_DISTANCE = 1;
 
 const isInflectionalSuffixExpansion = (sourceKey, targetKey) => {
   if (!sourceKey || !targetKey) return false;
@@ -410,9 +411,19 @@ const isInflectionalSuffixExpansion = (sourceKey, targetKey) => {
   if (!LATIN_ALNUM_KEY_RE.test(sourceKey) || !LATIN_ALNUM_KEY_RE.test(targetKey)) {
     return false;
   }
-  if (!sourceKey.startsWith(targetKey)) return false;
-  const suffix = sourceKey.slice(targetKey.length);
-  return INFLECTIONAL_SUFFIX_EXPANSION_RE.test(suffix);
+
+  for (const suffix of INFLECTIONAL_SUFFIXES) {
+    if (!sourceKey.endsWith(suffix)) continue;
+    const stem = sourceKey.slice(0, -suffix.length);
+    if (!stem) continue;
+    if (stem === targetKey) return true;
+    if (Math.abs(stem.length - targetKey.length) > MAX_INFLECTIONAL_STEM_DISTANCE) continue;
+    if (editDistance(stem, targetKey) <= MAX_INFLECTIONAL_STEM_DISTANCE) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 const buildDictionaryCanonicalEntries = (dictionary) => {
