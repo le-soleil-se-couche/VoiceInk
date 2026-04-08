@@ -12,6 +12,8 @@ import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
+const BATTERY_SIZE_LETTER_REPEAT_RE =
+  /\ba(?:\s+a){1,2}(?=\s+(?:battery|batteries|cell|cells)\b)/gi;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
@@ -138,7 +140,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /\b(i(?:'m| am)\s+here\s+to\s+help(?:\s+with\s+that)?)\b/i,
       /\b(i\s*(can't|cannot|am unable|won't))\b/i,
       /\b(i can help|don't worry|please tell me|what can i)\b/i,
-      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
+      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s*(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
       /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
       /\b(you can try).{0,20}(sentence|example)\b/i,
     ];
@@ -423,6 +425,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         "$1$2"
       )
       .replace(CHINESE_WORD_REPEAT_STUTTER_RE, "$1")
+      .replace(BATTERY_SIZE_LETTER_REPEAT_RE, (match) =>
+        "A".repeat(match.trim().split(/\s+/).length)
+      )
       .replace(/\b(i|we|you|he|she|they|it|the|a|an|to|and|but)\b(?:\s+\1\b)+/gi, "$1")
       .replace(/\s+([,.!?;:])/g, "$1")
       .replace(/\s+([，。！？、])/g, "$1")

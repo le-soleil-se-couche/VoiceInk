@@ -48,7 +48,7 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /\b(as an ai|as a language model)\b/i,
   /\b(i(?:'m| am)\s+here\s+to\s+help(?:\s+with\s+that)?)\b/i,
   /\b(i\s*(can't|cannot|am unable|won't))\b/i,
-  /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
+  /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s*(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
   /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
   /\b(you can try).{0,20}(sentence|example)\b/i,
 ];
@@ -60,6 +60,8 @@ const CHINESE_FILLER_WORD_RE =
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
 const ENGLISH_STUTTER_RE =
   /\b(i|we|you|he|she|they|it|the|a|an|to|and|but)\b(?:\s+\1\b)+/gi;
+const BATTERY_SIZE_LETTER_REPEAT_RE =
+  /\ba(?:\s+a){1,2}(?=\s+(?:battery|batteries|cell|cells)\b)/gi;
 const INLINE_CHINESE_FILLER_RE =
   /([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g;
 const INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE =
@@ -255,6 +257,11 @@ const normalizeSpokenChineseNumbers = (value) =>
     const parsed = parseChineseNumberWords(segment);
     return parsed ?? segment;
   });
+
+const normalizeBatterySizeLetterRepeat = (match) => {
+  const count = match.trim().split(/\s+/).length;
+  return "A".repeat(count);
+};
 
 const buildTargetedCanonicalAliasKeys = (normalizedKey) => {
   const aliases = new Set();
@@ -1659,6 +1666,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
       .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")
       .replace(CHINESE_WORD_REPEAT_STUTTER_RE, "$1")
+      .replace(BATTERY_SIZE_LETTER_REPEAT_RE, normalizeBatterySizeLetterRepeat)
       .replace(ENGLISH_STUTTER_RE, "$1")
       .replace(/\s+([,.!?;:])/g, "$1")
       .replace(/\s+([，。！？、])/g, "$1")

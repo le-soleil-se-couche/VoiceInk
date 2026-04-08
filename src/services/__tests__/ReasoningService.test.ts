@@ -83,6 +83,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when assistant-style wrapper has no space after comma in strict mode", async () => {
+    const source = "what is the capital of france";
+    const candidate = "Sure,what is the capital of France?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when Chinese assistant wrapper question appears in strict mode", async () => {
     const source = "这个要改吗";
     const candidate = "好的，这个要改吗？";
@@ -173,5 +184,29 @@ describe("ReasoningService strict mode", () => {
     });
 
     expect(result).toBe(candidate);
+  });
+
+  it("preserves spaced AA battery-size dictation during strict fallback cleanup", async () => {
+    const source = "use A A batteries for the remote";
+    const candidate = "Unrelated rewrite";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1000,
+    });
+
+    expect(result).toBe("use AA batteries for the remote");
+  });
+
+  it("preserves spaced AAA battery-size dictation during strict fallback cleanup", async () => {
+    const source = "bring A A A cells for backup";
+    const candidate = "Unrelated rewrite";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1000,
+    });
+
+    expect(result).toBe("bring AAA cells for backup");
   });
 });
