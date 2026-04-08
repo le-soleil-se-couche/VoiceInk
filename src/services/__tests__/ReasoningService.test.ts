@@ -50,6 +50,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an English ought-started question is rewritten into an answer", async () => {
+    const source = "ought we ship this migration build to production today";
+    const candidate = "We should ship this migration build to production today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a Chinese yes-no dictation ending is rewritten into a statement", async () => {
     const source = "这个方案行不行";
     const candidate = "这个方案可行。";
@@ -86,6 +97,17 @@ describe("ReasoningService strict mode", () => {
   it("falls back when assistant-style wrapper has no space after comma in strict mode", async () => {
     const source = "what is the capital of france";
     const candidate = "Sure,what is the capital of France?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when assistant-style wrapper uses ought-started question in strict mode", async () => {
+    const source = "ought we ship this migration build to production today";
+    const candidate = "Sure, ought we ship this migration build to production today?";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
       strictMode: true,
