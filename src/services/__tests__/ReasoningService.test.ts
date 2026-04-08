@@ -138,8 +138,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("treats we-were-wondering-whether dictation as question intent and blocks direct answers", async () => {
+    const source = "we were wondering whether we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats i've-been-wondering-whether dictation as question intent and blocks direct answers", async () => {
     const source = "I’ve been wondering whether we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("treats we've-been-wondering-whether dictation as question intent and blocks direct answers", async () => {
+    const source = "We've been wondering whether we should ship this today";
     const candidate = "We should ship this today.";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
