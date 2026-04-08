@@ -4,531 +4,470 @@
     {
       "code": "auto",
       "label": "Auto-detect",
-      "flag": "\ud83c\udf10",
+      "flag": "🌐",
       "whisper": false,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The language preference is set to auto-detect. Detect the language of the transcribed text and respond entirely in that same language. Maintain consistent language throughout your response."
     },
     {
       "code": "af",
       "label": "Afrikaans",
-      "flag": "\ud83c\uddff\ud83c\udde6",
+      "flag": "🇿🇦",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "ar",
       "label": "Arabic",
-      "flag": "\ud83c\uddf8\ud83c\udde6",
+      "flag": "🇸🇦",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Arabic. The transcribed text will be in Arabic. You MUST respond entirely in Arabic while maintaining proper Arabic grammar and punctuation. Preserve any English technical terms as the user spoke them."
     },
     {
       "code": "hy",
       "label": "Armenian",
-      "flag": "\ud83c\udde6\ud83c\uddf2",
+      "flag": "🇦🇲",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "az",
       "label": "Azerbaijani",
-      "flag": "\ud83c\udde6\ud83c\uddff",
+      "flag": "🇦🇿",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "be",
       "label": "Belarusian",
-      "flag": "\ud83c\udde7\ud83c\uddfe",
+      "flag": "🇧🇾",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "bs",
       "label": "Bosnian",
-      "flag": "\ud83c\udde7\ud83c\udde6",
+      "flag": "🇧🇦",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "bg",
       "label": "Bulgarian",
-      "flag": "\ud83c\udde7\ud83c\uddec",
+      "flag": "🇧🇬",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Bulgarian. The transcribed text will be in Bulgarian. You MUST respond entirely in Bulgarian while maintaining proper Bulgarian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "ca",
       "label": "Catalan",
-      "flag": "\ud83c\uddea\ud83c\uddf8",
+      "flag": "🇪🇸",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Catalan. The transcribed text will be in Catalan. You MUST respond entirely in Catalan while maintaining proper Catalan grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "zh-CN",
       "label": "Chinese (Simplified)",
-      "flag": "\ud83c\udde8\ud83c\uddf3",
+      "flag": "🇨🇳",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
-      "instruction": "LANGUAGE CONTEXT: The user's preferred language is Simplified Chinese (\u7b80\u4f53\u4e2d\u6587). The transcribed text will be in Chinese. You MUST respond entirely in Simplified Chinese while maintaining proper grammar and punctuation. Use simplified characters throughout (e.g., \u7b80\u4f53, \u8bed\u8a00, \u5b66\u4e60). Preserve English words, product names, acronyms, and technical terms exactly as spoken. Do not translate or paraphrase Latin-script tokens unless the user explicitly asks for translation."
+      "instruction": "LANGUAGE CONTEXT: The user's preferred language is Simplified Chinese (简体中文). The transcribed text will be in Chinese. You MUST respond entirely in Simplified Chinese while maintaining proper grammar and punctuation. Use simplified characters throughout (e.g., 简体, 语言, 学习). Preserve English words, product names, acronyms, and technical terms exactly as spoken. Do not translate or paraphrase Latin-script tokens unless the user explicitly asks for translation."
     },
     {
       "code": "zh-TW",
       "label": "Chinese (Traditional)",
-      "flag": "\ud83c\uddf9\ud83c\uddfc",
+      "flag": "🇹🇼",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
-      "instruction": "LANGUAGE CONTEXT: The user's preferred language is Traditional Chinese (\u7e41\u9ad4\u4e2d\u6587). The transcribed text will be in Chinese. You MUST respond entirely in Traditional Chinese while maintaining proper grammar and punctuation. Use traditional characters throughout (e.g., \u7e41\u9ad4, \u8a9e\u8a00, \u5b78\u7fd2). Preserve English words, product names, acronyms, and technical terms exactly as spoken. Do not translate or paraphrase Latin-script tokens unless the user explicitly asks for translation."
+      "instruction": "LANGUAGE CONTEXT: The user's preferred language is Traditional Chinese (繁體中文). The transcribed text will be in Chinese. You MUST respond entirely in Traditional Chinese while maintaining proper grammar and punctuation. Use traditional characters throughout (e.g., 繁體, 語言, 學習). Preserve English words, product names, acronyms, and technical terms exactly as spoken. Do not translate or paraphrase Latin-script tokens unless the user explicitly asks for translation."
     },
     {
       "code": "hr",
       "label": "Croatian",
-      "flag": "\ud83c\udded\ud83c\uddf7",
+      "flag": "🇭🇷",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Croatian. The transcribed text will be in Croatian. You MUST respond entirely in Croatian while maintaining proper Croatian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "cs",
       "label": "Czech",
-      "flag": "\ud83c\udde8\ud83c\uddff",
+      "flag": "🇨🇿",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Czech. The transcribed text will be in Czech. You MUST respond entirely in Czech while maintaining proper Czech grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "da",
       "label": "Danish",
-      "flag": "\ud83c\udde9\ud83c\uddf0",
+      "flag": "🇩🇰",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Danish. The transcribed text will be in Danish. You MUST respond entirely in Danish while maintaining proper Danish grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "nl",
       "label": "Dutch",
-      "flag": "\ud83c\uddf3\ud83c\uddf1",
+      "flag": "🇳🇱",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Dutch. The transcribed text will be in Dutch. You MUST respond entirely in Dutch while maintaining proper Dutch grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "en-US",
       "label": "English (US)",
-      "flag": "\ud83c\uddfa\ud83c\uddf8",
+      "flag": "🇺🇸",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": true,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is American English. You MUST use American English spelling conventions throughout your response (e.g., \"color\" not \"colour\", \"organize\" not \"organise\", \"center\" not \"centre\", \"defense\" not \"defence\", \"analyze\" not \"analyse\"). When users dictate mixed Chinese + English content, preserve Chinese words, English acronyms, product names, module names, function names, and technical identifiers exactly as spoken. Do not translate or paraphrase non-Latin script tokens unless the user explicitly asks for translation."
     },
     {
       "code": "en-GB",
       "label": "English (UK)",
-      "flag": "\ud83c\uddec\ud83c\udde7",
+      "flag": "🇬🇧",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": true,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is British English. You MUST use British English spelling conventions throughout your response (e.g., \"colour\" not \"color\", \"organise\" not \"organize\", \"centre\" not \"center\", \"defence\" not \"defense\", \"analyse\" not \"analyze\")."
     },
     {
       "code": "et",
       "label": "Estonian",
-      "flag": "\ud83c\uddea\ud83c\uddea",
+      "flag": "🇪🇪",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Estonian. The transcribed text will be in Estonian. You MUST respond entirely in Estonian while maintaining proper Estonian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "fi",
       "label": "Finnish",
-      "flag": "\ud83c\uddeb\ud83c\uddee",
+      "flag": "🇫🇮",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Finnish. The transcribed text will be in Finnish. You MUST respond entirely in Finnish while maintaining proper Finnish grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "fr",
       "label": "French",
-      "flag": "\ud83c\uddeb\ud83c\uddf7",
+      "flag": "🇫🇷",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": true,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is French. The transcribed text will be in French. You MUST respond entirely in French while maintaining proper French grammar, spelling, and punctuation. If the user naturally uses English words or technical terms within their French speech, preserve those as-is."
     },
     {
       "code": "gl",
       "label": "Galician",
-      "flag": "\ud83c\uddea\ud83c\uddf8",
+      "flag": "🇪🇸",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "de",
       "label": "German",
-      "flag": "\ud83c\udde9\ud83c\uddea",
+      "flag": "🇩🇪",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": true,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is German. The transcribed text will be in German. You MUST respond entirely in German while maintaining proper German grammar, spelling, and punctuation. If the user naturally uses English words or technical terms within their German speech, preserve those as-is."
     },
     {
       "code": "el",
       "label": "Greek",
-      "flag": "\ud83c\uddec\ud83c\uddf7",
+      "flag": "🇬🇷",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Greek. The transcribed text will be in Greek. You MUST respond entirely in Greek while maintaining proper Greek grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "he",
       "label": "Hebrew",
-      "flag": "\ud83c\uddee\ud83c\uddf1",
+      "flag": "🇮🇱",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Hebrew. The transcribed text will be in Hebrew. You MUST respond entirely in Hebrew while maintaining proper Hebrew grammar and punctuation. Preserve any English technical terms as the user spoke them."
     },
     {
       "code": "hi",
       "label": "Hindi",
-      "flag": "\ud83c\uddee\ud83c\uddf3",
+      "flag": "🇮🇳",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Hindi. The transcribed text will be in Hindi. You MUST respond entirely in Hindi while maintaining proper Hindi grammar and punctuation. If the user mixes Hindi and English (Hinglish), preserve that natural code-switching."
     },
     {
       "code": "hu",
       "label": "Hungarian",
-      "flag": "\ud83c\udded\ud83c\uddfa",
+      "flag": "🇭🇺",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Hungarian. The transcribed text will be in Hungarian. You MUST respond entirely in Hungarian while maintaining proper Hungarian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "is",
       "label": "Icelandic",
-      "flag": "\ud83c\uddee\ud83c\uddf8",
+      "flag": "🇮🇸",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "id",
       "label": "Indonesian",
-      "flag": "\ud83c\uddee\ud83c\udde9",
+      "flag": "🇮🇩",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Indonesian. The transcribed text will be in Indonesian. You MUST respond entirely in Indonesian while maintaining proper Indonesian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "it",
       "label": "Italian",
-      "flag": "\ud83c\uddee\ud83c\uddf9",
+      "flag": "🇮🇹",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": true,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Italian. The transcribed text will be in Italian. You MUST respond entirely in Italian while maintaining proper Italian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms within their Italian speech, preserve those as-is."
     },
     {
       "code": "ja",
       "label": "Japanese",
-      "flag": "\ud83c\uddef\ud83c\uddf5",
+      "flag": "🇯🇵",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Japanese. The transcribed text will be in Japanese. You MUST respond entirely in Japanese while maintaining proper Japanese grammar and punctuation. Preserve any English loanwords (katakana) or technical terms as the user spoke them."
     },
     {
       "code": "kn",
       "label": "Kannada",
-      "flag": "\ud83c\uddee\ud83c\uddf3",
+      "flag": "🇮🇳",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "kk",
       "label": "Kazakh",
-      "flag": "\ud83c\uddf0\ud83c\uddff",
+      "flag": "🇰🇿",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "ko",
       "label": "Korean",
-      "flag": "\ud83c\uddf0\ud83c\uddf7",
+      "flag": "🇰🇷",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Korean. The transcribed text will be in Korean. You MUST respond entirely in Korean while maintaining proper Korean grammar and punctuation. Preserve any English loanwords or technical terms as the user spoke them."
     },
     {
       "code": "lv",
       "label": "Latvian",
-      "flag": "\ud83c\uddf1\ud83c\uddfb",
+      "flag": "🇱🇻",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Latvian. The transcribed text will be in Latvian. You MUST respond entirely in Latvian while maintaining proper Latvian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "lt",
       "label": "Lithuanian",
-      "flag": "\ud83c\uddf1\ud83c\uddf9",
+      "flag": "🇱🇹",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Lithuanian. The transcribed text will be in Lithuanian. You MUST respond entirely in Lithuanian while maintaining proper Lithuanian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "mk",
       "label": "Macedonian",
-      "flag": "\ud83c\uddf2\ud83c\uddf0",
+      "flag": "🇲🇰",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "ms",
       "label": "Malay",
-      "flag": "\ud83c\uddf2\ud83c\uddfe",
+      "flag": "🇲🇾",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "mt",
       "label": "Maltese",
-      "flag": "\ud83c\uddf2\ud83c\uddf9",
+      "flag": "🇲🇹",
       "whisper": false,
-      "parakeet": true,
-      "assemblyai": false
+      "parakeet": true
     },
     {
       "code": "mr",
       "label": "Marathi",
-      "flag": "\ud83c\uddee\ud83c\uddf3",
+      "flag": "🇮🇳",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "mi",
       "label": "Maori",
-      "flag": "\ud83c\uddf3\ud83c\uddff",
+      "flag": "🇳🇿",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "ne",
       "label": "Nepali",
-      "flag": "\ud83c\uddf3\ud83c\uddf5",
+      "flag": "🇳🇵",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "no",
       "label": "Norwegian",
-      "flag": "\ud83c\uddf3\ud83c\uddf4",
+      "flag": "🇳🇴",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Norwegian. The transcribed text will be in Norwegian. You MUST respond entirely in Norwegian while maintaining proper Norwegian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "fa",
       "label": "Persian",
-      "flag": "\ud83c\uddee\ud83c\uddf7",
+      "flag": "🇮🇷",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Persian. The transcribed text will be in Persian. You MUST respond entirely in Persian while maintaining proper Persian grammar and punctuation. Preserve any English technical terms as the user spoke them."
     },
     {
       "code": "pl",
       "label": "Polish",
-      "flag": "\ud83c\uddf5\ud83c\uddf1",
+      "flag": "🇵🇱",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Polish. The transcribed text will be in Polish. You MUST respond entirely in Polish while maintaining proper Polish grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "pt",
       "label": "Portuguese",
-      "flag": "\ud83c\uddf5\ud83c\uddf9",
+      "flag": "🇵🇹",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": true,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Portuguese. The transcribed text will be in Portuguese. You MUST respond entirely in Portuguese while maintaining proper Portuguese grammar, spelling, and punctuation. If the user naturally uses English words or technical terms within their Portuguese speech, preserve those as-is."
     },
     {
       "code": "ro",
       "label": "Romanian",
-      "flag": "\ud83c\uddf7\ud83c\uddf4",
+      "flag": "🇷🇴",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Romanian. The transcribed text will be in Romanian. You MUST respond entirely in Romanian while maintaining proper Romanian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "ru",
       "label": "Russian",
-      "flag": "\ud83c\uddf7\ud83c\uddfa",
+      "flag": "🇷🇺",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Russian. The transcribed text will be in Russian. You MUST respond entirely in Russian while maintaining proper Russian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms within their Russian speech, preserve those as-is."
     },
     {
       "code": "sr",
       "label": "Serbian",
-      "flag": "\ud83c\uddf7\ud83c\uddf8",
+      "flag": "🇷🇸",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Serbian. The transcribed text will be in Serbian. You MUST respond entirely in Serbian while maintaining proper Serbian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "sk",
       "label": "Slovak",
-      "flag": "\ud83c\uddf8\ud83c\uddf0",
+      "flag": "🇸🇰",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Slovak. The transcribed text will be in Slovak. You MUST respond entirely in Slovak while maintaining proper Slovak grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "sl",
       "label": "Slovenian",
-      "flag": "\ud83c\uddf8\ud83c\uddee",
+      "flag": "🇸🇮",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Slovenian. The transcribed text will be in Slovenian. You MUST respond entirely in Slovenian while maintaining proper Slovenian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "es",
       "label": "Spanish",
-      "flag": "\ud83c\uddea\ud83c\uddf8",
+      "flag": "🇪🇸",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": true,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Spanish. The transcribed text will be in Spanish. You MUST respond entirely in Spanish while maintaining proper Spanish grammar, spelling, and punctuation. If the user naturally uses English words or technical terms within their Spanish speech (code-switching), preserve those as-is."
     },
     {
       "code": "sw",
       "label": "Swahili",
-      "flag": "\ud83c\uddf0\ud83c\uddea",
+      "flag": "🇰🇪",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "sv",
       "label": "Swedish",
-      "flag": "\ud83c\uddf8\ud83c\uddea",
+      "flag": "🇸🇪",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Swedish. The transcribed text will be in Swedish. You MUST respond entirely in Swedish while maintaining proper Swedish grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "tl",
       "label": "Tagalog",
-      "flag": "\ud83c\uddf5\ud83c\udded",
+      "flag": "🇵🇭",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "ta",
       "label": "Tamil",
-      "flag": "\ud83c\uddee\ud83c\uddf3",
+      "flag": "🇮🇳",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "th",
       "label": "Thai",
-      "flag": "\ud83c\uddf9\ud83c\udded",
+      "flag": "🇹🇭",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Thai. The transcribed text will be in Thai. You MUST respond entirely in Thai while maintaining proper Thai grammar and punctuation. Preserve any English technical terms as the user spoke them."
     },
     {
       "code": "tr",
       "label": "Turkish",
-      "flag": "\ud83c\uddf9\ud83c\uddf7",
+      "flag": "🇹🇷",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Turkish. The transcribed text will be in Turkish. You MUST respond entirely in Turkish while maintaining proper Turkish grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "uk",
       "label": "Ukrainian",
-      "flag": "\ud83c\uddfa\ud83c\udde6",
+      "flag": "🇺🇦",
       "whisper": true,
       "parakeet": true,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Ukrainian. The transcribed text will be in Ukrainian. You MUST respond entirely in Ukrainian while maintaining proper Ukrainian grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
       "code": "ur",
       "label": "Urdu",
-      "flag": "\ud83c\uddf5\ud83c\uddf0",
+      "flag": "🇵🇰",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     },
     {
       "code": "vi",
       "label": "Vietnamese",
-      "flag": "\ud83c\uddfb\ud83c\uddf3",
+      "flag": "🇻🇳",
       "whisper": true,
       "parakeet": false,
-      "assemblyai": false,
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Vietnamese. The transcribed text will be in Vietnamese. You MUST respond entirely in Vietnamese while maintaining proper Vietnamese grammar, spelling, and diacritics. Preserve any English technical terms as the user spoke them."
     },
     {
       "code": "cy",
       "label": "Welsh",
-      "flag": "\ud83c\udff4\udb40\udc67\udb40\udc62\udb40\udc77\udb40\udc6c\udb40\udc73\udb40\udc7f",
+      "flag": "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
       "whisper": true,
-      "parakeet": false,
-      "assemblyai": false
+      "parakeet": false
     }
   ]
 }

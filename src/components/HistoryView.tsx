@@ -6,6 +6,7 @@ import TranscriptionItem from "./ui/TranscriptionItem";
 import type { TranscriptionItem as TranscriptionItemType } from "../types/electron";
 import { formatHotkeyLabel } from "../utils/hotkeys";
 import { formatDateGroup } from "../utils/dateFormatting";
+import { loadMoreTranscriptions } from "../stores/transcriptionStore";
 
 interface HistoryViewProps {
   history: TranscriptionItemType[];
@@ -19,6 +20,8 @@ interface HistoryViewProps {
   copyToClipboard: (text: string) => void;
   deleteTranscription: (id: number) => void;
   onOpenSettings: (section?: string) => void;
+  hasMore?: boolean;
+  onLoadMore?: () => Promise<void>;
 }
 
 export default function HistoryView({
@@ -33,6 +36,8 @@ export default function HistoryView({
   copyToClipboard,
   deleteTranscription,
   onOpenSettings,
+  hasMore = false,
+  onLoadMore,
 }: HistoryViewProps) {
   const { t } = useTranslation();
 
@@ -262,6 +267,18 @@ export default function HistoryView({
                 </div>
               </div>
             ))}
+            {hasMore && onLoadMore && (
+              <div className="mt-4 flex justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onLoadMore}
+                  className="text-xs"
+                >
+                  Load more
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

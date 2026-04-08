@@ -19,7 +19,6 @@ export interface TranscriptionSettings {
   cloudTranscriptionBaseUrl?: string;
   cloudTranscriptionMode: string;
   customDictionary: string[];
-  assemblyAiStreaming: boolean;
   muteSystemAudioWhileRecording: boolean;
 }
 
@@ -168,9 +167,7 @@ function useSettingsInternal() {
     cloudTranscriptionMode: store.cloudTranscriptionMode,
     cloudReasoningMode: store.cloudReasoningMode,
     customDictionary: store.customDictionary,
-    assemblyAiStreaming: store.assemblyAiStreaming,
     muteSystemAudioWhileRecording: store.muteSystemAudioWhileRecording,
-    setAssemblyAiStreaming: store.setAssemblyAiStreaming,
     setMuteSystemAudioWhileRecording: store.setMuteSystemAudioWhileRecording,
     useReasoningModel: store.useReasoningModel,
     reasoningModel: store.reasoningModel,

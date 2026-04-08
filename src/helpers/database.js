@@ -180,6 +180,44 @@ class DatabaseManager {
     }
   }
 
+  getTranscriptionsPage(limit = 50, beforeId = null) {
+    try {
+      if (!this.db) {
+        throw new Error("Database not initialized");
+      }
+      
+      let query;
+      let params;
+      
+      if (beforeId != null) {
+        // Cursor-based pagination: get items before the cursor
+        query = "SELECT * FROM transcriptions WHERE id < ? ORDER BY timestamp DESC LIMIT ?";
+        params = [beforeId, limit];
+      } else {
+        // First page: get most recent items
+        query = "SELECT * FROM transcriptions ORDER BY timestamp DESC LIMIT ?";
+        params = [limit];
+      }
+      
+      const stmt = this.db.prepare(query);
+      const transcriptions = stmt.all(...params);
+      
+      // Check if there are more items
+      let hasMore = false;
+      if (transcriptions.length > 0) {
+        const lastId = transcriptions[transcriptions.length - 1].id;
+        const countStmt = this.db.prepare("SELECT COUNT(*) as count FROM transcriptions WHERE id < ?");
+        const countResult = countStmt.get(lastId);
+        hasMore = countResult.count > 0;
+      }
+      
+      return { transcriptions, hasMore, nextCursor: transcriptions.length > 0 ? transcriptions[transcriptions.length - 1].id : null };
+    } catch (error) {
+      debugLogger.error("Error getting transcriptions page", { error: error.message }, "database");
+      throw error;
+    }
+  }
+
   clearTranscriptions() {
     try {
       if (!this.db) {

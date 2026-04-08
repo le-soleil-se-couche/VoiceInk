@@ -28,6 +28,11 @@ const CONTENT_CONTEXT_RULES: Array<{ context: ReasoningContext; re: RegExp; sign
     signal: "text:code",
   },
   {
+    context: "code",
+    re: new RegExp("\\b(?:npm|pnpm|yarn|bun|npx)\\s+(?:run\\s+)?[\\w:-]+(?:\\s+--?[\\w-]+(?:[=:]\\S+)?)?\\b|(?:^|\\s)(?:\\.{0,2}/|~/|/)\\S+\\.[A-Za-z0-9]+(?:\\s|$)|\\b(?:cannot find module|module not found|failed to compile|build failed|syntaxerror|typeerror|referenceerror)\\b", "i"),
+    signal: "text:code_command",
+  },
+  {
     context: "email",
     re: /(^|\n)\s*(subject:|dear\s+|hi\s+\w+|best regards|sincerely|thanks,)/i,
     signal: "text:email",

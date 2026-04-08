@@ -574,18 +574,6 @@ const STREAMING_PROVIDERS = {
     onError: (cb) => window.electronAPI.onDeepgramError(cb),
     onSessionEnd: (cb) => window.electronAPI.onDeepgramSessionEnd(cb),
   },
-  assemblyai: {
-    warmup: (opts) => window.electronAPI.assemblyAiStreamingWarmup(opts),
-    start: (opts) => window.electronAPI.assemblyAiStreamingStart(opts),
-    send: (buf) => window.electronAPI.assemblyAiStreamingSend(buf),
-    finalize: () => window.electronAPI.assemblyAiStreamingForceEndpoint(),
-    stop: () => window.electronAPI.assemblyAiStreamingStop(),
-    status: () => window.electronAPI.assemblyAiStreamingStatus(),
-    onPartial: (cb) => window.electronAPI.onAssemblyAiPartialTranscript(cb),
-    onFinal: (cb) => window.electronAPI.onAssemblyAiFinalTranscript(cb),
-    onError: (cb) => window.electronAPI.onAssemblyAiError(cb),
-    onSessionEnd: (cb) => window.electronAPI.onAssemblyAiSessionEnd(cb),
-  },
 };
 
 class AudioManager {

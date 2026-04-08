@@ -84,15 +84,15 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const patterns = [
-      /(作为|身为).{0,10}(ai|语言模型|助手)/i,
-      /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
-      /(?:当然|好的|没问题|可以).{0,12}(以下是|这是).{0,18}(润色后|整理后|修改后|优化后|版本|内容)/,
-      /^(?:润色后|整理后|修改后|优化后)(?:的)?(?:版本|文本|内容)?[：:]/,
-      /^以下是(?:润色后|整理后|修改后|优化后)(?:的)?(?:版本|文本|内容)?[：:]/,
-      /(不用担心|别担心|我会尽力|我可以帮你|请告诉我|请问你|你想要).{0,40}/,
-      /(对不起|抱歉).{0,20}(我会|我将|让我|我们)/,
-      /你想要.{0,20}(什么|哪一个|哪两个|哪些)/,
-      /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
+      /(作为 | 身为).{0,10}(ai|语言模型 | 助手)/i,
+      /(我无法 | 不能 | 不会 | 不可以).{0,18}(提供 | 协助 | 回答 | 满足 | 处理)/,
+      /(?:当然 | 好的 | 没问题 | 可以).{0,12}(以下是 | 这是).{0,18}(润色后 | 整理后 | 修改后 | 优化后 | 版本 | 内容)/,
+      /^(?:润色后 | 整理后 | 修改后 | 优化后)(?:的)?(?:版本 | 文本 | 内容)?[：:]/,
+      /^以下是(?:润色后 | 整理后 | 修改后 | 优化后)(?:的)?(?:版本 | 文本 | 内容)?[：:]/,
+      /(不用担心 | 别担心 | 我会尽力 | 我可以帮你 | 请告诉我 | 请问你 | 你想要).{0,40}/,
+      /(对不起 | 抱歉).{0,20}(我会 | 我将 | 让我 | 我们)/,
+      /你想要.{0,20}(什么 | 哪一个 | 哪两个 | 哪些)/,
+      /如果您想.{0,20}(测试 | 试试 | 尝试).{0,30}(语音转文字 | 转录 | 句子 | 示例)/,
       /\b(as an ai|as a language model)\b/i,
       /\b(i\s*(can't|cannot|am unable|won't))\b/i,
       /\b(sure|absolutely|certainly|of course)[,.!:\s]+(?:here(?:'s| is)|below is)\b/i,
@@ -102,6 +102,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /\b(i can help|don't worry|please tell me|what can i)\b/i,
       /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
       /\b(you can try).{0,20}(sentence|example)\b/i,
+      /\b(let me)\b.{0,30}(summarize|review|explain|help|clean|fix|check|show|tell|walk|guide)/i,
+      /\b(i'll|i will)\b.{0,30}(help|summarize|review|explain|clean|fix|check|show|tell)/i,
+      /\b(让我来 | 我来).{0,20}(帮你 | 整理 | 总结 | 解释 | 处理 | 检查 | 看看)/,
     ];
 
     return patterns.some((re) => re.test(text));
@@ -114,7 +117,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const trimmed = text.trim();
     const patterns = [
-      /^(?:是的|不是|对(?:的)?|没错|当然|当然可以|当然会|好的|好吧)(?=[\s，,。.!?？；;:])/,
+      /^(?:是的 | 不是 | 对 (?:的)?|没错 | 当然 | 当然可以 | 当然会 | 好的 | 好吧)(?=[\s，,。.!?？；;:])/i,
       /^(?:yes|no|yeah|nope|sure|absolutely|certainly|of\s+course|ok(?:ay)?)(?=[\s,.;:!?])/i,
     ];
 
@@ -228,6 +231,57 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
+  }
+
+  private hasCodeOrStructuredContent(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    const codePatterns = [
+      /```[\s\S]*```/,  // Code fences
+      /`[^`]+`/,  // Inline code
+      /<\/?[a-z][^>]*>/i,  // HTML/JSX tags
+      /\b(?:function|const|let|var|class|interface|type|import|export|return|if|else|for|while|switch|case|break|continue|try|catch|finally|async|await|yield|extends|implements|new|this|typeof|instanceof|in|of)\b/,  // Code keywords
+      /(?:=>|===|!==|<=|>=|&&|\|\||\?\?|\+\+|--|<<|>>|\^|~|%)/,  // Operators
+      /\{[^}]*\}/,  // Objects/blocks
+      /\[[^\]]*\]/,  // Arrays
+      /(?:^|\n)\s*(?:-|\*|\d+\.)\s+\S/,  // List items
+      /\{\s*"[^"]+"\s*:/,  // JSON-like key-value
+    ];
+
+    return codePatterns.some((re) => re.test(text));
+  }
+
+  private isCodeContentPreserved(source: string, candidate: string): boolean {
+    const sourceCodeTokens = source
+      .replace(/\s+/g, " ")
+      .match(/(?:```[\s\S]*?```|`[^`]+`|<\/?[a-z][^>]*>|\b(?:function|const|let|var|class|interface|type|import|export|return)\b|=>|===|!==|<=|>=|&&|\|\||\?\?|\+\+|--|<<|>>|\^|~|%|\{[^}]*\}|\[[^\]]*\])/gi);
+
+    const candidateCodeTokens = candidate
+      .replace(/\s+/g, " ")
+      .match(/(?:```[\s\S]*?```|`[^`]+`|<\/?[a-z][^>]*>|\b(?:function|const|let|var|class|interface|type|import|export|return)\b|=>|===|!==|<=|>=|&&|\|\||\?\?|\+\+|--|<<|>>|\^|~|%|\{[^}]*\}|\[[^\]]*\])/gi);
+
+    if (!sourceCodeTokens || sourceCodeTokens.length === 0) {
+      return true;
+    }
+
+    if (!candidateCodeTokens || candidateCodeTokens.length === 0) {
+      return false;
+    }
+
+    const sourceSet = new Set(sourceCodeTokens.map((t) => t.toLowerCase()));
+    const candidateSet = new Set(candidateCodeTokens.map((t) => t.toLowerCase()));
+
+    let matches = 0;
+    for (const token of sourceSet) {
+      if (candidateSet.has(token)) {
+        matches++;
+      }
+    }
+
+    const preservationRatio = matches / sourceSet.size;
+    return preservationRatio >= 0.9;
   }
 
   private isQuestionAnswerRewrite(source: string, candidate: string): boolean {
@@ -499,6 +553,20 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         });
         return fallback;
       }
+    }
+
+    // Code/structured content requires near-exact preservation
+    const isCodeContext = this.hasCodeOrStructuredContent(source);
+    if (isCodeContext && !this.isCodeContentPreserved(source, candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_CODE_CONTENT_NOT_PRESERVED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
     }
 
     const threshold =
