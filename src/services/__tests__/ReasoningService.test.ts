@@ -140,6 +140,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("preserves lexical mM concentration units during strict fallback cleanup", async () => {
+    const source = "prepare a 5 mM solution before incubation";
+    const candidate = "Sure, what concentration should we use?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("still removes sentence-initial mm hesitation filler during strict fallback cleanup", async () => {
+    const source = "mm prepare the release notes today";
+    const candidate = "Sure, what should we prioritize?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe("prepare the release notes today");
+  });
+
   it("treats find-out-if dictation as question intent and blocks direct answers", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "We should ship this today.";

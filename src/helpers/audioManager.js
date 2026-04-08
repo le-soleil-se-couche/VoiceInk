@@ -57,6 +57,7 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
 
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
+const MM_NUMERIC_PREFIX_RE = /(?:\d+(?:[.,]\d+)?)\s*$/;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -76,6 +77,16 @@ const isAnswerLikeTranscriptionOutput = (text) => {
   const trimmed = text.trim();
   if (trimmed.length < 20) return false;
   return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
+};
+
+const stripEnglishFillerMatch = (match, offset, sourceText) => {
+  if (match === "mM") {
+    const prefix = typeof sourceText === "string" ? sourceText.slice(0, offset) : "";
+    if (MM_NUMERIC_PREFIX_RE.test(prefix)) {
+      return match;
+    }
+  }
+  return "";
 };
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -1656,7 +1667,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(/^[\u200B-\u200D\uFEFF]+/g, "")
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
-      .replace(ENGLISH_FILLER_WORD_RE, "")
+      .replace(ENGLISH_FILLER_WORD_RE, stripEnglishFillerMatch)
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
       .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")
