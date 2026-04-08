@@ -116,6 +116,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("keeps lexical bare-assistant role dictation without helper-offer intent", async () => {
+    const source = "作为助手请先检查发布清单并在今晚八点前提交总结";
+    const candidate = "作为助手请先检查发布清单并在今晚八点前提交总结。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("falls back when bare-assistant role phrasing includes explicit helper-offer intent", async () => {
+    const source = "这个要改吗";
+    const candidate = "作为助手，我来帮你处理这个问题。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats find-out-if dictation as question intent and blocks direct answers", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "We should ship this today.";
