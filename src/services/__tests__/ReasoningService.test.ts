@@ -105,6 +105,39 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("keeps lexical test-transcription dictation instead of flagging it as assistant output", async () => {
+    const source = "if you want to test transcription quality collect baseline logs first";
+    const candidate = "If you want to test transcription quality, collect baseline logs first.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps lexical sentence-example dictation when no transcription-testing helper intent exists", async () => {
+    const source = "you can try this sentence in the editor for readability checks";
+    const candidate = "You can try this sentence in the editor for readability checks.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("still falls back for explicit assistant-style transcription testing guidance", async () => {
+    const source = "if you want to test speech to text try saying hello world";
+    const candidate = "If you want to test speech-to-text, try saying hello world.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats find-out-if dictation as question intent and blocks direct answers", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "We should ship this today.";

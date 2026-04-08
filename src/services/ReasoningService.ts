@@ -139,8 +139,8 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /\b(i\s*(can't|cannot|am unable|won't))\b/i,
       /\b(i can help|don't worry|please tell me|what can i)\b/i,
       /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
-      /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
-      /\b(you can try).{0,20}(sentence|example)\b/i,
+      /\bif\s+you\s+want\s+to\s+test\b.{0,36}\b(?:speech[- ]to[- ]text|transcription)\b.{0,28}\b(?:try|say|speak|read|record)\b/i,
+      /\b(?:speech[- ]to[- ]text|transcription)\b.{0,40}\byou\s+can\s+try\b.{0,24}\b(?:sentence|example)\b|\byou\s+can\s+try\b.{0,24}\b(?:sentence|example)\b.{0,40}\b(?:speech[- ]to[- ]text|transcription)\b/i,
     ];
 
     return patterns.some((re) => re.test(text));
