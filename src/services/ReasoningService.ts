@@ -126,6 +126,8 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return false;
     }
 
+    const normalizedText = text.replace(/\u2019/g, "'");
+
     const patterns = [
       /(作为|身为).{0,10}(ai|语言模型|助手)/i,
       /\b(as\s+(?:an?|your)\s+(?:ai\s+)?(?:assistant|language\s+model))\b/i,
@@ -141,12 +143,12 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /\b(i can help|don't worry)\b/i,
       /\bplease\s+tell\s+me\b.{0,40}\b(?:what\s+(?:you|u)\s+(?:want|need|would\s+like)|how\s+i\s+can\s+help|if\s+you\s+need\s+help)\b/i,
       /\bwhat\s+can\s+i\s+(?:help\s+(?:you\s+)?with|do\s+for\s+you)\b/i,
-      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|shall|may|will|has|have|had)\b/i,
+      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|shall|may|will|has|have|had)\b|(?:shouldn't|shouldnt|couldn't|couldnt|wouldn't|wouldnt|haven't|havent|hasn't|hasnt|hadn't|hadnt)\s+(?:i|we|you|he|she|they|it|there|this|that)\b)/i,
       /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
       /\b(you can try).{0,20}(sentence|example)\b/i,
     ];
 
-    return patterns.some((re) => re.test(text));
+    return patterns.some((re) => re.test(normalizedText));
   }
 
   private isQuestionLikeText(text: string): boolean {
@@ -154,7 +156,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return false;
     }
 
-    const normalized = text.trim().toLowerCase();
+    const normalized = text.trim().toLowerCase().replace(/\u2019/g, "'");
     if (/[?？]$/.test(normalized)) {
       return true;
     }
@@ -171,7 +173,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const enQuestionStart =
-      /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|shall|will|have|has|had|may)\b/;
+      /^(?:(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|shall|will|have|has|had|may)\b|(?:shouldn't|shouldnt|couldn't|couldnt|wouldn't|wouldnt|haven't|havent|hasn't|hasnt|hadn't|hadnt)\s+(?:i|we|you|he|she|they|it|there|this|that)\b)/;
     if (enQuestionStart.test(normalized)) {
       return true;
     }

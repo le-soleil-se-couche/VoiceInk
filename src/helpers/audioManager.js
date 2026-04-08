@@ -48,7 +48,7 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /\b(as an ai|as a language model)\b/i,
   /\b(i(?:'m| am)\s+here\s+to\s+help(?:\s+with\s+that)?)\b/i,
   /\b(i\s*(can't|cannot|am unable|won't))\b/i,
-  /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|shall|may|will|has|have|had)\b/i,
+  /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|shall|may|will|has|have|had)\b|(?:shouldn't|shouldnt|couldn't|couldnt|wouldn't|wouldnt|haven't|havent|hasn't|hasnt|hadn't|hadnt)\s+(?:i|we|you|he|she|they|it|there|this|that)\b)/i,
   /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
   /\b(you can try).{0,20}(sentence|example)\b/i,
 ];
@@ -73,7 +73,8 @@ const isAnswerLikeTranscriptionOutput = (text) => {
   if (typeof text !== "string") return false;
   const trimmed = text.trim();
   if (trimmed.length < 20) return false;
-  return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
+  const normalized = trimmed.replace(/\u2019/g, "'");
+  return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(normalized));
 };
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
