@@ -256,6 +256,16 @@ const normalizeSpokenChineseNumbers = (value) =>
     return parsed ?? segment;
   });
 
+const countDictionaryTokens = (value) => {
+  if (typeof value !== "string" || !value) return 0;
+  let count = 0;
+  DICTIONARY_TOKEN_RE.lastIndex = 0;
+  while (DICTIONARY_TOKEN_RE.exec(value) !== null) {
+    count += 1;
+  }
+  return count;
+};
+
 const buildTargetedCanonicalAliasKeys = (normalizedKey) => {
   const aliases = new Set();
   if (!normalizedKey) return aliases;
@@ -427,6 +437,7 @@ const buildDictionaryCanonicalEntries = (dictionary) => {
     entries.push({
       canonical,
       canonicalKey,
+      canonicalTokenCount: Math.max(countDictionaryTokens(canonical), 1),
       aliasKeys: Array.from(aliasKeys),
     });
   }
@@ -497,6 +508,13 @@ const applyDictionaryCanonicalization = (text, entries) => {
           }
 
           if (!Number.isFinite(bestDistance)) continue;
+          if (
+            bestDistance > 0 &&
+            entry.canonicalTokenCount > windowSize &&
+            entry.canonicalKey.length > sourceKey.length
+          ) {
+            continue;
+          }
 
           if (
             !bestMatch ||
