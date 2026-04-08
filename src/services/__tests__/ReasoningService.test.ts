@@ -94,6 +94,39 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("keeps lexical what-can-i dictation in strict mode", async () => {
+    const source = "what can i automate in this repo";
+    const candidate = "What can I automate in this repo?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("keeps lexical i-can-help statements in strict mode", async () => {
+    const source = "i can help with migration tomorrow";
+    const candidate = "I can help with migration tomorrow.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("still falls back when assistant helper prompt appears in strict mode", async () => {
+    const source = "what can i do for you today";
+    const candidate = "What can I do for you today?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats find-out-if dictation as question intent and blocks direct answers", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "We should ship this today.";
