@@ -15,7 +15,7 @@ export interface ContextClassification {
 }
 
 const APP_CONTEXT_RULES: Array<{ context: ReasoningContext; re: RegExp; signal: string }> = [
-  { context: "code", re: /(code|cursor|vscode|visual studio|terminal|powershell|iterm|xcode)/i, signal: "app:code" },
+  { context: "code", re: /(code|cursor|vscode|visual studio|terminal|powershell|iterm|xcode|intellij|webstorm|pycharm|phpstorm|rider|rubymine|goland|clion|appcode|datagrip|jetbrains|sublime|atom|brackets|vim|neovim|emacs|nano|zed|lapce)/i, signal: "app:code" },
   { context: "email", re: /(mail|gmail|outlook|spark|thunderbird)/i, signal: "app:email" },
   { context: "chat", re: /(slack|discord|teams|wechat|telegram|whatsapp|message)/i, signal: "app:chat" },
   { context: "document", re: /(notion|docs|word|pages|onenote|obsidian)/i, signal: "app:document" },
@@ -26,6 +26,11 @@ const CONTENT_CONTEXT_RULES: Array<{ context: ReasoningContext; re: RegExp; sign
     context: "code",
     re: /(```|<\/?[a-z][^>]*>|=>|\bfunction\b|\bconst\b|\bclass\b|\bimport\b|\breturn\b)/i,
     signal: "text:code",
+  },
+  {
+    context: "code",
+    re: /({\s*"|{\s*\w+\s*:|:\s*\[|:\s*{|\[\s*{)|\b(JSON|YAML|XML|CSV|TOML|INI)\b/i,
+    signal: "text:structured",
   },
   {
     context: "email",

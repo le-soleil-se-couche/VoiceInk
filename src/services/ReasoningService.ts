@@ -99,6 +99,17 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /^(?:好的|没问题)[,，]?\s*/u,
       /\b(i'd be happy to|i would be happy to)\b/i,
       /\b(let me)\b/i,
+      /\b(here's|here is)\b/i,
+      /\b(i've|i have)\s+(?:updated|cleaned|revised|modified|processed)\b/i,
+      /\b(i'll|i will)\s+(?:help|assist|update|clean|revise)\b/i,
+      /\bthis\s+(?:has been|was)\s+(?:updated|cleaned|revised|modified)\b/i,
+      /\bbelow is\b/i,
+      /\bthe following\b/i,
+      /\bi'm|i am\b.*\b(helping|assisting|updating)\b/i,
+      /我已经.*[了]/,
+      /这是.*版本/,
+      /以下是.*结果/,
+      /我来帮你/,
     ];
 
     return patterns.some((re) => re.test(text));

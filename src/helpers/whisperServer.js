@@ -302,7 +302,6 @@ class WhisperServerManager extends EventEmitter {
           exitCode,
           stderr: stderrBuffer.slice(0, 200),
         });
-        this.emit("cuda-fallback");
         return this._doStart(modelPath, { ...options, useCuda: false });
       }
       throw err;

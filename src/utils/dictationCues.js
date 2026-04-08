@@ -30,28 +30,6 @@ const getAudioContext = () => {
   return audioContext;
 };
 
-export const resumeContextIfNeeded = async () => {
-  try {
-    const context = getAudioContext();
-    if (!context) {
-      return null;
-    }
-
-    if (context.state === "suspended") {
-      await context.resume();
-    }
-
-    return context.state === "running" ? context : null;
-  } catch (error) {
-    logger.debug(
-      "Failed to initialize dictation cue audio context",
-      { error: error instanceof Error ? error.message : String(error) },
-      "audio"
-    );
-    return null;
-  }
-};
-
 const scheduleTone = (context, frequency, startTime, noteDuration = NOTE_DURATION_SECONDS) => {
   const oscillator = context.createOscillator();
   const gainNode = context.createGain();
@@ -78,7 +56,7 @@ const playCue = async (notes, options = {}) => {
   try {
     if (!isEnabled()) return;
 
-    const context = await resumeContextIfNeeded();
+    const context = getAudioContext();
     if (!context) {
       return;
     }

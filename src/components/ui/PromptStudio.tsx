@@ -19,7 +19,7 @@ import { useAgentName } from "../../utils/agentName";
 import ReasoningService from "../../services/ReasoningService";
 import { getModelProvider } from "../../models/ModelRegistry";
 import logger from "../../utils/logger";
-import { sanitizeUnifiedPrompt, UNIFIED_SYSTEM_PROMPT } from "../../config/prompts";
+import { sanitizeUnifiedPrompt, CLEANUP_PROMPT } from "../../config/prompts";
 import { useSettingsStore, selectIsCloudReasoningMode } from "../../stores/settingsStore";
 
 interface PromptStudioProps {
@@ -52,16 +52,16 @@ function getCurrentPrompt(): string {
     try {
       return sanitizeUnifiedPrompt(JSON.parse(customPrompt));
     } catch {
-      return UNIFIED_SYSTEM_PROMPT;
+      return CLEANUP_PROMPT;
     }
   }
-  return UNIFIED_SYSTEM_PROMPT;
+  return CLEANUP_PROMPT;
 }
 
 export default function PromptStudio({ className = "" }: PromptStudioProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"current" | "edit" | "test">("current");
-  const [editedPrompt, setEditedPrompt] = useState(UNIFIED_SYSTEM_PROMPT);
+  const [editedPrompt, setEditedPrompt] = useState(CLEANUP_PROMPT);
   const [testText, setTestText] = useState(() => t("promptStudio.defaultTestInput"));
   const [testResult, setTestResult] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -113,7 +113,7 @@ export default function PromptStudio({ className = "" }: PromptStudioProps) {
   };
 
   const resetToDefault = () => {
-    setEditedPrompt(UNIFIED_SYSTEM_PROMPT);
+    setEditedPrompt(CLEANUP_PROMPT);
     localStorage.removeItem("customUnifiedPrompt");
     showAlertDialog({
       title: t("promptStudio.dialogs.reset.title"),
@@ -210,7 +210,7 @@ export default function PromptStudio({ className = "" }: PromptStudioProps) {
   };
 
   const isAgentAddressed = testText.toLowerCase().includes(agentName.toLowerCase());
-  const isCustomPrompt = getCurrentPrompt() !== UNIFIED_SYSTEM_PROMPT;
+  const isCustomPrompt = getCurrentPrompt() !== CLEANUP_PROMPT;
 
   const tabs = [
     { id: "current" as const, label: t("promptStudio.tabs.view"), icon: Eye },

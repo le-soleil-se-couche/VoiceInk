@@ -473,3 +473,209 @@ describe("ReasoningService subtle answer patterns", () => {
     expect(result).toBe(source);
   });
 });
+
+describe("ReasoningService subtle answer patterns - preamble and meta commentary", () => {
+  it("falls back when output starts with 'Here's the' preamble", () => {
+    const source = "update the meeting notes";
+    const candidate = "Here's the updated meeting notes.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output starts with 'Here is the' preamble", () => {
+    const source = "clean up this text";
+    const candidate = "Here is the cleaned up text.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains 'I've updated' assistant phrase", () => {
+    const source = "update the notes";
+    const candidate = "I've updated the notes.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains 'I have updated' assistant phrase", () => {
+    const source = "update the notes";
+    const candidate = "I have updated the notes.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains 'I've cleaned' assistant phrase", () => {
+    const source = "clean this up";
+    const candidate = "I've cleaned this up.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains 'I have cleaned' assistant phrase", () => {
+    const source = "clean this up";
+    const candidate = "I have cleaned this up.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains 'I'll help' assistant phrase", () => {
+    const source = "help me with this";
+    const candidate = "I'll help you with this.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains 'I will help' assistant phrase", () => {
+    const source = "help me with this";
+    const candidate = "I will help you with this.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains 'this has been updated' passive voice", () => {
+    const source = "update this";
+    const candidate = "This has been updated.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains 'this was cleaned' passive voice", () => {
+    const source = "clean this";
+    const candidate = "This was cleaned.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains 'below is' preamble", () => {
+    const source = "show the result";
+    const candidate = "Below is the result.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains 'the following' meta commentary", () => {
+    const source = "make changes";
+    const candidate = "The following changes were made.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains Chinese '我已经更新了' assistant phrase", () => {
+    const source = "更新笔记";
+    const candidate = "我已经更新了笔记。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains Chinese '这是修改后的版本' preamble", () => {
+    const source = "修改这个";
+    const candidate = "这是修改后的版本。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains Chinese '以下是整理结果' preamble", () => {
+    const source = "整理这个";
+    const candidate = "以下是整理结果。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when output contains Chinese '我来帮你' assistant phrase", () => {
+    const source = "帮忙";
+    const candidate = "我来帮你。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps cleanup output without preamble or meta commentary", () => {
+    const source = "um update the meeting notes please";
+    const candidate = "Update the meeting notes.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+});

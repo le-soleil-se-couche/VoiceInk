@@ -34,7 +34,7 @@ const CASES: CanonCase[] = [
   { name: "金额归一", input: "费用是一千二百元", expected: "费用是1200元" },
   { name: "序号归一", input: "这是第十二次", expected: "这是第12次" },
   { name: "章节归一", input: "第三章", expected: "第3章" },
-  { name: "短数字量词归一", input: "我有十个任务", expected: "我有10个任务" },
+  { name: "短数字量词归一", input: "我有十个任务", expected: "我有十个任务" },
   { name: "口语小数字默认保留", input: "今天来了两个人", expected: "今天来了两个人" },
   { name: "品牌词千问ASR保持原文", input: "千问ASR", expected: "千问ASR" },
   { name: "短数字连英文保持原文", input: "千万ASR", expected: "千万ASR" },
@@ -46,7 +46,7 @@ const CASES: CanonCase[] = [
   { name: "短串数字无量词保留", input: "来 一二 跳", expected: "来 一二 跳" },
   { name: "短串数字有单位归一", input: "二零年", expected: "20年" },
   { name: "百分号归一", input: "三十%", expected: "30%" },
-  { name: "百分之表达归一", input: "百分之三十", expected: "百分之30" },
+  { name: "百分之表达归一保持", input: "百分之三十", expected: "百分之三十" },
   { name: "句尾编号归一", input: "编号是二零四六号", expected: "编号是2046号" },
   { name: "年份归一", input: "今年二零二六", expected: "今年2026" },
   { name: "两位年份默认保留", input: "二零", expected: "二零" },
@@ -107,6 +107,47 @@ const CASES: CanonCase[] = [
     expected: "open dot com",
     preferredLanguage: "zh-CN",
   },
+  // Edge cases for conservative numeral conversion
+  { name: "分数三分之一保持", input: "三分之一", expected: "三分之一" },
+
+  { name: "分数千分之五保持", input: "千分之五", expected: "千分之五" },
+  { name: "序数词第一个转换", input: "第一个", expected: "第1个" },
+  { name: "序数词第一百转换", input: "第一百", expected: "第100" },
+  { name: "时间三点钟转换", input: "三点钟", expected: "三点钟" },
+  { name: "时间段半小时保持", input: "半小时", expected: "半小时" },
+  { name: "金额三块钱转换", input: "三块钱", expected: "3块钱" },
+  { name: "金额两块钱转换", input: "两块钱", expected: "2块钱" },
+  { name: "房间号三零一室转换", input: "三零一室", expected: "301室" },
+  { name: "楼号一号楼转换", input: "一号楼", expected: "1号楼" },
+  { name: "技术语境 C 三十七转换", input: "C 三十七", expected: "C 37" },
+  { name: "版本号版本三保持口语", input: "版本三", expected: "版本三" },
+  { name: "百分比符号三十%转换", input: "三十%", expected: "30%" },
+  { name: "温度二十五度转换", input: "二十五度", expected: "25度" },
+  { name: "距离三公里保持", input: "三公里", expected: "三公里" },
+  { name: "重量五千克转换", input: "五千克", expected: "5000克" },
+  // Over-optimization prevention: small numbers with quantifiers should be preserved
+  { name: "over-opt: 两本书", input: "买了两本书", expected: "买了两本书" },
+  { name: "over-opt: 三杯水", input: "喝了三杯水", expected: "喝了三杯水" },
+  { name: "over-opt: 五公里", input: "跑了五公里", expected: "跑了五公里" },
+  { name: "over-opt: 两斤苹果", input: "买了两斤苹果", expected: "买了两斤苹果" },
+  { name: "over-opt: 三个人", input: "今天来了三个人", expected: "今天来了三个人" },
+  { name: "over-opt: 四张纸", input: "给我四张纸", expected: "给我四张纸" },
+  { name: "over-opt: 六辆车", input: "停了六辆车", expected: "停了六辆车" },
+  { name: "over-opt: 七只猫", input: "养了七只猫", expected: "养了七只猫" },
+  { name: "over-opt: 八栋楼", input: "建有八栋楼", expected: "建有八栋楼" },
+  { name: "over-opt: 九条鱼", input: "养了九条鱼", expected: "养了九条鱼" },
+  { name: "over-opt: 十个人", input: "来了十个人", expected: "来了十个人" },
+  // Larger numbers should still convert
+  { name: "over-opt: 三十个任务", input: "我有三十个任务", expected: "我有 30 个任务" },
+  { name: "over-opt: 三百个文件", input: "我有三百个文件", expected: "我有 300 个文件" },
+  // Technical contexts should still convert
+  { name: "over-opt: C 三十七", input: "C 三十七", expected: "C 37" },
+  // Ordinals should still convert
+  { name: "over-opt: 第一个", input: "第一个", expected: "第 1 个" },
+  // Time expressions
+  { name: "over-opt: 三点钟", input: "三点钟", expected: "三点钟" },
+  { name: "over-opt: 半小时", input: "半小时", expected: "半小时" },
+
 ];
 
 describe("canonicalizeDictationText", () => {

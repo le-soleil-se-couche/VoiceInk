@@ -5,10 +5,8 @@ import { getLanguageInstruction } from "../utils/languageSupport";
 import type { ContextClassification } from "../utils/contextClassifier";
 
 export const CLEANUP_PROMPT = promptData.CLEANUP_PROMPT;
-export const FULL_PROMPT = promptData.FULL_PROMPT;
 /** @deprecated Kept for PromptStudio backwards compat */
 export const UNIFIED_SYSTEM_PROMPT = promptData.CLEANUP_PROMPT;
-export const LEGACY_PROMPTS = promptData.LEGACY_PROMPTS;
 
 const LEGACY_AGENT_PROMPT_MARKERS = [
   /\bmode\s*2\s*[:：]\s*agent\b/i,
@@ -225,9 +223,7 @@ export function getWordBoost(customDictionary?: string[]): string[] {
 
 export default {
   CLEANUP_PROMPT,
-  FULL_PROMPT,
   UNIFIED_SYSTEM_PROMPT,
   getSystemPrompt,
   getWordBoost,
-  LEGACY_PROMPTS,
 };

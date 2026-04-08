@@ -11,6 +11,9 @@ const MAX_REWARM_ATTEMPTS = 10;
 const KEEPALIVE_INTERVAL_MS = 3000;
 const COLD_START_BUFFER_MAX = 3 * SAMPLE_RATE * 2; // 3 seconds of 16-bit PCM
 const LIVENESS_TIMEOUT_MS = 2500; // Max wait for first Results from a warm connection
+const RECONNECT_MAX_ATTEMPTS = 5;
+const RECONNECT_BASE_DELAY_MS = 1000;
+const RECONNECT_MAX_DELAY_MS = 30000;
 
 // Languages supported by Nova-3 (base codes). If a language isn't here, fall back to Nova-2.
 const NOVA3_LANGUAGES = new Set([
@@ -105,6 +108,9 @@ class DeepgramStreaming {
     this.replayBuffer = [];
     this.replayBufferSize = 0;
     this.connectionOptions = null;
+    this.reconnectAttempts = 0;
+    this.reconnectTimer = null;
+    this.lastError = null;
   }
 
   setTokenRefreshFn(fn) {
@@ -427,8 +433,14 @@ class DeepgramStreaming {
     this.ws.removeAllListeners("error");
     this.ws.on("error", (error) => {
       debugLogger.error("Deepgram WebSocket error", { error: error.message });
-      this.cleanup();
-      this.onError?.(error);
+      this.lastError = error;
+      // Attempt reconnection for transient errors
+      if (this._shouldReconnect(error)) {
+        this._scheduleReconnect();
+      } else {
+        this.cleanup();
+        this.onError?.(error);
+      }
     });
 
     this.ws.removeAllListeners("close");
@@ -604,18 +616,24 @@ class DeepgramStreaming {
 
       this.ws.on("error", (error) => {
         debugLogger.error("Deepgram WebSocket error", { error: error.message });
+        this.lastError = error;
         // Invalidate cached token on auth failure so next attempt fetches fresh
         if (error.message && error.message.includes("401")) {
           this.cachedToken = null;
           this.tokenFetchedAt = null;
         }
-        this.cleanup();
-        if (this.pendingReject) {
-          this.pendingReject(error);
-          this.pendingReject = null;
-          this.pendingResolve = null;
+        // Attempt reconnection for transient errors
+        if (this._shouldReconnect(error)) {
+          this._scheduleReconnect();
+        } else {
+          this.cleanup();
+          if (this.pendingReject) {
+            this.pendingReject(error);
+            this.pendingReject = null;
+            this.pendingResolve = null;
+          }
+          this.onError?.(error);
         }
-        this.onError?.(error);
       });
 
       this.ws.on("close", (code, reason) => {
@@ -826,6 +844,8 @@ class DeepgramStreaming {
     this.connectionTimeout = null;
     clearTimeout(this.livenessTimer);
     this.livenessTimer = null;
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
     this.replayBuffer = [];
     this.replayBufferSize = 0;
 
@@ -850,12 +870,88 @@ class DeepgramStreaming {
     this.rewarmTimer = null;
     clearTimeout(this.proactiveRefreshTimer);
     this.proactiveRefreshTimer = null;
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
     this.cachedToken = null;
     this.tokenFetchedAt = null;
     this.warmConnectionOptions = null;
     this.finalSegments = [];
+    this.reconnectAttempts = 0;
+    this.lastError = null;
   }
 
+
+  _shouldReconnect(error) {
+    // Don't reconnect on auth errors or explicit close
+    if (!error) return false;
+    const msg = error.message || '';
+    if (msg.includes('401') || msg.includes('403')) return false;
+    if (this.reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) return false;
+    // Reconnect on transient network errors
+    return true;
+  }
+
+  _scheduleReconnect() {
+    if (this.reconnectTimer) return;
+    
+    this.reconnectAttempts++;
+    const delay = Math.min(
+      RECONNECT_BASE_DELAY_MS * Math.pow(2, this.reconnectAttempts - 1),
+      RECONNECT_MAX_DELAY_MS
+    );
+    
+    debugLogger.debug("Deepgram scheduling reconnect", {
+      attempt: this.reconnectAttempts,
+      delay,
+      lastError: this.lastError?.message,
+    });
+
+    this.reconnectTimer = setTimeout(async () => {
+      this.reconnectTimer = null;
+      await this._reconnect();
+    }, delay);
+  }
+
+  async _reconnect() {
+    if (this._generation !== this._generation) return;
+    
+    const options = {
+      ...this.connectionOptions,
+      replayBuffer: this.replayBuffer.length > 0 ? this.replayBuffer : undefined,
+    };
+    
+    let token = this.getCachedToken();
+    if (!token && this.tokenRefreshFn) {
+      try {
+        token = await this.tokenRefreshFn();
+        if (token) this.cacheToken(token);
+      } catch (err) {
+        debugLogger.error("Deepgram reconnect token refresh failed", { error: err.message });
+        this.reconnectAttempts = 0;
+        this.onError?.(err);
+        return;
+      }
+    }
+    
+    if (!token) {
+      this.reconnectAttempts = 0;
+      return;
+    }
+
+    try {
+      await this.connect({ ...options, token, forceNew: true });
+      debugLogger.debug("Deepgram reconnected successfully");
+      this.reconnectAttempts = 0;
+    } catch (err) {
+      debugLogger.error("Deepgram reconnect failed", { error: err.message });
+      if (this.reconnectAttempts < RECONNECT_MAX_ATTEMPTS) {
+        this._scheduleReconnect();
+      } else {
+        this.reconnectAttempts = 0;
+        this.onError?.(err);
+      }
+    }
+  }
   getStatus() {
     return {
       isConnected: this.isConnected,
