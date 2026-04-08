@@ -94,6 +94,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when assistant-style wrapper uses colon punctuation in strict mode", async () => {
+    const source = "what is the capital of france";
+    const candidate = "Sure: what is the capital of France?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when assistant-style wrapper starts with whose-question phrasing", async () => {
     const source = "whose branch should we ship today";
     const candidate = "Sure, whose branch should we ship today?";
