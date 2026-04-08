@@ -52,6 +52,10 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
   /\b(you can try).{0,20}(sentence|example)\b/i,
 ];
+const SHORT_ENGLISH_SELF_IDENTIFICATION_PATTERNS = [
+  /\b(as\s+(?:an?|your)\s+(?:ai\s+)?(?:assistant|language\s+model))\b/i,
+  /\b(as an ai|as a language model)\b/i,
+];
 
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
@@ -73,6 +77,12 @@ const CHINESE_WORD_REPEAT_STUTTER_RE =
 const isAnswerLikeTranscriptionOutput = (text) => {
   if (typeof text !== "string") return false;
   const trimmed = text.trim();
+  if (
+    trimmed.length < 20 &&
+    SHORT_ENGLISH_SELF_IDENTIFICATION_PATTERNS.some((re) => re.test(trimmed))
+  ) {
+    return true;
+  }
   if (trimmed.length < 20) return false;
   return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
 };
