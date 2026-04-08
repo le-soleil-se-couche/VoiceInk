@@ -60,6 +60,12 @@ const MIN_ANSWER_LIKE_TRANSCRIPTION_LENGTH = 20;
 
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
+const ENGLISH_DISCOURSE_TO_BE_HONEST_INITIAL_RE =
+  /(^|[\n])\s*to\s+be\s+honest\s*[，,、]+\s*/gi;
+const ENGLISH_DISCOURSE_TO_BE_HONEST_INLINE_RE =
+  /[，,、]\s*to\s+be\s+honest\s*[，,、]\s*/gi;
+const ENGLISH_DISCOURSE_TO_BE_HONEST_FINAL_RE =
+  /[，,、]\s*to\s+be\s+honest(?=\s*(?:[.!?;:，。！？、]|$))/gi;
 const COPULAR_ENGLISH_VERB_RE = /\b(?:is|are|was|were|be|been|being)\s*$/i;
 const NUMERIC_UNIT_PREFIX_RE = /\b\d+(?:[.,]\d+)?\s*(?:[-‐‑–—]\s*)?$/;
 const CHINESE_FILLER_WORD_RE =
@@ -1700,6 +1706,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(/^[\u200B-\u200D\uFEFF]+/g, "")
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
+      .replace(ENGLISH_DISCOURSE_TO_BE_HONEST_INITIAL_RE, "$1")
+      .replace(ENGLISH_DISCOURSE_TO_BE_HONEST_INLINE_RE, " ")
+      .replace(ENGLISH_DISCOURSE_TO_BE_HONEST_FINAL_RE, "")
       .replace(ENGLISH_FILLER_WORD_RE, stripEnglishFillerMatch)
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")

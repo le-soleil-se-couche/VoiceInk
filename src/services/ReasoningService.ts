@@ -14,6 +14,12 @@ const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
+const ENGLISH_DISCOURSE_TO_BE_HONEST_INITIAL_RE =
+  /(^|[\n])\s*to\s+be\s+honest\s*[，,、]+\s*/gi;
+const ENGLISH_DISCOURSE_TO_BE_HONEST_INLINE_RE =
+  /[，,、]\s*to\s+be\s+honest\s*[，,、]\s*/gi;
+const ENGLISH_DISCOURSE_TO_BE_HONEST_FINAL_RE =
+  /[，,、]\s*to\s+be\s+honest(?=\s*(?:[.!?;:，。！？、]|$))/gi;
 const COPULAR_ENGLISH_VERB_RE = /\b(?:is|are|was|were|be|been|being)\s*$/i;
 const NUMERIC_UNIT_PREFIX_RE = /\b\d+(?:[.,]\d+)?\s*(?:[-‐‑–—]\s*)?$/;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
@@ -455,6 +461,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         "$1"
       )
       .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
+      .replace(ENGLISH_DISCOURSE_TO_BE_HONEST_INITIAL_RE, "$1")
+      .replace(ENGLISH_DISCOURSE_TO_BE_HONEST_INLINE_RE, " ")
+      .replace(ENGLISH_DISCOURSE_TO_BE_HONEST_FINAL_RE, "")
       .replace(ENGLISH_FILLER_WORD_RE, stripEnglishFillerMatch)
       .replace(/([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g, "$1")
       .replace(/([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g, "$1$2$3")
