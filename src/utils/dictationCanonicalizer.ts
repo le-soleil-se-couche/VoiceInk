@@ -418,7 +418,7 @@ const normalizeResidualChineseDecimals = (
         return match;
       }
       const charAfter = sourceText[safeOffset + match.length] || "";
-      if (charAfter && "分时秒钟".includes(charAfter)) {
+      if (charAfter && "分时秒钟刻".includes(charAfter)) {
         return match;
       }
       const leftArabic = /\d/.test(left) ? left : parseChineseNumberWords(left);
