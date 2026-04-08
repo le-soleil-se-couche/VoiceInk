@@ -45,7 +45,6 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
   /(不用担心|别担心|我可以帮你|请告诉我|请问你|[你您]想要).{0,40}/,
   /(?:我会|我将)尽力.{0,20}(?:帮[你您]|协助[你您]|为[你您]|给[你您])/,
-  /^(?:好的|好|是的|对|對|嗯)[，,、]\s*.+(?:吗|麼|么|[?？])$/u,
   /\b(as an ai|as a language model)\b/i,
   /\b(i(?:'m| am)\s+here\s+to\s+help(?:\s+with\s+that)?)\b/i,
   /\b(i\s*(can't|cannot|am unable|won't))\b/i,
@@ -53,6 +52,15 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /\bif\s+you\s+want\s+to\s+test\b.{0,36}\b(?:speech[- ]to[- ]text|transcription)\b.{0,28}\b(?:try|say|speak|read|record)\b/i,
   /\b(?:speech[- ]to[- ]text|transcription)\b.{0,40}\byou\s+can\s+try\b.{0,24}\b(?:sentence|example)\b|\byou\s+can\s+try\b.{0,24}\b(?:sentence|example)\b.{0,40}\b(?:speech[- ]to[- ]text|transcription)\b/i,
 ];
+const CHINESE_ACK_QUESTION_WRAPPER_RE =
+  /^(?:好的|好|是的|对|對|嗯)[，,、]\s*.+(?:吗|麼|么|[?？])$/u;
+const CHINESE_FIRST_PERSON_LEXICAL_QUESTION_RE = /(我|我们|咱们|咱)/;
+const isLikelyLexicalChineseAckQuestion = (text) => {
+  if (!CHINESE_ACK_QUESTION_WRAPPER_RE.test(text)) return false;
+  const body = text.replace(/^(?:好的|好|是的|对|對|嗯)[，,、]\s*/u, "");
+  if (!body) return false;
+  return CHINESE_FIRST_PERSON_LEXICAL_QUESTION_RE.test(body);
+};
 
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
@@ -74,7 +82,13 @@ const isAnswerLikeTranscriptionOutput = (text) => {
   if (typeof text !== "string") return false;
   const trimmed = text.trim();
   if (trimmed.length < 20) return false;
-  return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
+  if (ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed))) {
+    return true;
+  }
+  if (!CHINESE_ACK_QUESTION_WRAPPER_RE.test(trimmed)) {
+    return false;
+  }
+  return !isLikelyLexicalChineseAckQuestion(trimmed);
 };
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

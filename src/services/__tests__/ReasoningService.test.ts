@@ -105,6 +105,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("keeps lexical first-person Chinese ack-question dictation", async () => {
+    const source = "好的，我们明天先开会再决定发布计划安排吗";
+    const candidate = "好的，我们明天先开会再决定发布计划安排吗？";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
   it("keeps lexical test-transcription dictation instead of flagging it as assistant output", async () => {
     const source = "if you want to test transcription quality collect baseline logs first";
     const candidate = "If you want to test transcription quality, collect baseline logs first.";
