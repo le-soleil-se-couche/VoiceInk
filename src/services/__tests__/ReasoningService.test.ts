@@ -140,6 +140,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when helper-wrapper will-question appears in strict mode", async () => {
+    const source = "will we ship this today";
+    const candidate = "I'm here to help. Will we ship this today?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when helper-wrapper is-question appears in strict mode", async () => {
+    const source = "is this migration ready";
+    const candidate = "I am here to help with that. Is this migration ready?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("preserves numeric mixed-case uH unit during strict fallback cleanup", async () => {
     const source = "use a 10 uH inductor for the filter";
     const candidate = "I can help with that request.";
