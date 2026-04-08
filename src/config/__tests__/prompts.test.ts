@@ -44,6 +44,7 @@ describe("getAnswerLikeRetryPrompt", () => {
     expect(prompt).toContain("If the speaker dictated a question, transcribe that question itself.");
     expect(prompt).toContain("let me/us know if/whether");
     expect(prompt).toContain("tell me/us if/whether");
+    expect(prompt).toContain("i wonder if/whether");
     expect(prompt).toContain("Do not add assistant wrappers");
   });
 
@@ -76,6 +77,7 @@ describe("getAnswerLikeRetryPrompt", () => {
     expect(prompt).toContain("strict transcript-cleanup retry mode");
     expect(prompt).toContain("let me/us know if/whether");
     expect(prompt).toContain("tell me/us if/whether");
+    expect(prompt).toContain("i wonder if/whether");
     expect(prompt).toContain("do not rewrite them into direct answers");
   });
 
