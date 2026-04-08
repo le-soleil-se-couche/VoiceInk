@@ -49,6 +49,7 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /\b(i(?:'m| am)\s+here\s+to\s+help(?:\s+with\s+that)?)\b/i,
   /\b(i\s*(can't|cannot|am unable|won't))\b/i,
   /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
+  /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)\s*[.。!?！？]\s*(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
   /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
   /\b(you can try).{0,20}(sentence|example)\b/i,
 ];
