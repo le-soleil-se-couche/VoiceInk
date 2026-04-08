@@ -17,6 +17,8 @@ const ENGLISH_FILLER_WORD_RE =
 const NUMERIC_MM_UNIT_RE = /\b(\d+(?:\.\d+)?)(\s*)mm\b/gi;
 const MM_UNIT_PLACEHOLDER = "__voiceink_mm_unit__";
 const MM_UNIT_PLACEHOLDER_RE = new RegExp(MM_UNIT_PLACEHOLDER, "g");
+const COMMA_LED_ENGLISH_FILLER_RE =
+  /[，,、]\s*(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\s*[，,、]?\s*(?=[\p{L}\p{N}])/giu;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
@@ -420,6 +422,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         "$1"
       )
       .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
+      .replace(COMMA_LED_ENGLISH_FILLER_RE, " ")
       .replace(NUMERIC_MM_UNIT_RE, `$1$2${MM_UNIT_PLACEHOLDER}`)
       .replace(ENGLISH_FILLER_WORD_RE, "")
       .replace(MM_UNIT_PLACEHOLDER_RE, "mm")

@@ -186,6 +186,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("removes comma-led one-sided English filler during strict fallback cleanup", async () => {
+    const source = "we should, um ship this today";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship this today");
+  });
+
   it("still removes sentence-initial mm hesitation during strict fallback cleanup", async () => {
     const source = "mm we should ship this today";
     const candidate = "As an AI assistant, I can help with that.";

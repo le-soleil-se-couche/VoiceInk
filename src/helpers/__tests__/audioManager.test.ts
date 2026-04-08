@@ -10,6 +10,10 @@ describe("AudioManager basicDictationCleanup", () => {
     );
   });
 
+  it("removes comma-led one-sided English filler without leaving dangling comma", () => {
+    expect(cleanup("we should, um ship this today")).toBe("we should ship this today");
+  });
+
   it("removes sentence-initial mm hesitation filler", () => {
     expect(cleanup("mm we should ship this today")).toBe("we should ship this today");
   });
