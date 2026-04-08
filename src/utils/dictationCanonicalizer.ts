@@ -340,6 +340,14 @@ const protectLiteralMentions = (
     new RegExp(`(?:这个词是|这个字是|这个符号是|念作|读作|写作)\\s*(?:“)?(?:${termGroup})(?:”)?`, "g"),
     new RegExp(`(?:“)?(?:${termGroup})(?:”)?\\s*(?:这个字|这个词|这个符号)`, "g"),
     new RegExp(`["“”'](?:${termGroup})["“”']`, "g"),
+    new RegExp(
+      `(?:这|那|它)(?:个)?(?:是|就是|叫(?:做|作)?)\\s*(?:“)?(?:${termGroup})(?:”)?(?=$|[\\s，。！？、,.!?;:])`,
+      "g"
+    ),
+    new RegExp(
+      `(?:我|你|他|她|它)(?:说|讲)的是\\s*(?:“)?(?:${termGroup})(?:”)?(?=$|[\\s，。！？、,.!?;:])`,
+      "g"
+    ),
   ];
 
   let protectedText = value;
