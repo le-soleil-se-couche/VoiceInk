@@ -105,6 +105,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("treats might-started dictation as question intent and blocks direct answers", async () => {
+    const source = "might we ship this today without QA signoff";
+    const candidate = "We might ship this today without QA signoff.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when assistant wrapper starts with sure, might in strict mode", async () => {
+    const source = "might we ship this today without QA signoff";
+    const candidate = "Sure, might we ship this today without QA signoff?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("passes cleanup-only deletions even when overlap thresholds are aggressive", async () => {
     const source = "嗯我想说这个项目其实有很多问题";
     const candidate = "我想说这个项目有很多问题";
