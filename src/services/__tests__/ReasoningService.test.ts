@@ -39,6 +39,38 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a no-punctuation Chinese who-question is rewritten into an answer", async () => {
+    const source = "你是谁";
+    const candidate = "你是张三";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("keeps no-punctuation Chinese who-question cleanup when question intent is preserved", async () => {
+    const source = "你是谁";
+    const candidate = "你是谁？";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("treats Chinese who-question form as question intent in strict matcher", () => {
+    expect((ReasoningService as any).isQuestionLikeText("你是谁")).toBe(true);
+  });
+
+  it("does not treat narrative Chinese who-clause as question intent in strict matcher", () => {
+    expect((ReasoningService as any).isQuestionLikeText("我知道谁负责这个模块")).toBe(false);
+  });
+
   it("falls back when an English yes-no dictation ending with or not is rewritten into an answer", async () => {
     const source = "we should ship this today or not";
     const candidate = "We should ship this today.";
