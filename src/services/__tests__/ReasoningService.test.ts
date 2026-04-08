@@ -138,6 +138,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("keeps lexical 我会尽力 dictation when no assistant-help intent exists", async () => {
+    const source = "我会尽力完成这个项目计划";
+    const candidate = "我会尽力完成这个项目计划。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("still falls back for explicit assistant-help phrasing with 我会尽力帮你", async () => {
+    const source = "我会尽力帮你处理这个问题";
+    const candidate = "我会尽力帮你处理这个问题。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats find-out-if dictation as question intent and blocks direct answers", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "We should ship this today.";
