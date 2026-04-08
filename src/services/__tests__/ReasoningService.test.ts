@@ -94,6 +94,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("keeps lexical i-am-here-to-help statements instead of treating them as answer-like", async () => {
+    const source = "i'm here to help with the migration plan tonight";
+    const candidate = "I'm here to help with the migration plan tonight.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("still blocks assistant-style i-am-here-to-help wrapper questions", async () => {
+    const source = "what should we ship today";
+    const candidate = "I'm here to help. What should we ship today?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("keeps lexical Chinese you-want question phrasing instead of treating it as answer-like", async () => {
     const source = "你想要喝咖啡还是茶";
     const candidate = "你想要喝咖啡还是茶？";

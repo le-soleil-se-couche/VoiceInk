@@ -48,7 +48,7 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /[你您]想要.{0,20}(?:我(?:帮|协助|处理|完成)|让我|我来|测试|试试|尝试|示例|演示)/,
   /^(?:好的|好|是的|对|對|嗯)[，,、]\s*.+(?:吗|麼|么|[?？])$/u,
   /\b(as an ai|as a language model)\b/i,
-  /\b(i(?:'m| am)\s+here\s+to\s+help(?:\s+with\s+that)?)\b/i,
+  /^\s*i(?:'m| am)\s+here\s+to\s+help(?:\s+you)?(?:\s+with\s+that)?\s*[,.!?，。！？]\s*(?:what|which|who|when|where|why|how|can|could|would|should|do|does|did)\b.*[?？]\s*$/i,
   /\b(i\s*(can't|cannot|am unable|won't))\b/i,
   /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
   /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
