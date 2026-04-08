@@ -75,6 +75,11 @@ const CASES: CanonCase[] = [
     expected: "今晨一点消息都没有咯",
   },
   {
+    name: "时间前文-一点都没有保留汉字",
+    input: "今晨一点消息都没有",
+    expected: "今晨一点消息都没有",
+  },
+  {
     name: "句中口语一点一点保留汉字",
     input: "慢慢来一点一点改",
     expected: "慢慢来一点一点改",
@@ -89,6 +94,7 @@ const CASES: CanonCase[] = [
     input: "凌晨一点消息都没有耶要继续等",
     expected: "凌晨1点消息都没有耶要继续等",
   },
+  { name: "真实时间表达继续归一", input: "今晨一点开会", expected: "今晨1点开会" },
   { name: "一点一点外的真实小数继续归一", input: "一点一", expected: "1.1" },
   { name: "口语一下保留汉字", input: "转一下", expected: "转一下" },
   { name: "这一层保留汉字", input: "这一层", expected: "这一层" },

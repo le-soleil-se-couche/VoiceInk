@@ -133,6 +133,8 @@ const ORAL_ONE_PREV_RE = /[这那哪每另前后上下同某]/;
 const TIME_CONTEXT_PREV_RE = /[上下早晚晨午夜今明昨零〇一二两三四五六七八九十百千万萬\d]/;
 const LEXICAL_YIDIAN_TERMINAL_PARTICLE_TAIL_RE =
   /^[^。！？!?；;\n]{0,24}(?:都|也)(?:没(?:有)?|沒(?:有)?|无|無|不)[^。！？!?；;\n]{0,16}(?:耶|哩|咯)(?:[。！？!?])?$/;
+const LEXICAL_YIDIAN_NEGATION_TAIL_RE =
+  /^[^。！？!?；;\n]{0,24}(?:都|也)(?:没(?:有)?|沒(?:有)?|无|無)(?:了)?(?:[。！？!?])?$/;
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -255,6 +257,7 @@ const shouldSkipShortNumberSegment = ({
     const tail = sourceText.slice(offset + segment.length + 1).trim();
     if (/^一(?:点|點)/.test(tail)) return true;
     if (LEXICAL_YIDIAN_TERMINAL_PARTICLE_TAIL_RE.test(tail)) return true;
+    if (LEXICAL_YIDIAN_NEGATION_TAIL_RE.test(tail)) return true;
     if (TIME_CONTEXT_PREV_RE.test(previousChar || "")) return false;
     if (/^[零〇一二两三四五六七八九十百千万萬\d]+(?:分|时|秒|鐘|钟)/.test(tail)) return false;
     if (CHINESE_SPOKEN_NUMBER_RE.test(tail)) return false;
