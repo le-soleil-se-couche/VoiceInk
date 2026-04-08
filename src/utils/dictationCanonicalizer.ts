@@ -339,7 +339,7 @@ const protectLiteralMentions = (
   const literalPatterns = [
     new RegExp(`(?:这个词是|这个字是|这个符号是|念作|读作|写作)\\s*(?:“)?(?:${termGroup})(?:”)?`, "g"),
     new RegExp(
-      `(?:这个词|这个字|这个符号|这个标点)\\s*(?:叫|叫做)\\s*(?:“)?(?:${termGroup})(?:”)?`,
+      `(?:这个词|这个字|这个符号|这个标点)\\s*(?:叫|叫做|叫作)\\s*(?:“)?(?:${termGroup})(?:”)?`,
       "g"
     ),
     new RegExp(`(?:“)?(?:${termGroup})(?:”)?\\s*(?:这个字|这个词|这个符号)`, "g"),
