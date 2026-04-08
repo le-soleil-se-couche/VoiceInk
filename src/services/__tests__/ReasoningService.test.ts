@@ -50,6 +50,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a must-started dictation question is rewritten into an answer", async () => {
+    const source = "must we ship this today";
+    const candidate = "We must ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when sure-prefixed must question appears in strict mode", async () => {
+    const source = "must we ship this today";
+    const candidate = "Sure, must we ship this today?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when a Chinese yes-no dictation ending is rewritten into a statement", async () => {
     const source = "这个方案行不行";
     const candidate = "这个方案可行。";

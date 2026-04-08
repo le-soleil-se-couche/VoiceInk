@@ -153,10 +153,10 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /(对不起|抱歉).{0,20}(我会|我将|让我|我们)/,
       /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
       /\b(as an ai|as a language model)\b/i,
-      /^\s*i(?:'m| am)\s+here\s+to\s+help(?:\s+you)?(?:\s+with\s+that)?\s*[,.!?，。！？]\s*(?:what|which|who|when|where|why|how|can|could|would|should|do|does|did)\b.*[?？]\s*$/i,
+      /^\s*i(?:'m| am)\s+here\s+to\s+help(?:\s+you)?(?:\s+with\s+that)?\s*[,.!?，。！？]\s*(?:what|which|who|when|where|why|how|can|could|would|should|must|do|does|did)\b.*[?？]\s*$/i,
       /\b(i\s*(can't|cannot|am unable|won't))\b/i,
       /\b(i can help|don't worry|please tell me|what can i)\b/i,
-      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
+      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|must|will|has|have|had)\b/i,
       /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
       /\b(you can try).{0,20}(sentence|example)\b/i,
     ];
@@ -186,7 +186,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const enQuestionStart =
-      /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/;
+      /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|must|will|have|has|had|may)\b/;
     if (enQuestionStart.test(normalized)) {
       return true;
     }
