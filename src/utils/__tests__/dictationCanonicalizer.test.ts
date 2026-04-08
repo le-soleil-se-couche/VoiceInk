@@ -86,6 +86,8 @@ const CASES: CanonCase[] = [
   { name: "引号词字面保护", input: "“问号”这个词", expected: "“问号”这个词" },
   { name: "这个字是字面保护", input: "这个字是点", expected: "这个字是点" },
   { name: "这个符号是字面保护", input: "这个符号是斜杠", expected: "这个符号是斜杠" },
+  { name: "对比并列标点词-还是-句号", input: "我们学习逗号还是句号", expected: "我们学习逗号还是句号" },
+  { name: "对比并列标点词-还是-感叹号", input: "请区分问号还是感叹号", expected: "请区分问号还是感叹号" },
   { name: "行内逗号提示不替换", input: "这里加个逗号然后继续", expected: "这里加个逗号然后继续" },
   { name: "换行结尾标点转换", input: "换行后问号\n", expected: "换行后？\n" },
   { name: "行内顿号提示不替换", input: "列表第一项顿号第二项", expected: "列表第一项顿号第二项" },
