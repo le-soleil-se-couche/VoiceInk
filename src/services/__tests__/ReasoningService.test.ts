@@ -340,6 +340,50 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe("we should.");
   });
 
+  it("removes sentence-initial punctuation-delimited honestly filler during strict fallback cleanup", async () => {
+    const source = "honestly, we should ship today";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes parenthetical punctuation-delimited honestly filler during strict fallback cleanup", async () => {
+    const source = "we should, honestly, ship today";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("preserves lexical adverb honestly phrasing during strict fallback cleanup", async () => {
+    const source = "i honestly think this works for production";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("removes terminal punctuation-delimited honestly filler during strict fallback cleanup", async () => {
+    const source = "we should, honestly.";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should.");
+  });
+
   it("removes parenthetical punctuation-delimited like filler during strict fallback cleanup", async () => {
     const source = "we should, like, ship today";
     const candidate = "As an AI assistant, I can help with that.";
