@@ -16,6 +16,11 @@ const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
 const YOU_KNOW_LEXICAL_FOLLOW_RE =
   /^\s+(?:that|if|whether|how|when|where|why|who|which|whom|what(?!\s*[,，、]))\b/i;
+const ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_INITIAL_RE =
+  /(^|[\n])\s*(?:kind|sort)\s+of\s*[，,、]\s*/gi;
+const ENGLISH_DISCOURSE_KIND_SORT_PARENTHETICAL_RE =
+  /([A-Za-z0-9\u4e00-\u9fff])\s*[，,、]\s*(?:kind|sort)\s+of\s*[，,、]\s*(?=[A-Za-z0-9\u4e00-\u9fff])/gi;
+const ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_FINAL_RE = /\s*[，,、]\s*(?:kind|sort)\s+of(?=$|[\n])/gi;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
@@ -434,6 +439,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .replace(ENGLISH_FILLER_WORD_RE, (match, offset, input) =>
         stripEnglishFillerMatch(match, offset, input)
       )
+      .replace(ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_INITIAL_RE, "$1")
+      .replace(ENGLISH_DISCOURSE_KIND_SORT_PARENTHETICAL_RE, "$1 ")
+      .replace(ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_FINAL_RE, "")
       .replace(/([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g, "$1")
       .replace(/([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g, "$1$2$3")
       .replace(

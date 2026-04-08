@@ -62,6 +62,11 @@ const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
 const YOU_KNOW_LEXICAL_FOLLOW_RE =
   /^\s+(?:that|if|whether|how|when|where|why|who|which|whom|what(?!\s*[,，、]))\b/i;
+const ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_INITIAL_RE =
+  /(^|[\n])\s*(?:kind|sort)\s+of\s*[，,、]\s*/gi;
+const ENGLISH_DISCOURSE_KIND_SORT_PARENTHETICAL_RE =
+  /([A-Za-z0-9\u4e00-\u9fff])\s*[，,、]\s*(?:kind|sort)\s+of\s*[，,、]\s*(?=[A-Za-z0-9\u4e00-\u9fff])/gi;
+const ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_FINAL_RE = /\s*[，,、]\s*(?:kind|sort)\s+of(?=$|[\n])/gi;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -1679,6 +1684,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(ENGLISH_FILLER_WORD_RE, (match, offset, input) =>
         stripEnglishFillerMatch(match, offset, input)
       )
+      .replace(ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_INITIAL_RE, "$1")
+      .replace(ENGLISH_DISCOURSE_KIND_SORT_PARENTHETICAL_RE, "$1 ")
+      .replace(ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_FINAL_RE, "")
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
       .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")

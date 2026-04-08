@@ -253,4 +253,37 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe("we should ship today");
   });
+
+  it("removes sentence-initial punctuation-delimited kind-of filler during strict short-input fallback cleanup", async () => {
+    const source = "kind of, we should ship today";
+    const candidate = "rewritten output";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes parenthetical punctuation-delimited sort-of filler during strict short-input fallback cleanup", async () => {
+    const source = "we should, sort of, ship today";
+    const candidate = "rewritten output";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("keeps lexical kind-of phrasing without filler punctuation during strict short-input fallback cleanup", async () => {
+    const source = "this kind of issue blocks rollout";
+    const candidate = "rewritten output";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("this kind of issue blocks rollout");
+  });
 });
