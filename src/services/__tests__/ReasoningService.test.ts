@@ -219,6 +219,39 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("removes parenthetical punctuation-delimited 那个 filler during strict fallback cleanup", async () => {
+    const source = "我们，那个，今天发版";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("我们，今天发版");
+  });
+
+  it("removes parenthetical punctuation-delimited 就是 filler during strict fallback cleanup", async () => {
+    const source = "结论，就是，今天发版";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("结论，今天发版");
+  });
+
+  it("preserves lexical copular 就是 phrasing during strict fallback cleanup", async () => {
+    const source = "这就是事实";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("removes sentence-initial punctuation-delimited like filler during strict fallback cleanup", async () => {
     const source = "like, we should ship today";
     const candidate = "As an AI assistant, I can help with that.";
