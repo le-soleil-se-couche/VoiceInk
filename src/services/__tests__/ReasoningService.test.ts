@@ -94,6 +94,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when assistant-style wrapper starts with whose-question phrasing", async () => {
+    const source = "whose branch should we ship today";
+    const candidate = "Sure, whose branch should we ship today?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("preserves do-you-know interrogative phrasing during strict fallback cleanup", async () => {
     const source = "do you know where the file is";
     const candidate = "Sure, what is the file location?";
