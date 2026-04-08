@@ -416,6 +416,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       )
       .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
       .replace(/(^|[\s，,、。！!;:；：])你懂吗(?=[\s，,、。！!;:；：])/gu, "$1")
+      .replace(/^[\s\u200B-\u200D\uFEFF]*like\s*[，,、]\s*/gi, "")
+      .replace(/([A-Za-z0-9])\s*[，,、]\s*like\s*[，,、]\s*(?=[A-Za-z])/gi, "$1 ")
+      .replace(/([，,、])\s*like(?=$|[\s]*[.。!?！？])/gi, "$1")
       .replace(/\byou\s+know\b/gi, (match: string, offset: number, source: string) => {
         const prefix = source.slice(0, offset);
         if (/\b(?:do|did|does)(?:n['’]t)?\s*$/i.test(prefix)) {

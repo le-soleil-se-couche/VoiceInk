@@ -218,4 +218,37 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(source);
   });
+
+  it("removes sentence-initial punctuation-delimited like filler during strict fallback cleanup", async () => {
+    const source = "like, we should ship today";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes parenthetical punctuation-delimited like filler during strict fallback cleanup", async () => {
+    const source = "we should, like, ship today";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("preserves lexical like phrasing during strict fallback cleanup", async () => {
+    const source = "we should explain things like apples and oranges";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
 });
