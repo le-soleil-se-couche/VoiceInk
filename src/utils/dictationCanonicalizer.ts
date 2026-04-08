@@ -362,7 +362,7 @@ const applyLowAmbiguityPunctuationRules = (
   value: string,
   stats: DictationCanonicalizerStats
 ): string => {
-  let next = value.replace(SENTENCE_END_PUNCT_WORD_RE, (match, offset, sourceText) => {
+  let next = value.replace(SENTENCE_END_PUNCT_WORD_RE, (match, _term, offset, sourceText) => {
     const safeOffset = typeof offset === "number" ? offset : 0;
     const before = sourceText.slice(0, safeOffset);
     if (PUNCT_COORDINATION_WITH_GEN_PREV_RE.test(before)) {
