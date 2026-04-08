@@ -62,7 +62,11 @@ const CHINESE_NUMBER_UNIT_CHAR_RE = /[十百千万萬]/;
 const CHINESE_SPOKEN_NUMBER_RE = /^[零〇一二两三四五六七八九十百千万萬\d]+/;
 const CHINESE_QUANTIFIER_SUFFIX_RE =
   /(?:个|位|名|条|项|份|台|次|句|行|段|年|月|周|天|日|号|点|分|秒|时|钟|元|块|币|￥|¥|度|℃|公里|里|米|厘米|毫米|千克|公斤|克|%|％|版|章|节|页|级|本|件|篇|集|层|届|期|套|辆)/;
-const SENTENCE_END_PUNCT_WORD_RE = /(句号|逗号|问号|感叹号|冒号|分号|顿号)(?=(?:\s|$|\n))/g;
+const PUNCTUATION_WORD_PATTERN = "句号|逗号|问号|感叹号|冒号|分号|顿号";
+const SENTENCE_END_PUNCT_WORD_RE = new RegExp(`(?:${PUNCTUATION_WORD_PATTERN})(?=(?:\\s|$|\\n))`, "g");
+const PUNCTUATION_WORD_COORDINATION_PREFIX_RE = new RegExp(
+  `(?:${PUNCTUATION_WORD_PATTERN})\\s*(?:和|与|及)\\s*$`
+);
 const DECIMAL_SPOKEN_RE = /([零〇一二两三四五六七八九\d]+)点([零〇一二两三四五六七八九\d]+)/g;
 const DOT_TLD_RE = /点(com|cn|net|org|io|ai|dev|app|co|gov|edu)\b/gi;
 const SAFE_FORWARD_SLASH_RE = /([A-Za-z0-9._~-])(斜杠|杠)([A-Za-z0-9._~-])/g;
@@ -360,7 +364,12 @@ const applyLowAmbiguityPunctuationRules = (
   value: string,
   stats: DictationCanonicalizerStats
 ): string => {
-  let next = value.replace(SENTENCE_END_PUNCT_WORD_RE, (match) => {
+  let next = value.replace(SENTENCE_END_PUNCT_WORD_RE, (match, offset, sourceText) => {
+    const safeOffset = typeof offset === "number" ? offset : 0;
+    const prefix = sourceText.slice(0, safeOffset);
+    if (PUNCTUATION_WORD_COORDINATION_PREFIX_RE.test(prefix)) {
+      return match;
+    }
     const symbol = PUNCTUATION_WORD_TO_SYMBOL[match];
     if (!symbol) return match;
     stats.punctuationReplacements += 1;
