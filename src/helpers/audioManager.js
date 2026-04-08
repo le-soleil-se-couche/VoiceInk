@@ -401,6 +401,20 @@ const getMaxAllowedDictionaryDistance = (sourceKey, targetKey) => {
   return 3;
 };
 
+const LATIN_ALNUM_KEY_RE = /^[a-z0-9]+$/;
+const INFLECTIONAL_SUFFIX_EXPANSION_RE = /^(?:s|es|ed|ing)$/;
+
+const isInflectionalSuffixExpansion = (sourceKey, targetKey) => {
+  if (!sourceKey || !targetKey) return false;
+  if (sourceKey.length <= targetKey.length) return false;
+  if (!LATIN_ALNUM_KEY_RE.test(sourceKey) || !LATIN_ALNUM_KEY_RE.test(targetKey)) {
+    return false;
+  }
+  if (!sourceKey.startsWith(targetKey)) return false;
+  const suffix = sourceKey.slice(targetKey.length);
+  return INFLECTIONAL_SUFFIX_EXPANSION_RE.test(suffix);
+};
+
 const buildDictionaryCanonicalEntries = (dictionary) => {
   const words = Array.isArray(dictionary) ? dictionary : [];
   const entries = [];
@@ -489,22 +503,30 @@ const applyDictionaryCanonicalization = (text, entries) => {
           let bestDistance = Number.POSITIVE_INFINITY;
           for (const sourceVariant of sourceKeyVariants) {
             let distance = Number.POSITIVE_INFINITY;
-            if (sourceVariant === aliasKey) {
-              distance = 0;
-            } else {
-              const maxAllowedDistance = getMaxAllowedDictionaryDistance(sourceVariant, aliasKey);
-              if (maxAllowedDistance > 0 && Math.abs(sourceVariant.length - aliasKey.length) <= 2) {
-                const fuzzyDistance = editDistance(sourceVariant, aliasKey);
-                if (fuzzyDistance <= maxAllowedDistance) {
-                  distance = fuzzyDistance;
+              if (sourceVariant === aliasKey) {
+                distance = 0;
+              } else {
+                const maxAllowedDistance = getMaxAllowedDictionaryDistance(sourceVariant, aliasKey);
+                if (maxAllowedDistance > 0 && Math.abs(sourceVariant.length - aliasKey.length) <= 2) {
+                  const fuzzyDistance = editDistance(sourceVariant, aliasKey);
+                  if (fuzzyDistance <= maxAllowedDistance) {
+                    distance = fuzzyDistance;
+                  }
                 }
               }
-            }
 
-            if (Number.isFinite(distance) && distance < bestDistance) {
-              bestDistance = distance;
-              if (distance === 0) break;
-            }
+              if (
+                distance > 0 &&
+                entry.canonicalTokenCount > 1 &&
+                isInflectionalSuffixExpansion(sourceKey, entry.canonicalKey)
+              ) {
+                distance = Number.POSITIVE_INFINITY;
+              }
+
+              if (Number.isFinite(distance) && distance < bestDistance) {
+                bestDistance = distance;
+                if (distance === 0) break;
+              }
           }
 
           if (!Number.isFinite(bestDistance)) continue;
