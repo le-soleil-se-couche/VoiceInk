@@ -12,6 +12,9 @@ import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
+const ENGLISH_FILLER_WORD_RE =
+  /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
+const NUMERIC_UH_UNIT_PREFIX_RE = /(?:^|[\s([{])\d+(?:[.,]\d+)?\s*$/;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
@@ -50,6 +53,20 @@ const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "呃",
   "额",
 ]);
+
+const stripEnglishFillerMatch = (match: string, offset: number, sourceText: string): string => {
+  if (match.toLowerCase() !== "uh") {
+    return "";
+  }
+  const safeOffset = typeof offset === "number" ? offset : 0;
+  const fullText = typeof sourceText === "string" ? sourceText : "";
+  const token = fullText.slice(safeOffset, safeOffset + match.length);
+  if (token !== "uH") {
+    return "";
+  }
+  const prefix = fullText.slice(0, safeOffset);
+  return NUMERIC_UH_UNIT_PREFIX_RE.test(prefix) ? match : "";
+};
 
 class ReasoningService extends BaseReasoningService {
   private apiKeyCache: SecureCache<string>;
@@ -416,7 +433,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         "$1"
       )
       .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
-      .replace(/\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi, "")
+      .replace(ENGLISH_FILLER_WORD_RE, (match, offset, sourceText) =>
+        stripEnglishFillerMatch(match, offset, sourceText)
+      )
       .replace(/([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g, "$1")
       .replace(/([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g, "$1$2$3")
       .replace(

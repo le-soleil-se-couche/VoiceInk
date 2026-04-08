@@ -118,6 +118,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("preserves numeric mixed-case uH unit during strict fallback cleanup", async () => {
+    const source = "use a 10 uH inductor for the filter";
+    const candidate = "I can help with that request.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("still removes sentence-initial uh hesitation during strict fallback cleanup", async () => {
+    const source = "uh we should ship today";
+    const candidate = "I can help with that request.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
   it("keeps lexical Chinese you-want question phrasing instead of treating it as answer-like", async () => {
     const source = "你想要喝咖啡还是茶";
     const candidate = "你想要喝咖啡还是茶？";
