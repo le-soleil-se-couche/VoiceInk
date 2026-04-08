@@ -116,6 +116,28 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("keeps may-started question cleanup when question intent is preserved", async () => {
+    const source = "may we ship this today";
+    const candidate = "May we ship this today?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("falls back for assistant-style sure-may wrapper phrasing in strict mode", async () => {
+    const source = "may we ship this today";
+    const candidate = "Sure, may we ship this today?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("keeps lexical please-tell-me question dictation without forcing strict fallback", async () => {
     const source = "please tell me when the meeting starts";
     const candidate = "Please tell me when the meeting starts?";

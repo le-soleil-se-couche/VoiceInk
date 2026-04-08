@@ -141,7 +141,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /\b(i can help|don't worry)\b/i,
       /\bplease\s+tell\s+me\b.{0,40}\b(?:what\s+(?:you|u)\s+(?:want|need|would\s+like)|how\s+i\s+can\s+help|if\s+you\s+need\s+help)\b/i,
       /\bwhat\s+can\s+i\s+(?:help\s+(?:you\s+)?with|do\s+for\s+you)\b/i,
-      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|shall|will|has|have|had)\b/i,
+      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|shall|may|will|has|have|had)\b/i,
       /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
       /\b(you can try).{0,20}(sentence|example)\b/i,
     ];
