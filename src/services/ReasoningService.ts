@@ -12,6 +12,8 @@ import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
+const LEXICAL_YOU_KNOW_RE = /^you\s+know$/i;
+const YOU_KNOW_WHOMEVER_PREDECESSOR_RE = /\bwhomever\s*$/i;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
@@ -415,7 +417,18 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         "$1"
       )
       .replace(/([\u4e00-\u9fff])\s*(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)\s*([\u4e00-\u9fff])/g, "$1$2")
-      .replace(/\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi, "")
+      .replace(
+        /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi,
+        (match: string, offset: number, input: string) => {
+          if (
+            LEXICAL_YOU_KNOW_RE.test(match) &&
+            YOU_KNOW_WHOMEVER_PREDECESSOR_RE.test(input.slice(0, offset))
+          ) {
+            return match;
+          }
+          return "";
+        }
+      )
       .replace(/([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g, "$1")
       .replace(/([\u4e00-\u9fff])\s*((?:是|就|在|会|要|的|了))(?:\s*[，,、]?\s*\2)+\s*([\u4e00-\u9fff])/g, "$1$2$3")
       .replace(

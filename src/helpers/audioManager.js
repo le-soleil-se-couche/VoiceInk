@@ -55,6 +55,8 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
 
 const ENGLISH_FILLER_WORD_RE = /\b(?:um+|uh+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
 const ENGLISH_ER_HESITATION_RE = /\b(?:er+|Er+)\b/g;
+const LEXICAL_YOU_KNOW_RE = /^you\s+know$/i;
+const YOU_KNOW_WHOMEVER_PREDECESSOR_RE = /\bwhomever\s*$/i;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -68,6 +70,13 @@ const CHINESE_FUNCTION_WORD_STUTTER_RE =
   /(^|[\s，,、。！？,.!?;:])((?:这个|那个|就是|然后|是|就|那|这|我|你|他|她|它|的|了|在|要|会|都|也|还))(?:\s*[，,、]?\s*\2)+/g;
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
+
+const shouldPreserveLexicalYouKnow = (match, offset, input) => {
+  if (!LEXICAL_YOU_KNOW_RE.test(match)) {
+    return false;
+  }
+  return YOU_KNOW_WHOMEVER_PREDECESSOR_RE.test(input.slice(0, offset));
+};
 
 const isAnswerLikeTranscriptionOutput = (text) => {
   if (typeof text !== "string") return false;
@@ -1655,7 +1664,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
       .replace(ENGLISH_ER_HESITATION_RE, "")
-      .replace(ENGLISH_FILLER_WORD_RE, "")
+      .replace(ENGLISH_FILLER_WORD_RE, (match, offset, input) =>
+        shouldPreserveLexicalYouKnow(match, offset, input) ? match : ""
+      )
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
       .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")

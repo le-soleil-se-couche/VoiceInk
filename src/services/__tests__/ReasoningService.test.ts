@@ -174,4 +174,28 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(candidate);
   });
+
+  it("preserves lexical whomever-you-know phrasing during strict short-input fallback cleanup", async () => {
+    const source = "ask whomever you know about the rollout";
+    const candidate = "unrelated response";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 120,
+    });
+
+    expect(result).toBe("ask whomever you know about the rollout");
+  });
+
+  it("still removes bare sentence-initial you-know filler during strict short-input fallback cleanup", async () => {
+    const source = "you know we should ship today";
+    const candidate = "unrelated response";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 120,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
 });

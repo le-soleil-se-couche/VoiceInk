@@ -13,4 +13,11 @@ describe("AudioManager basicDictationCleanup", () => {
     expect(cleanup("er we should ship today")).toBe("we should ship today");
     expect(cleanup("Er, we should ship today")).toBe("we should ship today");
   });
+
+  it("preserves lexical whomever-you-know clauses while still removing bare filler usage", () => {
+    expect(cleanup("ask whomever you know about the rollout")).toBe(
+      "ask whomever you know about the rollout"
+    );
+    expect(cleanup("you know we should ship today")).toBe("we should ship today");
+  });
 });
