@@ -97,6 +97,16 @@ const CASES: CanonCase[] = [
     expected: "这里有冒号以及分号",
   },
   {
+    name: "或并列标点词保持字面",
+    input: "我们学习逗号或句号",
+    expected: "我们学习逗号或句号",
+  },
+  {
+    name: "或者并列标点词保持字面",
+    input: "请区分问号或者感叹号",
+    expected: "请区分问号或者感叹号",
+  },
+  {
     name: "空白文本保持",
     input: "   ",
     expected: "   ",
