@@ -55,7 +55,7 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
   /\b(you can try).{0,20}(sentence|example)\b/i,
 ];
 const ASR_DEFAULT_ANSWER_LIKE_MIN_LENGTH = 20;
-const ASR_SHORT_SELF_IDENTIFICATION_MIN_LENGTH = 6;
+const ASR_SHORT_SELF_IDENTIFICATION_MIN_LENGTH = 4;
 const ASR_SHORT_CHINESE_SELF_IDENTIFICATION_PATTERNS = [
   /(?:作为|身为|我是).{0,6}(?:ai|人工智能).{0,4}(?:助手|语言模型)?/i,
   /(?:作为|身为|我是).{0,6}语言模型/i,
