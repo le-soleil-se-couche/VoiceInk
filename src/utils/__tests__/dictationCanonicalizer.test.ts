@@ -85,6 +85,8 @@ const CASES: CanonCase[] = [
   { name: "这个符号是字面保护", input: "这个符号是斜杠", expected: "这个符号是斜杠" },
   { name: "不是问号字面保护", input: "这里不是问号", expected: "这里不是问号" },
   { name: "不是冒号字面保护", input: "这个符号不是冒号", expected: "这个符号不是冒号" },
+  { name: "并非问号字面保护", input: "这里并非问号", expected: "这里并非问号" },
+  { name: "并非冒号字面保护", input: "这个符号并非冒号", expected: "这个符号并非冒号" },
   { name: "并列表达-还有-保持标点词", input: "我们学习逗号还有句号", expected: "我们学习逗号还有句号" },
   { name: "并列表达-还有-冒号分号", input: "这里有冒号还有分号", expected: "这里有冒号还有分号" },
   { name: "并列表达-并-保持标点词", input: "我们学习逗号并句号", expected: "我们学习逗号并句号" },
