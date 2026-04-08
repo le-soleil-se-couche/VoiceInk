@@ -218,4 +218,37 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe("we should ship today");
   });
+
+  it("removes sentence-initial punctuation-delimited to-be-honest filler during strict short-input fallback cleanup", async () => {
+    const source = "to be honest, we should ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("removes parenthetical punctuation-delimited to-be-honest filler during strict short-input fallback cleanup", async () => {
+    const source = "we should, to be honest, ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
+
+  it("preserves lexical non-delimited to-be-honest phrasing during strict short-input fallback cleanup", async () => {
+    const source = "i want to be honest about the timeline";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
 });
