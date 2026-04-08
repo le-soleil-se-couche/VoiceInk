@@ -138,6 +138,44 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe("这个要改吗？");
   });
 
+  it("keeps ordinary first-person cannot dictation without answer-like retry", async () => {
+    const source = "i can't attend today's meeting";
+    const retrySpy = vi
+      .spyOn(ReasoningService as any, "retryWithCleanupOnlyPrompt")
+      .mockResolvedValue(null);
+
+    const result = await ReasoningService.enforceStrictMode(
+      source,
+      source,
+      { strictMode: true, strictShortInputThreshold: 1 },
+      "openai",
+      "gpt-test",
+      null
+    );
+
+    expect(result).toBe(source);
+    expect(retrySpy).not.toHaveBeenCalled();
+  });
+
+  it("still retries on explicit assistant refusal phrasing", async () => {
+    const source = "i can't help with that request";
+    const retrySpy = vi
+      .spyOn(ReasoningService as any, "retryWithCleanupOnlyPrompt")
+      .mockResolvedValue(null);
+
+    const result = await ReasoningService.enforceStrictMode(
+      source,
+      source,
+      { strictMode: true, strictShortInputThreshold: 1 },
+      "openai",
+      "gpt-test",
+      null
+    );
+
+    expect(result).toBe(source);
+    expect(retrySpy).toHaveBeenCalledOnce();
+  });
+
   it("preserves numeric Ah battery-capacity units during strict short-input fallback cleanup", async () => {
     const source = "bring a 5 Ah battery pack";
 
