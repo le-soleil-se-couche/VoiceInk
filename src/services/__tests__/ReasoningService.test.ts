@@ -94,6 +94,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("keeps lexical apology dictation when punctuation is polished in strict mode", async () => {
+    const source = "抱歉我们今天晚点开始";
+    const candidate = "抱歉，我们今天晚点开始。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(candidate);
+  });
+
+  it("falls back when apology text shifts into assistant help output in strict mode", async () => {
+    const source = "我们今天晚点开始";
+    const candidate = "抱歉，我会帮你处理这个问题。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats find-out-if dictation as question intent and blocks direct answers", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "We should ship this today.";
