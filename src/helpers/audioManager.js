@@ -66,7 +66,8 @@ const ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_INITIAL_RE =
   /(^|[\n])\s*(?:kind|sort)\s+of\s*[，,、]\s*/gi;
 const ENGLISH_DISCOURSE_KIND_SORT_PARENTHETICAL_RE =
   /([A-Za-z0-9\u4e00-\u9fff])\s*[，,、]\s*(?:kind|sort)\s+of\s*[，,、]\s*(?=[A-Za-z0-9\u4e00-\u9fff])/gi;
-const ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_FINAL_RE = /\s*[，,、]\s*(?:kind|sort)\s+of(?=$|[\n])/gi;
+const ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_FINAL_RE =
+  /\s*[，,、]\s*(?:kind|sort)\s+of\s*(?=$|[\n]|[.?!;:。！？；：])/gi;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;

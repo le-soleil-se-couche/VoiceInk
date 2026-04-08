@@ -20,7 +20,8 @@ const ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_INITIAL_RE =
   /(^|[\n])\s*(?:kind|sort)\s+of\s*[，,、]\s*/gi;
 const ENGLISH_DISCOURSE_KIND_SORT_PARENTHETICAL_RE =
   /([A-Za-z0-9\u4e00-\u9fff])\s*[，,、]\s*(?:kind|sort)\s+of\s*[，,、]\s*(?=[A-Za-z0-9\u4e00-\u9fff])/gi;
-const ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_FINAL_RE = /\s*[，,、]\s*(?:kind|sort)\s+of(?=$|[\n])/gi;
+const ENGLISH_DISCOURSE_KIND_SORT_SENTENCE_FINAL_RE =
+  /\s*[，,、]\s*(?:kind|sort)\s+of\s*(?=$|[\n]|[.?!;:。！？；：])/gi;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
