@@ -56,7 +56,7 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
 const ENGLISH_FILLER_WORD_RE = /\b(?:um+|uh+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
 const ENGLISH_ER_HESITATION_RE = /\b(?:er+|Er+)\b/g;
 const LEXICAL_YOU_KNOW_RE = /^you\s+know$/i;
-const YOU_KNOW_WHOMEVER_PREDECESSOR_RE = /\bwhomever\s*$/i;
+const YOU_KNOW_WHOEVER_PREDECESSOR_RE = /\bwho(?:m)?ever\s*$/i;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -75,7 +75,7 @@ const shouldPreserveLexicalYouKnow = (match, offset, input) => {
   if (!LEXICAL_YOU_KNOW_RE.test(match)) {
     return false;
   }
-  return YOU_KNOW_WHOMEVER_PREDECESSOR_RE.test(input.slice(0, offset));
+  return YOU_KNOW_WHOEVER_PREDECESSOR_RE.test(input.slice(0, offset));
 };
 
 const isAnswerLikeTranscriptionOutput = (text) => {

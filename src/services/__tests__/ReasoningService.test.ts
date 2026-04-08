@@ -175,8 +175,8 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(candidate);
   });
 
-  it("preserves lexical whomever-you-know phrasing during strict short-input fallback cleanup", async () => {
-    const source = "ask whomever you know about the rollout";
+  it("preserves lexical whoever/whomever-you-know phrasing during strict short-input fallback cleanup", async () => {
+    const source = "ask whoever you know about the rollout";
     const candidate = "unrelated response";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
@@ -184,7 +184,13 @@ describe("ReasoningService strict mode", () => {
       strictShortInputThreshold: 120,
     });
 
-    expect(result).toBe("ask whomever you know about the rollout");
+    expect(result).toBe("ask whoever you know about the rollout");
+    expect(
+      await ReasoningService.enforceStrictMode("ask whomever you know about the rollout", candidate, {
+        strictMode: true,
+        strictShortInputThreshold: 120,
+      })
+    ).toBe("ask whomever you know about the rollout");
   });
 
   it("still removes bare sentence-initial you-know filler during strict short-input fallback cleanup", async () => {

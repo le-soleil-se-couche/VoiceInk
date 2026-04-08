@@ -13,7 +13,7 @@ import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
 const LEXICAL_YOU_KNOW_RE = /^you\s+know$/i;
-const YOU_KNOW_WHOMEVER_PREDECESSOR_RE = /\bwhomever\s*$/i;
+const YOU_KNOW_WHOEVER_PREDECESSOR_RE = /\bwho(?:m)?ever\s*$/i;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NOVEL_HAN_DELETION_STOP_CHARS = new Set([
   "的",
@@ -422,7 +422,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         (match: string, offset: number, input: string) => {
           if (
             LEXICAL_YOU_KNOW_RE.test(match) &&
-            YOU_KNOW_WHOMEVER_PREDECESSOR_RE.test(input.slice(0, offset))
+            YOU_KNOW_WHOEVER_PREDECESSOR_RE.test(input.slice(0, offset))
           ) {
             return match;
           }
