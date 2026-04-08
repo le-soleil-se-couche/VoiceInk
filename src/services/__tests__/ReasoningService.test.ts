@@ -174,4 +174,28 @@ describe("ReasoningService strict mode", () => {
 
     expect(result).toBe(candidate);
   });
+
+  it("preserves numeric micrometer um units during strict fallback cleanup", async () => {
+    const source = "set a 5 um gap";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("still removes sentence-initial um hesitation during strict fallback cleanup", async () => {
+    const source = "um we should ship today";
+    const candidate = "As an AI assistant, I can help with that.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe("we should ship today");
+  });
 });

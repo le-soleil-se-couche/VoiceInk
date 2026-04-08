@@ -55,6 +55,7 @@ const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
 
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
+const NUMERIC_PREFIX_MICROMETER_RE = /\b\d+(?:[.,]\d+)?\s*(?:[-‐‑–—]\s*)?$/;
 const CHINESE_FILLER_WORD_RE =
   /(^|[\s，。！？、,.!?;:])(?:嗯+|呃+|额+|啊+|唉+|诶+|欸+)(?=$|[\s，。！？、,.!?;:])/g;
 const CHINESE_STUTTER_RE = /([我你他她它这那])(?:\s*[，,、]?\s*\1)+/g;
@@ -74,6 +75,15 @@ const isAnswerLikeTranscriptionOutput = (text) => {
   const trimmed = text.trim();
   if (trimmed.length < 20) return false;
   return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
+};
+
+const shouldPreserveEnglishFillerToken = (match, offset, sourceText) => {
+  if (typeof match !== "string" || typeof sourceText !== "string") return false;
+  if (match.toLowerCase() !== "um") return false;
+
+  const safeOffset = typeof offset === "number" ? Math.max(0, offset) : 0;
+  const prefix = sourceText.slice(0, safeOffset);
+  return NUMERIC_PREFIX_MICROMETER_RE.test(prefix);
 };
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -1654,7 +1664,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       .replace(/^[\u200B-\u200D\uFEFF]+/g, "")
       .replace(CHINESE_FILLER_WORD_RE, "$1")
       .replace(INLINE_CHINESE_FILLER_RE, "$1$2")
-      .replace(ENGLISH_FILLER_WORD_RE, "")
+      .replace(ENGLISH_FILLER_WORD_RE, (match, offset, sourceText) =>
+        shouldPreserveEnglishFillerToken(match, offset, sourceText) ? match : ""
+      )
       .replace(CHINESE_STUTTER_RE, "$1")
       .replace(INLINE_CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2$3")
       .replace(CHINESE_FUNCTION_WORD_STUTTER_RE, "$1$2")
