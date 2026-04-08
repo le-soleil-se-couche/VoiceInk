@@ -59,7 +59,7 @@ const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|hmm+|mm+|you\s+know|basically)\b/gi;
 const AH_FILLER_RE = /\bah+\b/gi;
 const NUMERIC_AH_UNIT_PREFIX_RE = /\b\d+(?:[.,]\d+)?\s*(?:[-‐‑–—]\s*)?$/;
-const LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE = /^\s+whose\b/i;
+const LEXICAL_YOU_KNOW_LEXICAL_FOLLOW_RE = /^\s+(?:whose|that)\b/i;
 const LEXICAL_YOU_KNOW_INTERROGATIVE_PREFIX_RE =
   /\b(?:do|did|does|do(?:n't|nt)|does(?:n't|nt))\s*$/i;
 const SENTENCE_INITIAL_BARE_WELL_FORMAL_FOLLOW_RE =
@@ -88,7 +88,7 @@ const isAnswerLikeTranscriptionOutput = (text) => {
 const stripEnglishFillerMatch = (match, offset, source) => {
   if (/^\s*you\s+know\s*$/i.test(match)) {
     const trailingText = source.slice(offset + match.length);
-    if (LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE.test(trailingText)) {
+    if (LEXICAL_YOU_KNOW_LEXICAL_FOLLOW_RE.test(trailingText)) {
       return match;
     }
 

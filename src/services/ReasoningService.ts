@@ -14,7 +14,7 @@ const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
 const CLEANUP_ONLY_MAX_TOKEN_MISMATCH_RATIO = 0.05;
 const NUMERIC_AH_UNIT_PREFIX_RE = /\b\d+(?:[.,]\d+)?\s*(?:[-‐‑–—]\s*)?$/;
-const LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE = /^\s+whose\b/i;
+const LEXICAL_YOU_KNOW_LEXICAL_FOLLOW_RE = /^\s+(?:whose|that)\b/i;
 const LEXICAL_YOU_KNOW_INTERROGATIVE_PREFIX_RE =
   /\b(?:do|did|does|do(?:n't|nt)|does(?:n't|nt))\s*$/i;
 const SENTENCE_INITIAL_BARE_WELL_FORMAL_FOLLOW_RE =
@@ -67,7 +67,7 @@ const shouldPreserveLexicalYouKnow = (
   }
 
   const trailingText = source.slice(offset + match.length);
-  if (LEXICAL_YOU_KNOW_WHOSE_FOLLOW_RE.test(trailingText)) {
+  if (LEXICAL_YOU_KNOW_LEXICAL_FOLLOW_RE.test(trailingText)) {
     return true;
   }
 

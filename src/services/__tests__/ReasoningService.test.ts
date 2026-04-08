@@ -242,6 +242,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("preserves sentence-initial lexical you know that clauses during strict short-input fallback cleanup", async () => {
+    const source = "you know that we should ship today";
+
+    const result = await ReasoningService.enforceStrictMode(source, source, {
+      strictMode: true,
+      strictShortInputThreshold: 100,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("preserves lexical you know whose clauses during strict short-input fallback cleanup", async () => {
     const source = "you know whose idea this was";
 
