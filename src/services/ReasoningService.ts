@@ -140,7 +140,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /\b(i(?:'m| am)\s+here\s+to\s+help(?:\s+with\s+that)?)\b/i,
       /\b(i\s*(can't|cannot|am unable|won't))\b/i,
       /\b(i can help|don't worry|please tell me|what can i)\b/i,
-      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s*(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|ought|will|has|have|had|(?:isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|don['’]?t|doesn['’]?t|didn['’]?t|can['’]?t|couldn['’]?t|wouldn['’]?t|shouldn['’]?t|won['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t)\s+(?:i|you|we|they|he|she|it|there|this|that))\b/i,
+      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s*(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|ought|will|has|have|had|(?:isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|don['’]?t|doesn['’]?t|didn['’]?t|can['’]?t|couldn['’]?t|wouldn['’]?t|shouldn['’]?t|won['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t)\s+(?:i|you|we|they|he|she|it|there|this|that|these|those|the|a|an|my|your|our|their|his|her|its))\b/i,
       /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
       /\b(you can try).{0,20}(sentence|example)\b/i,
     ];
@@ -170,7 +170,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const enQuestionStart =
-      /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|ought|will|have|has|had|may|(?:isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|don['’]?t|doesn['’]?t|didn['’]?t|can['’]?t|couldn['’]?t|wouldn['’]?t|shouldn['’]?t|won['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t)\s+(?:i|you|we|they|he|she|it|there|this|that))\b/;
+      /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|ought|will|have|has|had|may|(?:isn['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|don['’]?t|doesn['’]?t|didn['’]?t|can['’]?t|couldn['’]?t|wouldn['’]?t|shouldn['’]?t|won['’]?t|haven['’]?t|hasn['’]?t|hadn['’]?t)\s+(?:i|you|we|they|he|she|it|there|this|that|these|those|the|a|an|my|your|our|their|his|her|its))\b/;
     if (enQuestionStart.test(normalized)) {
       return true;
     }
