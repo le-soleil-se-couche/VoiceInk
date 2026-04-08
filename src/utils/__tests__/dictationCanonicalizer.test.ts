@@ -86,6 +86,13 @@ const CASES: CanonCase[] = [
   { name: "行内逗号提示不替换", input: "这里加个逗号然后继续", expected: "这里加个逗号然后继续" },
   { name: "换行结尾标点转换", input: "换行后问号\n", expected: "换行后？\n" },
   { name: "行内顿号提示不替换", input: "列表第一项顿号第二项", expected: "列表第一项顿号第二项" },
+  { name: "标点名或连接保留", input: "我们学习逗号或句号", expected: "我们学习逗号或句号" },
+  { name: "标点名或者连接保留", input: "我们学习逗号或者句号", expected: "我们学习逗号或者句号" },
+  {
+    name: "标点名列表或连接保留",
+    input: "请使用逗号、句号或问号",
+    expected: "请使用逗号、句号或问号",
+  },
   {
     name: "空白文本保持",
     input: "   ",
