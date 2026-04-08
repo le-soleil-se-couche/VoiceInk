@@ -31,6 +31,11 @@ const CASES: CanonCase[] = [
     input: "这里有冒号及分号",
     expected: "这里有冒号及分号",
   },
+  {
+    name: "并列表达-顿号-保持标点词",
+    input: "我们学习逗号、句号",
+    expected: "我们学习逗号、句号",
+  },
   { name: "斜杠高置信转换", input: "a斜杠b", expected: "a/b" },
   { name: "反斜杠高置信转换", input: "C反斜杠D", expected: "C\\D" },
   { name: "口述域名转换", input: "open点com", expected: "open.com" },

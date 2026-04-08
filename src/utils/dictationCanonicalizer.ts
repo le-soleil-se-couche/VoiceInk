@@ -65,7 +65,7 @@ const CHINESE_QUANTIFIER_SUFFIX_RE =
 const PUNCTUATION_WORD_PATTERN = "句号|逗号|问号|感叹号|冒号|分号|顿号";
 const SENTENCE_END_PUNCT_WORD_RE = new RegExp(`(?:${PUNCTUATION_WORD_PATTERN})(?=(?:\\s|$|\\n))`, "g");
 const PUNCTUATION_WORD_COORDINATION_PREFIX_RE = new RegExp(
-  `(?:${PUNCTUATION_WORD_PATTERN})\\s*(?:和|与|及)\\s*$`
+  `(?:${PUNCTUATION_WORD_PATTERN})\\s*(?:和|与|及|、)\\s*$`
 );
 const DECIMAL_SPOKEN_RE = /([零〇一二两三四五六七八九\d]+)点([零〇一二两三四五六七八九\d]+)/g;
 const DOT_TLD_RE = /点(com|cn|net|org|io|ai|dev|app|co|gov|edu)\b/gi;
