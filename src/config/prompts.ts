@@ -47,7 +47,7 @@ function getContextInstruction(context?: ContextClassification): string {
 
   const focusHints: Record<ContextClassification["context"], string> = {
     general: "Keep output natural and concise.",
-    code: "Preserve syntax, symbols, casing, code blocks, shell commands, flags, file paths, package/module names, and error text exactly where possible. Do not rewrite them into explanatory prose.",
+    code: "Preserve syntax, symbols, casing, code blocks, shell commands, flags, file paths, package/module names, product names, framework/tool names, and error text exactly. Do not rewrite technical dictation into explanatory prose.",
     email: "Preserve recipient intent and structure it like a clear, professional email.",
     chat: "Keep it concise and conversational, but still polished.",
     document: "Preserve headings, bullets, and list structure when they aid readability.",

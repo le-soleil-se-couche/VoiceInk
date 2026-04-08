@@ -236,22 +236,22 @@ describe("getSystemPrompt technical dictation context guards", () => {
   it("includes command preservation guidance for code context", () => {
     const prompt = getSystemPrompt("VoiceInk", undefined, "en", "npm run build failed", "en", codeContext);
 
-    expect(prompt).toContain("shell commands, flags, file paths, package/module names, and error text");
-    expect(prompt).toContain("Do not rewrite them into explanatory prose.");
+    expect(prompt).toContain("shell commands, flags, file paths, package/module names, product names, framework/tool names");
+    expect(prompt).toContain("Do not rewrite technical dictation into explanatory prose.");
   });
 
   it("includes technical identifier preservation in code context hint", () => {
     const prompt = getSystemPrompt("VoiceInk", undefined, "en", "npm run build:renderer -- --watch src/components/App.tsx", "en", codeContext);
 
     expect(prompt).toContain("Context hint: code or technical content.");
-    expect(prompt).toContain("Preserve syntax, symbols, casing, code blocks, shell commands, flags, file paths, package/module names, and error text");
+    expect(prompt).toContain("Preserve syntax, symbols, casing, code blocks, shell commands, flags, file paths, package/module names, product names, framework/tool names");
   });
 
   it("handles module resolution error dictation", () => {
     const prompt = getSystemPrompt("VoiceInk", undefined, "en", "cannot find module ./utils/helper.ts", "en", codeContext);
 
-    expect(prompt).toContain("error text");
-    expect(prompt).toContain("Do not rewrite them into explanatory prose.");
+    expect(prompt).toContain("error text exactly");
+    expect(prompt).toContain("Do not rewrite technical dictation into explanatory prose.");
   });
 
   it("handles build error dictation", () => {
@@ -264,6 +264,83 @@ describe("getSystemPrompt technical dictation context guards", () => {
     const prompt = getSystemPrompt("VoiceInk", undefined, "en", "open ./src/config/prompts.ts", "en", codeContext);
 
     expect(prompt).toContain("file paths");
-    expect(prompt).toContain("Do not rewrite them into explanatory prose.");
+    expect(prompt).toContain("Do not rewrite technical dictation into explanatory prose.");
+  });
+});
+
+describe("getSystemPrompt software environment preservation", () => {
+  const mockTargetApp: TargetAppInfo = {
+    appName: "VSCode",
+    processId: 12345,
+    platform: "darwin",
+    source: "renderer-fallback",
+    capturedAt: null,
+  };
+
+  const codeContext: ContextClassification = {
+    context: "code",
+    intent: "cleanup",
+    confidence: 0.85,
+    strictMode: true,
+    strictOverlapThreshold: 0.45,
+    signals: ["tool:framework"],
+    targetApp: mockTargetApp,
+  };
+
+  it("includes product and framework name preservation in code context", () => {
+    const prompt = getSystemPrompt("VoiceInk", undefined, "en", "build with react and next", "en", codeContext);
+
+    expect(prompt).toContain("product names");
+    expect(prompt).toContain("framework/tool names");
+    expect(prompt).toContain("Do not rewrite technical dictation into explanatory prose.");
+  });
+
+  it("includes technical preservation for npm and package managers", () => {
+    const prompt = getSystemPrompt("VoiceInk", undefined, "en", "run npm install", "en", codeContext);
+
+    expect(prompt).toContain("package/module names");
+    expect(prompt).toContain("shell commands");
+  });
+
+  it("includes preservation guidance for cloud platforms", () => {
+    const prompt = getSystemPrompt("VoiceInk", undefined, "en", "deploy to vercel or aws", "en", codeContext);
+
+    expect(prompt).toContain("product names");
+    expect(prompt).toContain("framework/tool names");
+  });
+
+  it("includes preservation for database names", () => {
+    const prompt = getSystemPrompt("VoiceInk", undefined, "en", "connect to postgres or mongodb", "en", codeContext);
+
+    expect(prompt).toContain("product names");
+    expect(prompt).toContain("Do not rewrite technical dictation");
+  });
+
+  it("includes preservation for version control tools", () => {
+    const prompt = getSystemPrompt("VoiceInk", undefined, "en", "commit with git", "en", codeContext);
+
+    expect(prompt).toContain("tool names");
+    expect(prompt).toContain("shell commands");
+  });
+
+  it("includes preservation for container tools", () => {
+    const prompt = getSystemPrompt("VoiceInk", undefined, "en", "build docker image", "en", codeContext);
+
+    expect(prompt).toContain("product names");
+    expect(prompt).toContain("framework/tool names");
+  });
+
+  it("includes preservation for runtime environments", () => {
+    const prompt = getSystemPrompt("VoiceInk", undefined, "en", "run on node or python", "en", codeContext);
+
+    expect(prompt).toContain("tool names");
+    expect(prompt).toContain("Do not rewrite technical dictation");
+  });
+
+  it("includes preservation for bundlers and build tools", () => {
+    const prompt = getSystemPrompt("VoiceInk", undefined, "en", "bundle with webpack or vite", "en", codeContext);
+
+    expect(prompt).toContain("framework/tool names");
+    expect(prompt).toContain("Do not rewrite technical dictation");
   });
 });

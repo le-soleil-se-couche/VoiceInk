@@ -174,3 +174,225 @@ describe("classifyContext technical dictation detection", () => {
     expect(result.signals).toContain("text:code");
   });
 });
+
+describe("classifyContext software environment detection", () => {
+  it("classifies package manager mentions as code context", () => {
+    const result = classifyContext({
+      text: "install with npm",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:package-manager");
+  });
+
+  it("classifies pnpm mention as code context", () => {
+    const result = classifyContext({
+      text: "use pnpm for workspace",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:package-manager");
+  });
+
+  it("classifies git command as code context", () => {
+    const result = classifyContext({
+      text: "run git push origin main",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:vcs");
+  });
+
+  it("classifies docker mention as code context", () => {
+    const result = classifyContext({
+      text: "build docker container",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:container");
+  });
+
+  it("classifies kubectl as code context", () => {
+    const result = classifyContext({
+      text: "apply kubernetes with kubectl",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:k8s");
+  });
+
+  it("classifies curl as code context", () => {
+    const result = classifyContext({
+      text: "test endpoint with curl",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:http");
+  });
+
+  it("classifies ssh as code context", () => {
+    const result = classifyContext({
+      text: "connect via ssh to server",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:transfer");
+  });
+
+  it("classifies vim as code context", () => {
+    const result = classifyContext({
+      text: "edit config in vim",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:editor");
+  });
+
+  it("classifies python runtime as code context", () => {
+    const result = classifyContext({
+      text: "run with python three",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:runtime");
+  });
+
+  it("classifies webpack as code context", () => {
+    const result = classifyContext({
+      text: "bundle with webpack",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:bundler");
+  });
+
+  it("classifies react framework as code context", () => {
+    const result = classifyContext({
+      text: "build component in react",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:framework");
+  });
+
+  it("classifies express server as code context", () => {
+    const result = classifyContext({
+      text: "create api with express",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:server");
+  });
+
+  it("classifies mongodb database as code context", () => {
+    const result = classifyContext({
+      text: "store data in mongodb",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:database");
+  });
+
+  it("classifies aws cloud as code context", () => {
+    const result = classifyContext({
+      text: "deploy to aws",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:cloud");
+  });
+
+  it("classifies github as code context", () => {
+    const result = classifyContext({
+      text: "push to github repository",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:productivity");
+  });
+
+  it("classifies next.js framework as code context", () => {
+    const result = classifyContext({
+      text: "build app with next",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:framework");
+  });
+
+  it("classifies typescript as code context", () => {
+    const result = classifyContext({
+      text: "write in typescript",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:bundler");
+  });
+
+  it("classifies postgres database as code context", () => {
+    const result = classifyContext({
+      text: "query postgres database",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:database");
+  });
+
+  it("classifies vercel deployment as code context", () => {
+    const result = classifyContext({
+      text: "deploy on vercel",
+      targetApp: notesApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:cloud");
+  });
+
+  it("classifies node runtime as code context", () => {
+    const result = classifyContext({
+      text: "run on node",
+      targetApp: textEditApp,
+      agentName: "VoiceInk",
+    });
+
+    expect(result.context).toBe("code");
+    expect(result.signals).toContain("tool:runtime");
+  });
+});
