@@ -11,6 +11,7 @@ import { getSettings, isCloudReasoningMode } from "../stores/settingsStore";
 import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 import { isAnswerLikeText } from "../utils/answerLikeDetection";
 import { hasUnresolvedAlternativeChoice, isQuestionLikeDictation } from "../utils/questionIntent";
+import { shouldBlockQuestionAnswerization, hasCodeOrStructuredContent, shouldBlockCodeOrStructuredContentRewrite, isAnswerLikeTranscriptionOutput } from "../utils/answerGuard";
 
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
@@ -241,33 +242,6 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       .trim();
 
     return tail.length > 0;
-  }
-
-  private splitIntoClauses(text: string): string[] {
-    return text
-      .split(/(?<=[?？.!。！？])\s+|[\n\r]+/u)
-      .map((part) => part.trim())
-      .filter(Boolean);
-  }
-
-  private hasQuestionThenAnswerPattern(source: string, candidate: string): boolean {
-    if (!this.isQuestionLikeText(source)) {
-      return false;
-    }
-
-    const clauses = this.splitIntoClauses(candidate);
-    if (clauses.length < 2) {
-      return false;
-    }
-
-    const questionClauseIndex = clauses.findIndex((clause) => this.isQuestionLikeText(clause));
-    if (questionClauseIndex === -1 || questionClauseIndex === clauses.length - 1) {
-      return false;
-    }
-
-    return clauses
-      .slice(questionClauseIndex + 1)
-      .some((clause) => clause.length > 0 && !this.isQuestionLikeText(clause));
   }
 
   private isAssistantDialogueQuestion(text: string): boolean {

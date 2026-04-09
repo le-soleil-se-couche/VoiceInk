@@ -329,6 +329,9 @@ declare global {
 
       // Database operations
       saveTranscription: (text: string) => Promise<{ id: number; success: boolean }>;
+      getTranscriptionsPage?: (
+        options?: TranscriptionPageRequest
+      ) => Promise<TranscriptionItem[]>;
       getTranscriptions: (limit?: number) => Promise<TranscriptionItem[]>;
       getTranscriptionsPage?: (
         options?: TranscriptionPageRequest
@@ -861,6 +864,7 @@ declare global {
       onLimitReached?: (
         callback: (data: { wordsUsed: number; limit: number }) => void
       ) => () => void;
+
 
 
       // Referral stats

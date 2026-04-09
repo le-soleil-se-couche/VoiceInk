@@ -18,6 +18,49 @@ const useTranscriptionStore = create<TranscriptionState>()(() => ({
 let hasBoundIpcListeners = false;
 const DEFAULT_LIMIT = 200;
 let currentLimit = DEFAULT_LIMIT;
+const PAGINATION_STORAGE_KEY = "voiceink_transcription_pagination";
+
+interface PaginationState {
+  hasMore: boolean;
+  oldestLoadedId: number | null;
+}
+
+function savePaginationState(state: PaginationState) {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(PAGINATION_STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.warn("Failed to save pagination state:", e);
+  }
+}
+
+function loadPaginationState(): PaginationState | null {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+  try {
+    const stored = window.localStorage.getItem(PAGINATION_STORAGE_KEY);
+    if (!stored) return null;
+    return JSON.parse(stored) as PaginationState;
+  } catch (e) {
+    console.warn("Failed to load pagination state:", e);
+    return null;
+  }
+}
+
+
+function mergeTranscriptions(
+  existing: TranscriptionItem[],
+  incoming: TranscriptionItem[]
+): TranscriptionItem[] {
+  const merged = [...existing];
+
+  for (const item of incoming) {
+    if (!merged.some((existingItem) => existingItem.id === item.id)) {
+      merged.push(item);
+    }
+  }
+
+  return merged;
+}
 
 function mergeTranscriptions(
   existing: TranscriptionItem[],

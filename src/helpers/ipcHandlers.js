@@ -3093,6 +3093,7 @@ class IPCHandlers {
     };
 
 
+
     let deepgramTokenWindowId = null;
 
     const fetchDeepgramStreamingTokenFromWindow = async (windowId) => {

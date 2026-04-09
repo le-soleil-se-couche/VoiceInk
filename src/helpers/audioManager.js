@@ -10,6 +10,10 @@ import { classifyContext, getTargetAppInfo, DEFAULT_STRICT_OVERLAP_THRESHOLD } f
 import { isAnswerLikeText } from "../utils/answerLikeDetection";
 import { canonicalizeDictationText } from "../utils/dictationCanonicalizer";
 import {
+  isAnswerLikeTranscriptionOutput,
+  shouldBlockQuestionAnswerization,
+} from "../utils/answerGuard";
+import {
   getSettings,
   getEffectiveReasoningModel,
   isCloudReasoningMode,
@@ -61,6 +65,7 @@ const isAnswerLikeTranscriptionOutput = (text) => {
   if (typeof text !== "string") return false;
   return isAnswerLikeText(text, 20);
 };
+
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // Split by script family so mixed tokens like "readme在" become ["readme", "在"].
@@ -2012,6 +2017,14 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             beforeLength: result.length,
             afterLength: postProcessed.length,
           });
+        }
+        if (shouldBlockQuestionAnswerization(textForProcessing, postProcessed)) {
+          logger.logReasoning("REASONING_QUESTION_ANSWERIZATION_BLOCKED", {
+            source,
+            inputPreview: textForProcessing.substring(0, 120),
+            outputPreview: postProcessed.substring(0, 120),
+          });
+          return finalizeFallbackOutput();
         }
         return postProcessed;
       } catch (error) {

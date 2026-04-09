@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Database functions
   saveTranscription: (text) => ipcRenderer.invoke("db-save-transcription", text),
+  getTranscriptionsPage: (options) => ipcRenderer.invoke("db-get-transcriptions-page", options),
   getTranscriptions: (limit) => ipcRenderer.invoke("db-get-transcriptions", limit),
   getTranscriptionsPage: (options) => ipcRenderer.invoke("db-get-transcriptions-page", options),
   clearTranscriptions: () => ipcRenderer.invoke("db-clear-transcriptions"),
@@ -384,6 +385,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getReferralStats: () => ipcRenderer.invoke("get-referral-stats"),
   sendReferralInvite: (email) => ipcRenderer.invoke("send-referral-invite", email),
   getReferralInvites: () => ipcRenderer.invoke("get-referral-invites"),
+
 
 
   // Deepgram Streaming

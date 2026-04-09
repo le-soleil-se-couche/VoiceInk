@@ -32,6 +32,8 @@ const TECH_TOOL_PATTERNS: Array<{ context: ReasoningContext; re: RegExp; signal:
   { context: "code", re: /\b(node|deno|bun|python|ruby|go|rust|java|cargo|pip|bundle)\b/i, signal: "tool:runtime" },
 ];
 
+
+
 const CONTENT_CONTEXT_RULES: Array<{ context: ReasoningContext; re: RegExp; signal: string }> = [
   {
     context: "code",
