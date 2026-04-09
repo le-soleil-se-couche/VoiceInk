@@ -39,6 +39,30 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a Chinese arithmetic question is rewritten into a numeric answer", async () => {
+    const source = "5+5等于几";
+    const candidate = "5+5等于10。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese value question ending with shi duoshao is rewritten into a value", async () => {
+    const source = "这个版本号是多少";
+    const candidate = "这个版本号是3.2.1。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when an English yes-no dictation ending with or not is rewritten into an answer", async () => {
     const source = "we should ship this today or not";
     const candidate = "We should ship this today.";
@@ -83,6 +107,17 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when an English assistant wrapper question omits punctuation after the wrapper", async () => {
+    const source = "what is the capital of france";
+    const candidate = "Sure what is the capital of France?";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("falls back when Chinese assistant wrapper question appears in strict mode", async () => {
     const source = "这个要改吗";
     const candidate = "好的，这个要改吗？";
@@ -94,9 +129,76 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when a Chinese assistant wrapper question omits punctuation after the wrapper", async () => {
+    const source = "这个要改吗";
+    const candidate = "好的这个要改吗？";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats find-out-if dictation as question intent and blocks direct answers", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "We should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("treats tell-me-whether dictation as question intent and blocks direct answers", async () => {
+    const source = "tell me whether we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("treats check-if dictation as question intent and blocks direct answers", async () => {
+    const source = "check if we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("treats i-wonder-if dictation as question intent and blocks direct answers", async () => {
+    const source = "i wonder if we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("treats Chinese want-to-know dictation as question intent and blocks direct answers", async () => {
+    const source = "我想知道为什么我们今天还不能把这个版本发出去";
+    const candidate = "我想知道为什么我们今天还不能把这个版本发出去，因为还有几个阻塞 bug 没修完。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when an indirect dictation question is rewritten into assistant dialogue", async () => {
+    const source = "i need to find out if we should ship this today";
+    const candidate = "Can you tell me if we should ship this today?";
 
     const result = await ReasoningService.enforceStrictMode(source, candidate, {
       strictMode: true,

@@ -28,6 +28,16 @@ const CONTENT_CONTEXT_RULES: Array<{ context: ReasoningContext; re: RegExp; sign
     signal: "text:code",
   },
   {
+    context: "code",
+    re: /(^|[\s(])(?:npm|pnpm|yarn|bun|npx|node|deno|python|python3|pip|pip3|uv|poetry|cargo|go|git|gh|docker|kubectl|helm|make|cmake|brew)\b/i,
+    signal: "text:code_cli",
+  },
+  {
+    context: "code",
+    re: /(?:^|[\s(])(?:\.{1,2}\/[\w./-]+|(?:[\w.-]+\/)+[\w.-]+\.(?:ts|tsx|js|jsx|mjs|cjs|json|md|py|go|rs|java|rb|sh|yaml|yml|toml|sql)|\/(?:[\w.-]+\/)+[\w.-]+|@[\w.-]+\/[\w.-]+|[\w.-]+\.(?:ts|tsx|js|jsx|mjs|cjs|json|md|py|go|rs|java|rb|sh|yaml|yml|toml|sql))\b/i,
+    signal: "text:code_artifact",
+  },
+  {
     context: "email",
     re: /(^|\n)\s*(subject:|dear\s+|hi\s+\w+|best regards|sincerely|thanks,)/i,
     signal: "text:email",

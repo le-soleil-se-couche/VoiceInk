@@ -146,6 +146,16 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return patterns.some((re) => re.test(text));
   }
 
+  private isChineseIndirectQuestion(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    return /^(?:我)?(?:想知道|想问(?:一下)?|想确认(?:一下)?|请问|麻烦你|麻烦帮我|帮我)(?:.{0,40})(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否|是不是|能不能|可不可以|要不要|会不会|有没有|行不行|对不对|好不好)/u.test(
+      text.trim()
+    );
+  }
+
   private isQuestionLikeText(text: string): boolean {
     if (!text || !text.trim()) {
       return false;
@@ -161,9 +171,14 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       /\b(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否)\b/,
       /(?:是不是|能不能|可不可以|要不要|会不会|有没有)/,
       /(?:行不行|对不对|好不好|可不可以|能不能|要不要|有没有|是不是)$/,
+      /(?:等于|等於|是|為|为)\s*(?:多少|几)\s*$/,
     ];
 
     if (zhQuestionPatterns.some((re) => re.test(normalized))) {
+      return true;
+    }
+
+    if (this.isChineseIndirectQuestion(text)) {
       return true;
     }
 
@@ -180,13 +195,37 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const enIndirectQuestionPatterns = [
       /^(?:i\s+(?:need|want|would\s+like|'d\s+like)\s+to\s+(?:find\s+out|see))\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:i\s+wonder|i(?:'m|\s+am)\s+wondering|i\s+was\s+wondering)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
       /^(?:please\s+)?(?:find\s+out|see)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:please\s+)?(?:check|confirm|verify|clarify)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:please\s+)?(?:tell\s+me|let\s+me\s+know)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
     ];
     if (enIndirectQuestionPatterns.some((re) => re.test(normalized))) {
       return true;
     }
 
     return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
+  }
+
+  private hasQuestionLeadInThenAnswerTail(source: string, candidate: string): boolean {
+    const normalizedSource = source.trim().replace(/[?？。.!！]+$/u, "");
+    const normalizedCandidate = candidate.trim();
+    if (
+      !normalizedSource ||
+      !normalizedCandidate ||
+      normalizedCandidate.length <= normalizedSource.length ||
+      !this.isQuestionLikeText(source) ||
+      !normalizedCandidate.startsWith(normalizedSource)
+    ) {
+      return false;
+    }
+
+    const tail = normalizedCandidate
+      .slice(normalizedSource.length)
+      .replace(/^[?？。.!！,，、；;:\-\s]+/u, "")
+      .trim();
+
+    return tail.length > 0;
   }
 
   private splitIntoClauses(text: string): string[] {
@@ -214,6 +253,66 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return clauses
       .slice(questionClauseIndex + 1)
       .some((clause) => clause.length > 0 && !this.isQuestionLikeText(clause));
+  }
+
+  private isAssistantDialogueQuestion(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    const normalized = text.trim().toLowerCase().normalize("NFKC");
+    const englishPatterns = [
+      /^(?:can|could|would|will)\s+you\s+(?:tell|confirm|check|verify|clarify)\b.{0,40}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:can|could|would|will)\s+you\s+let\s+me\s+know\b.{0,40}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+    ];
+    if (englishPatterns.some((re) => re.test(normalized))) {
+      return true;
+    }
+
+    const chinesePatterns = [
+      /^(?:你能|你可以|能不能|可不可以|请|麻烦你|帮我).{0,12}(?:告诉我|确认|看一下|看下|检查一下|检查下|说明).{0,20}(?:吗|么|呢|吧|[?？])?$/u,
+    ];
+    return chinesePatterns.some((re) => re.test(text.trim()));
+  }
+
+  private hasAssistantWrapperQuestionShift(source: string, candidate: string): boolean {
+    if (!this.isQuestionLikeText(source) || !candidate.trim()) {
+      return false;
+    }
+
+    const englishWrapperRe =
+      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)\b[\s,，、:：-]*(.+)$/i;
+    const chineseWrapperRe =
+      /^(?:好的|好|是的|对|對|嗯)\s*[，,、:：-]?\s*(.+)$/u;
+
+    const englishCandidateMatch = candidate.trim().match(englishWrapperRe);
+    if (englishCandidateMatch) {
+      const sourceMatch = source.trim().match(englishWrapperRe);
+      const remainder = englishCandidateMatch[1]?.trim() ?? "";
+      if (!sourceMatch && remainder && this.isQuestionLikeText(remainder)) {
+        return true;
+      }
+    }
+
+    const chineseCandidateMatch = candidate.trim().match(chineseWrapperRe);
+    if (chineseCandidateMatch) {
+      const sourceMatch = source.trim().match(chineseWrapperRe);
+      const remainder = chineseCandidateMatch[1]?.trim() ?? "";
+      if (!sourceMatch && remainder && this.isQuestionLikeText(remainder)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private hasAssistantDialogueQuestionShift(source: string, candidate: string): boolean {
+    return (
+      (this.isQuestionLikeText(candidate) &&
+        this.isAssistantDialogueQuestion(candidate) &&
+        !this.isAssistantDialogueQuestion(source)) ||
+      this.hasAssistantWrapperQuestionShift(source, candidate)
+    );
   }
 
   private calculateOverlapMetrics(source: string, candidate: string): {
@@ -548,6 +647,54 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         }
       }
       return finalizeFallback("question_answer_append");
+    }
+
+    if (this.hasQuestionLeadInThenAnswerTail(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+      return finalizeFallback("question_answer_tail");
+    }
+
+    if (this.hasAssistantDialogueQuestionShift(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+      return finalizeFallback("assistant_dialogue_question");
     }
 
     if (this.deletesNovelChineseContent(source, candidate)) {
