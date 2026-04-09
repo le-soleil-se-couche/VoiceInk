@@ -1,12 +1,13 @@
 import ReasoningService from "../services/ReasoningService";
 import { API_ENDPOINTS, NETWORK_TIMEOUTS, buildApiUrl, normalizeBaseUrl } from "../config/constants";
-import { buildCleanupUserMessage, getAnswerLikeRetryPrompt, getSystemPrompt } from "../config/prompts";
+import { getAnswerLikeRetryPrompt, getSystemPrompt } from "../config/prompts";
 import logger from "../utils/logger";
 import { isBuiltInMicrophone } from "../utils/audioDeviceUtils";
 import { isSecureEndpoint } from "../utils/urlUtils";
 import { withSessionRefresh } from "../lib/neonAuth";
 import { getBaseLanguageCode, validateLanguageForModel } from "../utils/languageSupport";
 import { classifyContext, getTargetAppInfo, DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
+import { isAnswerLikeText } from "../utils/answerLikeDetection";
 import { canonicalizeDictationText } from "../utils/dictationCanonicalizer";
 import {
   getSettings,
@@ -25,6 +26,8 @@ const MAC_STRICT_MIN_OUTPUT_COVERAGE = 0.7;
 const FLAG_CANONICALIZER_ENABLED = "dictationCanonicalizerEnabled";
 const FLAG_NUMBER_CANONICALIZER_ENABLED = "dictationNumberCanonicalizerEnabled";
 const FLAG_PUNCTUATION_CANONICALIZER_ENABLED = "dictationPunctuationCanonicalizerEnabled";
+const PENDING_TRANSCRIPTIONS_KEY = "voiceink_pending_transcriptions";
+const MAX_PENDING_TRANSCRIPTIONS = 100;
 
 const PLACEHOLDER_KEYS = {
   openai: "your_openai_api_key_here",
@@ -37,21 +40,6 @@ const isValidApiKey = (key, provider = "openai") => {
   const placeholder = PLACEHOLDER_KEYS[provider] || PLACEHOLDER_KEYS.openai;
   return key !== placeholder;
 };
-
-const ANSWER_LIKE_TRANSCRIPTION_PATTERNS = [
-  /(作为|身为).{0,10}(ai|语言模型|助手)/i,
-  /\b(as\s+(?:an?|your)\s+(?:ai\s+)?(?:assistant|language\s+model))\b/i,
-  /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
-  /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
-  /(不用担心|别担心|我会尽力|我可以帮你|请告诉我|请问你|[你您]想要).{0,40}/,
-  /^(?:好的|好|是的|对|對|嗯)[，,、]\s*.+(?:吗|麼|么|[?？])$/u,
-  /\b(as an ai|as a language model)\b/i,
-  /\b(i(?:'m| am)\s+here\s+to\s+help(?:\s+with\s+that)?)\b/i,
-  /\b(i\s*(can't|cannot|am unable|won't))\b/i,
-  /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
-  /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
-  /\b(you can try).{0,20}(sentence|example)\b/i,
-];
 
 const ENGLISH_FILLER_WORD_RE =
   /\b(?:um+|uh+|er+|ah+|hmm+|mm+|you\s+know|basically)\b/gi;
@@ -71,9 +59,7 @@ const CHINESE_WORD_REPEAT_STUTTER_RE =
 
 const isAnswerLikeTranscriptionOutput = (text) => {
   if (typeof text !== "string") return false;
-  const trimmed = text.trim();
-  if (trimmed.length < 20) return false;
-  return ANSWER_LIKE_TRANSCRIPTION_PATTERNS.some((re) => re.test(trimmed));
+  return isAnswerLikeText(text, 20);
 };
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -598,18 +584,6 @@ const STREAMING_PROVIDERS = {
     onFinal: (cb) => window.electronAPI.onDeepgramFinalTranscript(cb),
     onError: (cb) => window.electronAPI.onDeepgramError(cb),
     onSessionEnd: (cb) => window.electronAPI.onDeepgramSessionEnd(cb),
-  },
-  assemblyai: {
-    warmup: (opts) => window.electronAPI.assemblyAiStreamingWarmup(opts),
-    start: (opts) => window.electronAPI.assemblyAiStreamingStart(opts),
-    send: (buf) => window.electronAPI.assemblyAiStreamingSend(buf),
-    finalize: () => window.electronAPI.assemblyAiStreamingForceEndpoint(),
-    stop: () => window.electronAPI.assemblyAiStreamingStop(),
-    status: () => window.electronAPI.assemblyAiStreamingStatus(),
-    onPartial: (cb) => window.electronAPI.onAssemblyAiPartialTranscript(cb),
-    onFinal: (cb) => window.electronAPI.onAssemblyAiFinalTranscript(cb),
-    onError: (cb) => window.electronAPI.onAssemblyAiError(cb),
-    onSessionEnd: (cb) => window.electronAPI.onAssemblyAiSessionEnd(cb),
   },
 };
 
@@ -3087,11 +3061,92 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     }
   }
 
+  getPendingTranscriptions() {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return [];
+    }
+    try {
+      const raw = window.localStorage.getItem(PENDING_TRANSCRIPTIONS_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      logger.error("Failed to get pending transcriptions", { error: error.message }, "persistence");
+      return [];
+    }
+  }
+
+  savePendingTranscription(text) {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return false;
+    }
+    try {
+      const pending = this.getPendingTranscriptions();
+      pending.push({ text, timestamp: Date.now() });
+      // Keep only the most recent transcriptions to avoid localStorage bloat
+      while (pending.length > MAX_PENDING_TRANSCRIPTIONS) {
+        pending.shift();
+      }
+      window.localStorage.setItem(PENDING_TRANSCRIPTIONS_KEY, JSON.stringify(pending));
+      logger.info("Saved pending transcription", { count: pending.length }, "persistence");
+      return true;
+    } catch (error) {
+      logger.error("Failed to save pending transcription", { error: error.message }, "persistence");
+      return false;
+    }
+  }
+
+  async flushPendingTranscriptions() {
+    const pending = this.getPendingTranscriptions();
+    if (pending.length === 0) {
+      return { flushed: 0, failed: 0 };
+    }
+
+    logger.info("Flushing pending transcriptions", { count: pending.length }, "persistence");
+    let flushed = 0;
+    let failed = 0;
+
+    for (const item of pending) {
+      try {
+        await window.electronAPI.saveTranscription(item.text);
+        flushed++;
+      } catch (error) {
+        logger.error("Failed to flush pending transcription", { error: error.message }, "persistence");
+        failed++;
+      }
+    }
+
+    // Clear all pending transcriptions after flush attempt
+    if (typeof window !== "undefined" && window.localStorage) {
+      window.localStorage.removeItem(PENDING_TRANSCRIPTIONS_KEY);
+    }
+
+    logger.info("Pending transcriptions flush complete", { flushed, failed }, "persistence");
+    return { flushed, failed };
+  }
+
+  clearPendingTranscriptions() {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return false;
+    }
+    try {
+      window.localStorage.removeItem(PENDING_TRANSCRIPTIONS_KEY);
+      return true;
+    } catch (error) {
+      logger.error("Failed to clear pending transcriptions", { error: error.message }, "persistence");
+      return false;
+    }
+  }
+
+
   async saveTranscription(text) {
     try {
       await window.electronAPI.saveTranscription(text);
       return true;
     } catch (error) {
+      // Queue for later retry if save fails (e.g., app crash during IPC)
+      logger.warn("Transcription save failed, queuing for retry", { error: error.message }, "persistence");
+      this.savePendingTranscription(text);
       return false;
     }
   }

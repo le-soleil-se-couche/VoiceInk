@@ -9,6 +9,18 @@ const TOKEN_EXPIRY_MS = 300000;
 const REWARM_DELAY_MS = 2000;
 const MAX_REWARM_ATTEMPTS = 10;
 const KEEPALIVE_INTERVAL_MS = 3000;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_BASE_DELAY_MS = 500;
+const RECONNECT_MAX_DELAY_MS = 5000;
+const TRANSIENT_ERROR_PATTERNS = [
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'ECONNREFUSED',
+  'ENOTFOUND',
+  'socket hang up',
+  'network',
+  'timeout',
+];
 const COLD_START_BUFFER_MAX = 3 * SAMPLE_RATE * 2; // 3 seconds of 16-bit PCM
 const LIVENESS_TIMEOUT_MS = 2500; // Max wait for first Results from a warm connection
 
@@ -104,7 +116,10 @@ class DeepgramStreaming {
     this.livenessTimer = null;
     this.replayBuffer = [];
     this.replayBufferSize = 0;
+    this.messageQueue = [];  // Buffer messages during connection transitions
     this.connectionOptions = null;
+    this.reconnectAttempts = 0;
+    this.lastReconnectTime = 0;
   }
 
   setTokenRefreshFn(fn) {
@@ -420,6 +435,8 @@ class DeepgramStreaming {
     this.warmSessionId = null;
 
     this.ws.removeAllListeners("message");
+    // Flush any queued messages from warm connection before attaching new listener
+    this.messageQueue = [];  // Clear queue when taking over warm connection
     this.ws.on("message", (data) => {
       this.handleMessage(data);
     });
@@ -427,8 +444,13 @@ class DeepgramStreaming {
     this.ws.removeAllListeners("error");
     this.ws.on("error", (error) => {
       debugLogger.error("Deepgram WebSocket error", { error: error.message });
+      const gen = this._generation;
       this.cleanup();
-      this.onError?.(error);
+      if (this.shouldAttemptReconnect(error)) {
+        this.attemptReconnect(error, { generation: gen });
+      } else {
+        this.onError?.(error);
+      }
     });
 
     this.ws.removeAllListeners("close");
@@ -483,7 +505,105 @@ class DeepgramStreaming {
         hasKeepAlive: this.keepAliveInterval !== null,
       });
     }
+
     return result;
+  }
+
+
+  isTransientError(error) {
+    if (!error || !error.message) return false;
+    const msg = error.message.toLowerCase();
+    return TRANSIENT_ERROR_PATTERNS.some(pattern => msg.includes(pattern.toLowerCase()));
+  }
+
+  calculateReconnectDelay(attempt) {
+    const exponentialDelay = RECONNECT_BASE_DELAY_MS * Math.pow(2, attempt);
+    const jitter = Math.random() * 0.3 * exponentialDelay;
+    return Math.min(exponentialDelay + jitter, RECONNECT_MAX_DELAY_MS);
+  }
+
+  shouldAttemptReconnect(error) {
+    if (!this.isTransientError(error)) {
+      debugLogger.debug("Deepgram non-transient error, skipping reconnect", {
+        error: error.message,
+      });
+      return false;
+    }
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      debugLogger.debug("Deepgram max reconnect attempts reached", {
+        attempts: this.reconnectAttempts,
+      });
+      return false;
+    }
+    const now = Date.now();
+    const timeSinceLastReconnect = now - this.lastReconnectTime;
+    if (timeSinceLastReconnect < 1000) {
+      debugLogger.debug("Deepgram reconnect rate limit", {
+        timeSinceLastReconnect,
+      });
+      return false;
+    }
+    return true;
+  }
+
+  async attemptReconnect(error, options = {}) {
+    if (!this.shouldAttemptReconnect(error)) {
+      this.onError?.(error);
+      return;
+    }
+
+    this.reconnectAttempts++;
+    this.lastReconnectTime = Date.now();
+    const delay = this.calculateReconnectDelay(this.reconnectAttempts);
+
+    debugLogger.info("Deepgram attempting reconnect", {
+      attempt: this.reconnectAttempts,
+      maxAttempts: MAX_RECONNECT_ATTEMPTS,
+      delayMs: Math.round(delay),
+      error: error.message,
+    });
+
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    if (this._generation !== options.generation) {
+      debugLogger.debug("Deepgram reconnect cancelled: generation changed");
+      return;
+    }
+
+    let token = this.getCachedToken();
+    if (!token && this.tokenRefreshFn) {
+      try {
+        token = await this.tokenRefreshFn();
+        if (token) this.cacheToken(token);
+      } catch (refreshErr) {
+        debugLogger.error("Deepgram reconnect token refresh failed", {
+          error: refreshErr.message,
+        });
+        this.onError?.(error);
+        return;
+      }
+    }
+
+    if (!token) {
+      this.onError?.(error);
+      return;
+    }
+
+    try {
+      await this.connect({
+        ...this.connectionOptions,
+        token,
+        replayBuffer: this.replayBuffer,
+        forceNew: true,
+      });
+      debugLogger.debug("Deepgram reconnect succeeded");
+      this.reconnectAttempts = 0;
+    } catch (reconnectErr) {
+      debugLogger.error("Deepgram reconnect failed", {
+        error: reconnectErr.message,
+      });
+      await this.attemptReconnect(reconnectErr, options);
+    }
   }
 
   startLivenessCheck() {
@@ -500,6 +620,8 @@ class DeepgramStreaming {
 
     const gen = this._generation;
     const savedReplay = this.replayBuffer;
+    const savedAccumulatedText = this.accumulatedText;
+    const savedFinalSegments = [...this.finalSegments];
 
     debugLogger.warn("Deepgram warm connection unresponsive, reconnecting", {
       audioBytesSent: this.audioBytesSent,
@@ -529,6 +651,8 @@ class DeepgramStreaming {
         ...this.connectionOptions,
         token,
         replayBuffer: savedReplay,
+        accumulatedText: savedAccumulatedText,
+        finalSegments: savedFinalSegments,
         forceNew: true,
       });
       debugLogger.debug("Deepgram liveness reconnect succeeded");
@@ -553,8 +677,8 @@ class DeepgramStreaming {
       language: options.language,
       keyterms: options.keyterms,
     };
-    this.accumulatedText = "";
-    this.finalSegments = [];
+    this.accumulatedText = options.accumulatedText || "";
+    this.finalSegments = options.finalSegments || [];
     this.audioBytesSent = 0;
     this.resultsReceived = 0;
 
@@ -609,13 +733,18 @@ class DeepgramStreaming {
           this.cachedToken = null;
           this.tokenFetchedAt = null;
         }
+        const gen = this._generation;
         this.cleanup();
         if (this.pendingReject) {
-          this.pendingReject(error);
           this.pendingReject = null;
           this.pendingResolve = null;
         }
-        this.onError?.(error);
+        // Attempt reconnect for transient errors, otherwise propagate
+        if (this.shouldAttemptReconnect(error)) {
+          this.attemptReconnect(error, { generation: gen });
+        } else {
+          this.onError?.(error);
+        }
       });
 
       this.ws.on("close", (code, reason) => {
@@ -645,6 +774,14 @@ class DeepgramStreaming {
     try {
       const message = JSON.parse(data.toString());
 
+      // Ignore messages from stale connection generations to prevent ordering issues
+      // Messages are only valid if they arrive after the connection was established
+      if (!this.isConnected && !this.pendingResolve) {
+        debugLogger.debug("Deepgram message received before connection ready, queuing");
+        this.messageQueue.push(data);
+        return;
+      }
+
       // Resolve pending connect() promise on first valid message.
       // With nova-3, when audio is already flowing, Deepgram may skip
       // the Metadata message and jump straight to SpeechStarted/Results.
@@ -659,9 +796,12 @@ class DeepgramStreaming {
           sessionId: this.sessionId,
           firstMessageType: message.type,
         });
+        this.reconnectAttempts = 0;
         this.pendingResolve();
         this.pendingResolve = null;
         this.pendingReject = null;
+        // Flush any queued messages after connection is established
+        this.flushMessageQueue();
       }
 
       switch (message.type) {
@@ -671,6 +811,7 @@ class DeepgramStreaming {
 
         case "Results": {
           this.resultsReceived++;
+          this.reconnectAttempts = 0;
           if (this.livenessTimer) {
             clearTimeout(this.livenessTimer);
             this.livenessTimer = null;
@@ -716,6 +857,21 @@ class DeepgramStreaming {
     } catch (err) {
       debugLogger.error("Deepgram message parse error", { error: err.message });
     }
+  }
+
+  flushMessageQueue() {
+    if (this.messageQueue.length === 0) return;
+    debugLogger.debug("Deepgram flushing queued messages", { count: this.messageQueue.length });
+    const queue = this.messageQueue;
+    this.messageQueue = [];
+    // Process queued messages directly without re-queuing
+    // Set isConnected to true to ensure messages are processed
+    const wasConnected = this.isConnected;
+    this.isConnected = true;
+    for (const data of queue) {
+      this.handleMessage(data);
+    }
+    this.isConnected = wasConnected;
   }
 
   sendAudio(pcmBuffer) {
@@ -828,6 +984,7 @@ class DeepgramStreaming {
     this.livenessTimer = null;
     this.replayBuffer = [];
     this.replayBufferSize = 0;
+    this.messageQueue = [];
 
     if (this.ws) {
       try {
@@ -843,6 +1000,11 @@ class DeepgramStreaming {
     this.closeResolve = null;
   }
 
+  resetReconnectState() {
+    this.reconnectAttempts = 0;
+    this.lastReconnectTime = 0;
+  }
+
   cleanupAll() {
     this.cleanup();
     this.cleanupWarmConnection();
@@ -854,6 +1016,7 @@ class DeepgramStreaming {
     this.tokenFetchedAt = null;
     this.warmConnectionOptions = null;
     this.finalSegments = [];
+    this.resetReconnectState();
   }
 
   getStatus() {

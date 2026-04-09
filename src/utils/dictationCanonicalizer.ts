@@ -96,6 +96,24 @@ const LITERAL_TERMS = [
   "杠",
 ];
 
+const ENGLISH_TECH_PROTECTIONS = [
+  "API",
+  "SDK",
+  "IDE",
+  "CLI",
+  "URL",
+  "HTTP",
+  "HTTPS",
+  "JSON",
+  "XML",
+  "CSS",
+  "HTML",
+  "DOM",
+  "npm",
+];
+
+
+
 const IDIOM_PROTECTIONS = [
   "一心一意",
   "一举两得",
@@ -356,6 +374,24 @@ const protectLiteralMentions = (
   return protectedText;
 };
 
+const protectEnglishTechTerms = (
+  value: string,
+  placeholders: Map<string, string>,
+  stats: DictationCanonicalizerStats
+) => {
+  let protectedText = value;
+  const pattern = /\b(API|SDK|IDE|CLI|URL|HTTP|HTTPS|JSON|XML|CSS|HTML|DOM|npm|VSCode|GitHub|GitLab|Docker|Kubernetes|AWS|Azure|GCP|REST|GraphQL|gRPC|TCP|IP|DNS|SSH|SSL|TLS|JWT|OAuth|SAML|LDAP|SMTP|IMAP|POP3|FTP|SFTP|WebSocket|WebRTC|WebAssembly|TypeScript|JavaScript|Python|Java|Go|Rust|Ruby|Swift|Kotlin|React|Vue|Angular|Next\.js|Nuxt\.js|Electron|Vite|Webpack|Babel|ESLint|Prettier|Jest|Vitest|Playwright|Cypress)\b/gi;
+  protectedText = protectByRegex({
+    value: protectedText,
+    regex: pattern,
+    placeholders,
+    counter: () => {
+      stats.literalProtections += 1;
+    },
+  });
+  return protectedText;
+};
+
 const applyLowAmbiguityPunctuationRules = (
   value: string,
   stats: DictationCanonicalizerStats
@@ -470,6 +506,7 @@ export const canonicalizeDictationText = (
   const placeholders = new Map<string, string>();
   let next = baseText;
   next = protectIdioms(next, placeholders, stats);
+  next = protectEnglishTechTerms(next, placeholders, stats);
   next = protectLiteralMentions(next, placeholders, stats);
 
   if (stats.punctuationEnabled) {

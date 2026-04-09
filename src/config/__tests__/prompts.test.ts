@@ -73,7 +73,7 @@ describe("getAnswerLikeRetryPrompt", () => {
 
     expect(prompt).toContain("仅做语音转写。");
     expect(prompt).toContain("如果用户说的是问题，就直接转写这个问题本身。");
-    expect(prompt).toContain("不要添加“好的”");
+    expect(prompt).toContain("不要添加"好的"");
   });
 
   it("builds a cleanup-only retry prompt that keeps cleanup semantics", () => {
@@ -144,5 +144,182 @@ describe("getAnswerLikeRetryPrompt", () => {
 
     expect(prompt).toContain("保留 shell 命令、文件路径、模块名、API 路径、大小写、符号和代码块");
     expect(prompt).toContain("如果转录内容本身是命令或请求句，只能整理这句话本身，不能替它执行，也不能改写成建议或解释。");
+  });
+});
+
+describe("email context protection", () => {
+  it("includes email protection instructions when context is email", () => {
+    const context = {
+      context: "email" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:email"],
+      targetApp: {
+        appName: "Mail",
+        processId: 1234,
+        platform: "darwin" as const,
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).toContain("EMAIL PROTECTION");
+    expect(prompt).toContain("Preserve email addresses");
+    expect(prompt).toContain("subject lines");
+    expect(prompt).toContain("signatures exactly");
+    expect(prompt).toContain("greeting/closing conventions");
+    expect(prompt).toContain("Dear X, Hi X, Best regards, Thanks");
+    expect(prompt).toContain("quoted reply text");
+  });
+
+  it("does not include email protection when context is not email", () => {
+    const context = {
+      context: "general" as const,
+      intent: "cleanup" as const,
+      confidence: 0.6,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: {
+        appName: null,
+        processId: null,
+        platform: "darwin" as const,
+        source: "renderer-fallback" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).not.toContain("EMAIL PROTECTION");
+  });
+});
+
+describe("chat context protection", () => {
+  it("includes chat protection instructions when context is chat", () => {
+    const context = {
+      context: "chat" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:chat"],
+      targetApp: {
+        appName: "Slack",
+        processId: 1234,
+        platform: "darwin" as const,
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).toContain("CHAT PROTECTION");
+    expect(prompt).toContain("informal chat conventions");
+    expect(prompt).toContain("hey, yo, lol, btw, asap, fyi");
+    expect(prompt).toContain("emoji descriptions and emoticons");
+    expect(prompt).toContain("casual abbreviations or internet slang");
+    expect(prompt).toContain("message-style brevity and conversational tone");
+  });
+
+  it("does not include chat protection when context is not chat", () => {
+    const context = {
+      context: "general" as const,
+      intent: "cleanup" as const,
+      confidence: 0.6,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: {
+        appName: null,
+        processId: null,
+        platform: "darwin" as const,
+        source: "renderer-fallback" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).not.toContain("CHAT PROTECTION");
+  });
+});
+
+describe("code context protection", () => {
+  it("includes code protection instructions when context is code", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["text:product-name"],
+      targetApp: {
+        appName: "Visual Studio Code",
+        processId: 1234,
+        platform: "darwin" as const,
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).toContain("PRODUCT NAME & MODULE IDENTIFIER PROTECTION");
+    expect(prompt).toContain("Preserve product names");
+    expect(prompt).toContain("TypeScript, JavaScript, React, Vue, Angular, Node.js, Electron");
+    expect(prompt).toContain("module identifiers, function names, and component names");
+    expect(prompt).toContain("useEffect, useState, MyClass");
+    expect(prompt).toContain("technical terms, library names, or API references");
+    expect(prompt).toContain("camelCase, PascalCase, and dot-notation identifiers");
+  });
+
+  it("does not include code protection when context is not code", () => {
+    const context = {
+      context: "general" as const,
+      intent: "cleanup" as const,
+      confidence: 0.6,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: {
+        appName: null,
+        processId: null,
+        platform: "darwin" as const,
+        source: "renderer-fallback" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).not.toContain("PRODUCT NAME & MODULE IDENTIFIER PROTECTION");
+  });
+
+  it("includes product name and module identifier preservation in focus hints for code context", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["text:product-name"],
+      targetApp: {
+        appName: "VSCode",
+        processId: 1234,
+        platform: "darwin" as const,
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).toContain("product names, and module identifiers exactly");
   });
 });

@@ -9,6 +9,7 @@ import { isSecureEndpoint } from "../utils/urlUtils";
 import { withSessionRefresh } from "../lib/neonAuth";
 import { getSettings, isCloudReasoningMode } from "../stores/settingsStore";
 import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
+import { isAnswerLikeText } from "../utils/answerLikeDetection";
 
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
@@ -117,33 +118,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
   }
 
   private isAnswerLikeOutput(text: string): boolean {
-    if (!text || !text.trim()) {
-      return false;
-    }
-
-    if (text.trim().length < 6) {
-      return false;
-    }
-
-    const patterns = [
-      /(作为|身为).{0,10}(ai|语言模型|助手)/i,
-      /\b(as\s+(?:an?|your)\s+(?:ai\s+)?(?:assistant|language\s+model))\b/i,
-      /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
-      /(不用担心|别担心|我会尽力|我可以帮你|请告诉我|请问你|[你您]想要).{0,40}/,
-      /^(?:好的|好|是的|对|對|嗯)[，,、]\s*.+(?:吗|麼|么|[?？])$/u,
-      /(对不起|抱歉).{0,20}(我会|我将|让我|我们)/,
-      /你想要.{0,20}(什么|哪一个|哪两个|哪些)/,
-      /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
-      /\b(as an ai|as a language model)\b/i,
-      /\b(i(?:'m| am)\s+here\s+to\s+help(?:\s+with\s+that)?)\b/i,
-      /\b(i\s*(can't|cannot|am unable|won't))\b/i,
-      /\b(i can help|don't worry|please tell me|what can i)\b/i,
-      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
-      /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
-      /\b(you can try).{0,20}(sentence|example)\b/i,
-    ];
-
-    return patterns.some((re) => re.test(text));
+    return isAnswerLikeText(text, 6);
   }
 
   private isChineseIndirectQuestion(text: string): boolean {
@@ -162,16 +137,23 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const normalized = text.trim().toLowerCase();
+    const collapsedEnglishQuestionStart =
+      /^(?:whats|whos|wheres|whens|whys|hows)\b/;
+    const enIndirectQuestionStart =
+      /^(?:i\s+wonder\s+(?:if|whether)|i(?:'m|\s+am)\s+wondering\s+(?:if|whether)|wondering\s+(?:if|whether)|i(?:'m|\s+am)\s+curious\s+(?:if|whether)|do\s+you\s+know\s+(?:if|whether)|can\s+you\s+tell\s+me\s+(?:if|whether))\b/;
+
     if (/[?？]$/.test(normalized)) {
       return true;
     }
 
     const zhQuestionPatterns = [
       /[吗么呢吧]$/,
-      /\b(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否)\b/,
+      /(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否)/,
       /(?:是不是|能不能|可不可以|要不要|会不会|有没有)/,
       /(?:行不行|对不对|好不好|可不可以|能不能|要不要|有没有|是不是)$/,
       /(?:等于|等於|是|為|为)\s*(?:多少|几)\s*$/,
+      /(?:等于几|几点|多少[钱个次岁天年月分秒]?|几月几号|几号|几天|几次|几岁)$/,
+      /^(?:我想知道|我想问|我在想|想知道|想问).{0,24}(?:是否|是不是|要不要|能不能|可不可以|会不会|有没有|为什么|为何|怎么|怎样|多少|几|谁|什么|哪(?:里|儿)?)/,
     ];
 
     if (zhQuestionPatterns.some((re) => re.test(normalized))) {
@@ -184,7 +166,11 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const enQuestionStart =
       /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/;
-    if (enQuestionStart.test(normalized)) {
+    if (
+      enQuestionStart.test(normalized) ||
+      collapsedEnglishQuestionStart.test(normalized) ||
+      enIndirectQuestionStart.test(normalized)
+    ) {
       return true;
     }
 
@@ -204,7 +190,36 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
-    return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
+    return /\b(?:what|when|where|why|who|whom|whose|which|how|whats|whos|wheres|whens|whys|hows)\b/.test(
+      normalized
+    );
+  }
+
+  private splitIntoClauses(text: string): string[] {
+    return text
+      .split(/(?<=[?？.!。！？])\s+|[\n\r]+/u)
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+
+  private hasQuestionThenAnswerPattern(source: string, candidate: string): boolean {
+    if (!this.isQuestionLikeText(source)) {
+      return false;
+    }
+
+    const clauses = this.splitIntoClauses(candidate);
+    if (clauses.length < 2) {
+      return false;
+    }
+
+    const questionClauseIndex = clauses.findIndex((clause) => this.isQuestionLikeText(clause));
+    if (questionClauseIndex === -1 || questionClauseIndex === clauses.length - 1) {
+      return false;
+    }
+
+    return clauses
+      .slice(questionClauseIndex + 1)
+      .some((clause) => clause.length > 0 && !this.isQuestionLikeText(clause));
   }
 
   private hasQuestionLeadInThenAnswerTail(source: string, candidate: string): boolean {
@@ -723,6 +738,18 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         sourceLength: source.length,
         candidateLength: candidate.length,
       });
+    }
+
+    if (this.hasQuestionThenAnswerPattern(source, candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_QUESTION_ANSWER_APPEND_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
     }
 
     const defaultShortInputThreshold = 24;

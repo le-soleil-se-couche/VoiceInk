@@ -103,9 +103,22 @@ function getContextInstruction(context?: ContextClassification, uiLanguage?: str
       ? "The source may look like a request sentence, but this is still cleanup mode. Preserve it as dictated text instead of fulfilling it."
       : "Stay in cleanup mode; only refine the user's words without executing, answering, or expanding them.";
 
+  const emailProtection =
+    context.context === "email"
+      ? "\n\nEMAIL PROTECTION:\n- Preserve email addresses (to/from/cc), subject lines, and signatures exactly.\n- Do not rewrite greeting/closing conventions (Dear X, Hi X, Best regards, Thanks, etc.).\n- Keep quoted reply text and inline replies anchored to original structure."
+      : "";
+  const chatProtection =
+    context.context === "chat"
+      ? "\n\nCHAT PROTECTION:\n- Preserve informal chat conventions (hey, yo, lol, btw, asap, fyi).\n- Keep emoji descriptions and emoticons intact.\n- Do not over-polish casual abbreviations or internet slang.\n- Maintain message-style brevity and conversational tone."
+      : "";
+  const codeProtection =
+    context.context === "code"
+      ? "\n\nPRODUCT NAME & MODULE IDENTIFIER PROTECTION:\n- Preserve product names (TypeScript, JavaScript, React, Vue, Angular, Node.js, Electron, etc.) exactly as spoken.\n- Preserve module identifiers, function names, and component names (useEffect, useState, MyClass, etc.) without translation.\n- Do not rewrite technical terms, library names, or API references.\n- Keep camelCase, PascalCase, and dot-notation identifiers intact."
+      : "";
+
   return isZh
-    ? `上下文提示：${contextLabels[context.context]}。${appSuffix} ${focusHints[context.context]} ${intentHint}`
-    : `Context hint: ${contextLabels[context.context]}.${appSuffix} ${focusHints[context.context]} ${intentHint}`;
+    ? `上下文提示：${contextLabels[context.context]}。${appSuffix} ${focusHints[context.context]} ${intentHint}${emailProtection}${chatProtection}${codeProtection}`
+    : `Context hint: ${contextLabels[context.context]}.${appSuffix} ${focusHints[context.context]} ${intentHint}${emailProtection}${chatProtection}${codeProtection}`;
 }
 
 function getDictionaryEnforcementInstruction(uiLanguage?: string): string {
