@@ -652,4 +652,302 @@ describe("over-optimization prevention", () => {
 
     expect(result).toBe(source);
   });
+  it("falls back when a cleaned English question appends a resolved answer", () => {
+    const source = "what is the capital of france";
+    const candidate = "What is the capital of France? Paris.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when an English negative-contraction question is rewritten into a statement", () => {
+    const source = "shouldn't we ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when an irregular English negative-contraction question is rewritten into a statement", () => {
+    const source = "can't we ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a contractionless English what's-question is rewritten into an answer", () => {
+    const source = "whats the capital of france";
+    const candidate = "The capital of France is Paris.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when an indirect English wonder-if dictation is rewritten into a resolved statement", () => {
+    const source = "i wonder if we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when an indirect English wondering-whether dictation is rewritten into a resolved statement", () => {
+    const source = "i'm wondering whether we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when an indirect English uncertainty-if dictation is rewritten into a resolved statement", () => {
+    const source = "not sure if we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when bare whether-led English dictation is rewritten into a resolved statement", () => {
+    const source = "whether we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a let-me-know indirect English dictation is rewritten into a resolved statement", () => {
+    const source = "let me know if we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a polite indirect English dictation is rewritten into a resolved statement", () => {
+    const source = "please let me know if we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when advise-style indirect English dictation is rewritten into a resolved statement", () => {
+    const source = "please advise whether we should ship this today";
+    const candidate = "We should ship this today.";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a cleaned Chinese question appends a resolved answer", () => {
+    const source = "这个要改吗";
+    const candidate = "这个要改吗？要改。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese why-question is rewritten into a statement", () => {
+    const source = "为什么会这样";
+    const candidate = "这是系统延迟导致的。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when an inline Chinese what-question is rewritten into an explanation", () => {
+    const source = "这个是什么原因";
+    const candidate = "这是网络配置问题。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a long Chinese A-not-A question is rewritten into a statement", () => {
+    const source = "我们这次发布前把监控只开核心告警稳不稳";
+    const candidate = "我们这次发布前把监控只开核心告警很稳。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a long repeated-phrase Chinese A-not-A question is rewritten into a statement", () => {
+    const source = "按照现在这个发布时间安排靠谱不靠谱";
+    const candidate = "按照现在这个发布时间安排很靠谱。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese alternative-choice dictation is rewritten into a resolved statement", () => {
+    const source = "这个需求我们今天发还是明天发比较稳妥";
+    const candidate = "这个需求我们今天发比较稳妥。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a pronoun-led Chinese alternative choice is rewritten into a single option", () => {
+    const source = "我们今天发还是明天发";
+    const candidate = "我们今天发。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when an English alternative-choice question is rewritten into a single option", () => {
+    const source = "should we ship this today or tomorrow";
+    const candidate = "Should we ship this today?";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when an English multi-option choice is rewritten into a single option", () => {
+    const source = "should we ship this today or tomorrow or Monday";
+    const candidate = "Should we ship this today?";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a long Chinese quantity question using 几 is rewritten into a resolved answer", () => {
+    const source = "我们这个接口在正式发布之前一共要重试几次才比较稳妥";
+    const candidate = "我们这个接口在正式发布之前一共要重试三次才比较稳妥。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when a Chinese duration question is rewritten into a resolved answer", () => {
+    const source = "这个多久能上线";
+    const candidate = "这个明天能上线。";
+
+    const result = ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("detects classic AI assistant self-reference patterns", () => {
+    const patterns = [
+      "As an AI assistant, I can help you with that.",
+      "作为 AI 助手，我可以帮你处理这个。",
+      "I am a language model and cannot execute commands.",
+      "我是一个语言模型，无法执行此操作。",
+    ];
+
+    patterns.forEach((text) => {
+      const result = ReasoningService.enforceStrictMode("test", text, { strictMode: true });
+      expect(result).toBe("test");
+    });
+  });
+
+  it("detects refusal patterns with offers to help", () => {
+    const patterns = [
+      "I cannot do that, but I can help you draft the text.",
+      "我不能执行这个命令，但我可以帮你整理这句话。",
+      "I'm unable to assist with that request. However, I can summarize.",
+      "Don't worry, I'm here to help with your transcription.",
+    ];
+
+    patterns.forEach((text) => {
+      const result = ReasoningService.enforceStrictMode("test", text, { strictMode: true });
+      expect(result).toBe("test");
+    });
+  });
+
+  it("detects instructional meta-commentary about the tool itself", () => {
+    const patterns = [
+      "If you want to test VoiceInk, try speaking clearly.",
+      "You can try dictating a sample sentence to see how it works.",
+      "To use this transcription tool, press the hotkey and speak.",
+      "如果您想试试语音转文字，请对着麦克风说话。",
+    ];
+
+    patterns.forEach((text) => {
+      const result = ReasoningService.enforceStrictMode("test", text, { strictMode: true });
+      expect(result).toBe("test");
+    });
+  });
+
+  it("allows normal cleanup output that is not assistant-like", () => {
+    const normalOutputs = [
+      "What is the capital of France?",
+      "Should we ship this today?",
+      "这个需求我们今天发还是明天发比较稳妥",
+      "The meeting is scheduled for 3 PM tomorrow.",
+      "Please review the attached document.",
+    ];
+
+    normalOutputs.forEach((text) => {
+      const result = ReasoningService.enforceStrictMode(text, text, { strictMode: true });
+      expect(result).toBe(text);
+    });
+  });
 });

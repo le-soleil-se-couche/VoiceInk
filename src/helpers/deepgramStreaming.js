@@ -22,6 +22,8 @@ const TRANSIENT_ERROR_PATTERNS = [
   'timeout',
 ];
 const COLD_START_BUFFER_MAX = 3 * SAMPLE_RATE * 2; // 3 seconds of 16-bit PCM
+const MAX_REPLAY_BUFFER_SECONDS = 30; // Cap replay buffer to 30s of audio to prevent OOM
+const MAX_REPLAY_BUFFER_BYTES = MAX_REPLAY_BUFFER_SECONDS * SAMPLE_RATE * 2; // 16-bit mono
 const LIVENESS_TIMEOUT_MS = 2500; // Max wait for first Results from a warm connection
 
 // Languages supported by Nova-3 (base codes). If a language isn't here, fall back to Nova-2.
@@ -113,6 +115,10 @@ class DeepgramStreaming {
     this.audioBytesSent = 0;
     this.currentModel = "nova-3";
     this.resultsReceived = 0;
+
+    this.lastProcessedSequenceId = null;
+    this.processedTranscripts = new Set();
+
     this.livenessTimer = null;
     this.replayBuffer = [];
     this.replayBufferSize = 0;
@@ -620,6 +626,8 @@ class DeepgramStreaming {
 
     const gen = this._generation;
     const savedReplay = this.replayBuffer;
+    // Preserve accumulated text and final segments to maintain correct
+    // transcription ordering after reconnection
     const savedAccumulatedText = this.accumulatedText;
     const savedFinalSegments = [...this.finalSegments];
 
@@ -630,6 +638,9 @@ class DeepgramStreaming {
     this.isDisconnecting = true;
     this.cleanup();
     this.isDisconnecting = false;
+    // Restore accumulated text and final segments after cleanup
+    this.accumulatedText = savedAccumulatedText;
+    this.finalSegments = savedFinalSegments;
 
     if (gen !== this._generation) return;
 
@@ -681,6 +692,10 @@ class DeepgramStreaming {
     this.finalSegments = options.finalSegments || [];
     this.audioBytesSent = 0;
     this.resultsReceived = 0;
+
+    this.lastProcessedSequenceId = null;
+    this.processedTranscripts = new Set();
+
 
     if (replayBuffer && replayBuffer.length > 0) {
       this.coldStartBuffer = replayBuffer;
@@ -812,14 +827,39 @@ class DeepgramStreaming {
         case "Results": {
           this.resultsReceived++;
           this.reconnectAttempts = 0;
+          
+          // Detect duplicate/out-of-order messages under network jitter
+          // Deepgram may resend the same Results message during reconnection
+          const sequenceId = message.sequence_id || null;
+          const transcript = message.channel?.alternatives?.[0]?.transcript;
+          const transcriptHash = transcript ? `${sequenceId || ''}:${message.is_final ? '1' : '0'}:${transcript}` : null;
+          
+          // Skip if we've already processed this exact transcript
+          if (transcriptHash && this.processedTranscripts.has(transcriptHash)) {
+            debugLogger.debug("Deepgram duplicate Results ignored", {
+              sequenceId,
+              transcript: transcript?.slice(0, 50),
+            });
+            break;
+          }
+          
           if (this.livenessTimer) {
             clearTimeout(this.livenessTimer);
             this.livenessTimer = null;
-            this.replayBuffer = [];
-            this.replayBufferSize = 0;
+            // Do NOT clear replayBuffer here — preserve for recovery
+            // if connection becomes unresponsive mid-dictation
           }
-          const transcript = message.channel?.alternatives?.[0]?.transcript;
           if (!transcript) break;
+          
+          // Mark this transcript as processed to prevent duplicates
+          if (transcriptHash) {
+            this.processedTranscripts.add(transcriptHash);
+            // Limit the set size to prevent memory leaks on long sessions
+            if (this.processedTranscripts.size > 1000) {
+              const first = Array.from(this.processedTranscripts)[0];
+              this.processedTranscripts.delete(first);
+            }
+          }
 
           if (message.is_final || message.from_finalize) {
             const trimmed = transcript.trim();
@@ -894,14 +934,22 @@ class DeepgramStreaming {
       this.stopKeepAlive();
     }
 
+    // Track whether we're flushing cold start buffer to stabilize chunk boundary handling
+    const hadColdStartBuffer = this.coldStartBuffer.length > 0;
+
     // Flush any audio buffered during cold start
-    if (this.coldStartBuffer.length > 0) {
+    if (hadColdStartBuffer) {
       debugLogger.debug("Deepgram flushing cold-start buffer", {
         chunks: this.coldStartBuffer.length,
         bytes: this.coldStartBufferSize,
       });
       for (const buf of this.coldStartBuffer) {
         this.ws.send(buf);
+        // Add flushed chunks to replay buffer for recovery consistency
+        if (this.livenessTimer) {
+          this.replayBuffer.push(buf);
+          this.replayBufferSize += buf.length;
+        }
       }
       this.coldStartBuffer = [];
       this.coldStartBufferSize = 0;
@@ -911,6 +959,11 @@ class DeepgramStreaming {
       const copy = Buffer.from(pcmBuffer);
       this.replayBuffer.push(copy);
       this.replayBufferSize += copy.length;
+      // Cap replay buffer to prevent OOM on long recordings
+      while (this.replayBufferSize > MAX_REPLAY_BUFFER_BYTES && this.replayBuffer.length > 0) {
+        const oldest = this.replayBuffer.shift();
+        this.replayBufferSize -= oldest.length;
+      }
     }
 
     this.audioBytesSent += pcmBuffer.length;

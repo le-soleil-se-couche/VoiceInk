@@ -1,0 +1,134 @@
+export function hasUnresolvedAlternativeChoice(text?: string): boolean {
+  if (!text || !text.trim()) {
+    return false;
+  }
+
+  const hasMeaningfulChoiceToken = (value: string): boolean =>
+    /[\u4e00-\u9fffA-Za-z0-9]/.test(value);
+
+  const trimmed = text.trim().toLowerCase();
+  const normalized = trimmed.replace(/\s+/g, "");
+
+  if (normalized.includes("还是")) {
+    const ignorePrefixes = /^(?:后来|最后|最终|结果|其实|但|但是|不过)/;
+    if (ignorePrefixes.test(normalized)) {
+      return false;
+    }
+
+    const parts = normalized.split("还是");
+    if (parts.length < 2 || parts.some((part) => part.length < 1)) {
+      return false;
+    }
+
+    const [before, after] = parts;
+    if (before.length < 2 || after.length < 1) {
+      return false;
+    }
+
+    const likelyStillUsage =
+      /^(?:觉得|认为|希望|可以|不行|行|稳|好|对|错|要|会|能|是|有|在|决定|选择|选|用了|用|改成|继续|保持|直接|已经)/;
+    if (likelyStillUsage.test(after)) {
+      return false;
+    }
+
+    return parts.every((part) => hasMeaningfulChoiceToken(part));
+  }
+
+  if (!/\bor\b/.test(trimmed)) {
+    return false;
+  }
+
+  const sanitized = trimmed.replace(/[?!.;,:'"()[\]{}]/g, " ");
+  const parts = sanitized.split(/\s+or\s+/);
+  if (parts.length < 2 || parts.some((part) => !part.trim())) {
+    return false;
+  }
+
+  const normalizedParts = parts.map((part) => part.trim());
+  if (normalizedParts.some((part) => !part)) {
+    return false;
+  }
+
+  const hasMeaningfulToken = (value: string): boolean =>
+    /[a-z0-9]/.test(value) && /\b[a-z0-9][a-z0-9'-]*\b/.test(value);
+
+  if (!normalizedParts.every((part) => hasMeaningfulToken(part))) {
+    return false;
+  }
+
+  const ignoredAfter = /^(?:not|so|something|someone|somebody|anything|anyone|anybody|whatever)\b/;
+  if (normalizedParts.slice(1).some((part) => ignoredAfter.test(part))) {
+    return false;
+  }
+
+  const ignoredWholePhrases = [
+    /\bmore\s+or\s+less\b/,
+    /\bnow\s+or\s+never\b/,
+    /\bsooner\s+or\s+later\b/,
+    /\bblack\s+or\s+white\b/,
+  ];
+  if (ignoredWholePhrases.some((pattern) => pattern.test(trimmed))) {
+    return false;
+  }
+
+  return true;
+}
+
+export function isQuestionLikeDictation(text?: string): boolean {
+  if (!text || !text.trim()) {
+    return false;
+  }
+
+  const normalized = text.trim().toLowerCase();
+  if (/[?？]$/.test(normalized)) {
+    return true;
+  }
+
+  const zhQuantityQuestionPattern =
+    /(?:等于几|差几|第几|几个|几次|几天|几年|几月|几号|几点|几分|几秒|几页|几行|几种|几台|几层|几级|几块|几位|几项|几条|几句|几遍|几小时)(?=$|[\u4e00-\u9fffA-Za-z0-9])/;
+  const zhDurationQuestionPattern = /(?:多久|多长时间)(?=$|[\u4e00-\u9fffA-Za-z0-9])/;
+  const zhQuestionPatterns = [
+    /[吗么呢吧]$/,
+    /(?:为什么|为何|怎么|怎样)(?=[\u4e00-\u9fffA-Za-z0-9])/,
+    /(?:什么|谁|多少|几时|几点|是否)(?=$|[\u4e00-\u9fffA-Za-z0-9])/,
+    /哪(?:里|儿|个|些|种|边|款|家|位)?(?=$|[\u4e00-\u9fffA-Za-z0-9])/,
+    /(?:是不是|能不能|可不可以|要不要|会不会|有没有)/,
+    /(?:行不行|对不对|好不好|可不可以|能不能|要不要|有没有|是不是)$/,
+    /([\u4e00-\u9fff]{1,4})不\1$/,
+    zhQuantityQuestionPattern,
+    zhDurationQuestionPattern,
+  ];
+
+  if (zhQuestionPatterns.some((re) => re.test(normalized))) {
+    return true;
+  }
+
+  const enQuestionStart =
+    /^(?:(?:what|when|where|why|who|whom|whose|which|how)\b|(?:what|when|where|who|how)(?:'s|s)\b|(?:is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b|(?:is|are|was|were|do|does|did|could|would|should|have|has|had|may)(?:n't|nt)\b|(?:can't|cant|won't|wont|shan't|shant|ain't|aint)\b)/;
+  if (enQuestionStart.test(normalized)) {
+    return true;
+  }
+
+  const enQuestionEnd = /\b(?:or\s+not|right|correct|okay|ok)\s*$/;
+  if (enQuestionEnd.test(normalized)) {
+    return true;
+  }
+
+  const enIndirectQuestion =
+    /^(?:(?:(?:i\s+)?wonder(?:ing)?|i(?:'m| am)\s+wondering)\s+(?:if|whether)|(?:i(?:'m| am)\s+)?not\s+sure\s+(?:if|whether)|unclear\s+(?:if|whether)|whether\b)/;
+  if (enIndirectQuestion.test(normalized)) {
+    return true;
+  }
+
+  const enIndirectQuestionRequest =
+    /^(?:(?:please\s+|pls\s+|kindly\s+)?(?:let\s+me\s+know|tell\s+me|check|confirm|see|advise(?:\s+me)?)\s+(?:if|whether))\b/;
+  if (enIndirectQuestionRequest.test(normalized)) {
+    return true;
+  }
+
+  if (/\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized)) {
+    return true;
+  }
+
+  return hasUnresolvedAlternativeChoice(normalized);
+}

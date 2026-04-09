@@ -10,6 +10,7 @@ import { withSessionRefresh } from "../lib/neonAuth";
 import { getSettings, isCloudReasoningMode } from "../stores/settingsStore";
 import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
 import { isAnswerLikeText } from "../utils/answerLikeDetection";
+import { hasUnresolvedAlternativeChoice, isQuestionLikeDictation } from "../utils/questionIntent";
 
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
@@ -131,7 +132,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     );
   }
 
-  private isQuestionLikeText(text: string): boolean {
+  private hasTrailingAnswerAfterQuestion(text: string): boolean {
     if (!text || !text.trim()) {
       return false;
     }
@@ -174,9 +175,8 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
-    const enQuestionEnd = /\b(?:or\s+not|right|correct|okay|ok)\s*$/;
-    if (enQuestionEnd.test(normalized)) {
-      return true;
+    if (!/[\u4e00-\u9fffA-Za-z0-9]/.test(normalizedTrailing)) {
+      return false;
     }
 
     const enIndirectQuestionPatterns = [
@@ -743,6 +743,30 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     if (this.hasQuestionThenAnswerPattern(source, candidate)) {
       const fallback = this.localCleanupFallback(source);
       logger.logReasoning("STRICT_MODE_QUESTION_ANSWER_APPEND_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
+    }
+
+    if (isQuestionLikeDictation(source) && this.hasTrailingAnswerAfterQuestion(candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_TRAILING_ANSWER_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
+    }
+
+    if (hasUnresolvedAlternativeChoice(source) && !hasUnresolvedAlternativeChoice(candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_ALTERNATIVE_CHOICE_BLOCKED", {
         provider,
         model,
         originalLength: source.length,

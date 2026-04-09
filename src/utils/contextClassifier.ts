@@ -21,10 +21,21 @@ const APP_CONTEXT_RULES: Array<{ context: ReasoningContext; re: RegExp; signal: 
   { context: "document", re: /(notion|docs|word|pages|onenote|obsidian)/i, signal: "app:document" },
 ];
 
+const TECH_TOOL_PATTERNS: Array<{ context: ReasoningContext; re: RegExp; signal: string }> = [
+  { context: "code", re: /\b(npm|pnpm|yarn|bun|npx)\b/i, signal: "tool:package-manager" },
+  { context: "code", re: /\b(git|svn|hg|fossil)\b/i, signal: "tool:vcs" },
+  { context: "code", re: /\b(docker|podman|containerd)\b/i, signal: "tool:container" },
+  { context: "code", re: /\b(kubectl|k8s|helm|istio)\b/i, signal: "tool:k8s" },
+  { context: "code", re: /\b(curl|wget|httpie|http)\b/i, signal: "tool:http" },
+  { context: "code", re: /\b(ssh|scp|rsync|ftp|sftp)\b/i, signal: "tool:transfer" },
+  { context: "code", re: /\b(vim|nvim|emacs|nano|sublime|atom)\b/i, signal: "tool:editor" },
+  { context: "code", re: /\b(node|deno|bun|python|ruby|go|rust|java|cargo|pip|bundle)\b/i, signal: "tool:runtime" },
+];
+
 const CONTENT_CONTEXT_RULES: Array<{ context: ReasoningContext; re: RegExp; signal: string }> = [
   {
     context: "code",
-    re: /(```|<\/?[a-z][^>]*>|=>|\bfunction\b|\bconst\b|\bclass\b|\bimport\b|\breturn\b)/i,
+    re: /(```|<\/?[a-z][^>]*>|=>|\bfunction\b|\bconst\b|\bclass\b|\bimport\b|\breturn\b|\b(?:npm|pnpm|yarn|bun|npx)\s+(?:install|add|remove|run|build|test|dev|prod)|\b(?:git)\s+(?:add|commit|push|pull|merge|rebase|checkout|branch|status|diff|log)|\b(?:docker)\s+(?:build|run|stop|start|ps|images|container|image)|\b(?:kubectl)\s+(?:apply|get|describe|logs|exec|port-forward)|\b(?:error|warning|failed|failure|exception|traceback)[\s:]+|\b(?:at\s+[\w$.]+\(|\.[jt]sx?:\d+)|\b(?:npm ERR|pnpm ERR|yarn error)|\b(?:ENOENT|EACCES|ETIMEDOUT|ECONNREFUSED)|\b(?:module not found|cannot find module|cannot find package)|\b(?:ReferenceError|TypeError|SyntaxError|Error:)|\b(?:panic|thread.*panicked)|\b(?:segfault|segmentation fault)|\b(?:\/[\w.-]+)+\/[\w.-]+\.(?:ts|tsx|js|jsx|py|go|rs|rb|java|c|cpp|h|hpp)|\b(?:src|lib|dist|build|node_modules|packages)\/[\w.-]+)/i,
     signal: "text:code",
   },
   {
@@ -179,8 +190,9 @@ export function classifyContext({
 
   const appName = targetApp.appName || "";
   const appContext = detectContextFromRules(APP_CONTEXT_RULES, appName, signals);
+  const techToolContext = detectContextFromRules(TECH_TOOL_PATTERNS, normalizedText, signals);
   const contentContext = detectContextFromRules(CONTENT_CONTEXT_RULES, normalizedText, signals);
-  const context = contentContext || appContext || "general";
+  const context = techToolContext || contentContext || appContext || "general";
 
   const isInstruction = detectInstructionIntent(normalizedText, agentName || null, signals);
   const intent: ReasoningIntent = isInstruction ? "instruction" : "cleanup";
