@@ -7,7 +7,6 @@ import { isSecureEndpoint } from "../utils/urlUtils";
 import { withSessionRefresh } from "../lib/neonAuth";
 import { getBaseLanguageCode, validateLanguageForModel } from "../utils/languageSupport";
 import { classifyContext, getTargetAppInfo, DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
-import { isAnswerLikeText } from "../utils/answerLikeDetection";
 import { canonicalizeDictationText } from "../utils/dictationCanonicalizer";
 import {
   isAnswerLikeTranscriptionOutput,
@@ -60,12 +59,6 @@ const CHINESE_FUNCTION_WORD_STUTTER_RE =
   /(^|[\s，,、。！？,.!?;:])((?:这个|那个|就是|然后|是|就|那|这|我|你|他|她|它|的|了|在|要|会|都|也|还))(?:\s*[，,、]?\s*\2)+/g;
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
-
-const isAnswerLikeTranscriptionOutput = (text) => {
-  if (typeof text !== "string") return false;
-  return isAnswerLikeText(text, 20);
-};
-
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // Split by script family so mixed tokens like "readme在" become ["readme", "在"].

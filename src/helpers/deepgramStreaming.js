@@ -26,10 +26,7 @@ const MAX_REPLAY_BUFFER_SECONDS = 30; // Cap replay buffer to 30s of audio to pr
 const MAX_REPLAY_BUFFER_BYTES = MAX_REPLAY_BUFFER_SECONDS * SAMPLE_RATE * 2; // 16-bit mono
 const LIVENESS_TIMEOUT_MS = 2500; // Max wait for first Results from a warm connection
 
-// Reconnection configuration for network fluctuations
-const MAX_RECONNECT_ATTEMPTS = 5;
-const RECONNECT_BASE_DELAY_MS = 500;
-const RECONNECT_MAX_DELAY_MS = 5000;
+// Network-related close codes considered transient and reconnectable
 const TRANSIENT_CLOSE_CODES = [1006, 1012, 1013, 1014]; // Network-related close codes
 
 // Languages supported by Nova-3 (base codes). If a language isn't here, fall back to Nova-2.
@@ -131,6 +128,7 @@ class DeepgramStreaming {
     this.messageQueue = [];  // Buffer messages during connection transitions
     this.connectionOptions = null;
     this.reconnectAttempts = 0;
+    this.reconnectAttempt = 0;
     this.lastReconnectTime = 0;
   }
 
