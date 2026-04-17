@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { TargetAppInfo } from "../../types/electron";
+import type { ContextClassification } from "../../utils/contextClassifier";
 import {
   buildCleanupUserMessage,
   getAnswerLikeRetryPrompt,

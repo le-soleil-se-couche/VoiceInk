@@ -133,7 +133,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     );
   }
 
-  private hasTrailingAnswerAfterQuestion(text: string): boolean {
+  private isQuestionLikeText(text: string): boolean {
     if (!text || !text.trim()) {
       return false;
     }
@@ -176,8 +176,9 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
-    if (!/[\u4e00-\u9fffA-Za-z0-9]/.test(normalizedTrailing)) {
-      return false;
+    const enQuestionEnd = /\b(?:or\s+not|right|correct|okay|ok)\s*$/;
+    if (enQuestionEnd.test(normalized)) {
+      return true;
     }
 
     const enIndirectQuestionPatterns = [
@@ -194,6 +195,30 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return /\b(?:what|when|where|why|who|whom|whose|which|how|whats|whos|wheres|whens|whys|hows)\b/.test(
       normalized
     );
+  }
+
+  private hasTrailingAnswerAfterQuestion(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    const trimmed = text.trim();
+    const lastQuestionIndex = Math.max(trimmed.lastIndexOf("?"), trimmed.lastIndexOf("？"));
+    if (lastQuestionIndex < 0) {
+      return false;
+    }
+
+    const trailing = trimmed.slice(lastQuestionIndex + 1).trim();
+    if (!trailing) {
+      return false;
+    }
+
+    const normalizedTrailing = trailing.replace(/^[)\]"'”’」』】>\s\-–—:;,，。！？、]+/, "").trim();
+    if (!/[\u4e00-\u9fffA-Za-z0-9]/.test(normalizedTrailing)) {
+      return false;
+    }
+
+    return !isQuestionLikeDictation(normalizedTrailing);
   }
 
   private splitIntoClauses(text: string): string[] {
