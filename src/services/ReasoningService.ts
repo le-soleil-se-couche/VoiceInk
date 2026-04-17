@@ -148,6 +148,10 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return true;
     }
 
+    if (isQuestionLikeDictation(text)) {
+      return true;
+    }
+
     const zhQuestionPatterns = [
       /[吗么呢吧]$/,
       /(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否)/,
