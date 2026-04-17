@@ -73,7 +73,7 @@ describe("getAnswerLikeRetryPrompt", () => {
 
     expect(prompt).toContain("仅做语音转写。");
     expect(prompt).toContain("如果用户说的是问题，就直接转写这个问题本身。");
-    expect(prompt).toContain("不要添加"好的"");
+    expect(prompt).toContain('不要添加"好的"');
   });
 
   it("builds a cleanup-only retry prompt that keeps cleanup semantics", () => {
@@ -1160,4 +1160,3 @@ describe("getSystemPrompt anti-answerization safety", () => {
     expect(prompt).toContain("keep output semantically anchored to source content");
   });
 });
-
