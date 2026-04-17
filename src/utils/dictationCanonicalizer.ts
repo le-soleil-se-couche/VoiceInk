@@ -112,6 +112,10 @@ const ENGLISH_TECH_PROTECTIONS = [
   "npm",
 ];
 
+const LEXICAL_NUMERAL_TERM_PATTERNS: RegExp[] = [
+  /[百千万萬]分(?:比|位|点|号|號|制|率)/g,
+];
+
 
 
 const IDIOM_PROTECTIONS = [
@@ -273,16 +277,22 @@ const shouldSkipShortNumberSegment = ({
     if (CHINESE_SPOKEN_NUMBER_RE.test(tail)) return false;
     return true;
   }
-  if (previousChar === "第") return true;
+  if (previousChar === "第" && nextChar !== "个") return true;
   if (nextChar === ".") return false;
   if (nextChar === "/") return false;
   if (sourceText.slice(Math.max(0, offset - 3), offset).endsWith("分之")) return false;
   
-  // Preserve small numbers (一，两，二，三) in natural spoken contexts with quantifiers
+  // Preserve small numbers in natural spoken contexts with quantifiers.
   // Examples: 三个人，两本书，三杯水，五公里，两斤苹果
-  const smallNumbers = new Set(["一", "两", "二", "三", "四", "五", "六", "七", "八", "九", "十"]);
-  if (smallNumbers.has(segment) && CHINESE_QUANTIFIER_SUFFIX_RE.test(nextChar || "")) {
-    return true;
+  const smallNumbers = new Set(["一", "两", "二", "三", "四", "五", "六", "七", "八", "九"]);
+  if (
+    previousChar !== "第" &&
+    smallNumbers.has(segment) &&
+    CHINESE_QUANTIFIER_SUFFIX_RE.test(nextChar || "")
+  ) {
+    if (nextChar !== "天" || previousChar === "了") {
+      return true;
+    }
   }
   
   if (LATIN_CHAR_RE.test(previousChar) || LATIN_CHAR_RE.test(nextChar)) return true;
@@ -369,6 +379,25 @@ const protectLiteralMentions = (
 
   let protectedText = value;
   for (const pattern of literalPatterns) {
+    protectedText = protectByRegex({
+      value: protectedText,
+      regex: pattern,
+      placeholders,
+      counter: () => {
+        stats.literalProtections += 1;
+      },
+    });
+  }
+  return protectedText;
+};
+
+const protectLexicalNumeralTerms = (
+  value: string,
+  placeholders: Map<string, string>,
+  stats: DictationCanonicalizerStats
+) => {
+  let protectedText = value;
+  for (const pattern of LEXICAL_NUMERAL_TERM_PATTERNS) {
     protectedText = protectByRegex({
       value: protectedText,
       regex: pattern,
@@ -515,6 +544,7 @@ export const canonicalizeDictationText = (
   next = protectIdioms(next, placeholders, stats);
   next = protectEnglishTechTerms(next, placeholders, stats);
   next = protectLiteralMentions(next, placeholders, stats);
+  next = protectLexicalNumeralTerms(next, placeholders, stats);
 
   if (stats.punctuationEnabled) {
     next = applyLowAmbiguityPunctuationRules(next, stats);

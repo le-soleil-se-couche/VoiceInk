@@ -62,6 +62,9 @@ const CASES: CanonCase[] = [
   { name: "短串数字有单位归一", input: "二零年", expected: "20年" },
   { name: "百分号归一", input: "三十%", expected: "30%" },
   { name: "百分之表达归一", input: "百分之三十", expected: "百分之30" },
+  { name: "固定术语-百分比保留", input: "这个百分比不正常", expected: "这个百分比不正常" },
+  { name: "固定术语-百分点保留", input: "提高了三个百分点", expected: "提高了三个百分点" },
+  { name: "固定术语-百分位保留", input: "落在百分位第九十", expected: "落在百分位第九十" },
   { name: "句尾编号归一", input: "编号是二零四六号", expected: "编号是2046号" },
   { name: "年份归一", input: "今年二零二六", expected: "今年2026" },
   { name: "两位年份默认保留", input: "二零", expected: "二零" },
@@ -327,6 +330,23 @@ describe("canonicalizeDictationText", () => {
 });
 
 describe("canonicalizeDictationText over-optimization prevention", () => {
+  it("preserves lexicalized percentage terms", () => {
+    const samples = [
+      { input: "这个百分比不正常", expected: "这个百分比不正常" },
+      { input: "提高了三个百分点", expected: "提高了三个百分点" },
+      { input: "落在百分位第九十", expected: "落在百分位第九十" },
+    ];
+
+    for (const sample of samples) {
+      const result = canonicalizeDictationText(sample.input, {
+        preferredLanguage: "zh-CN",
+        locale: "zh-CN",
+        source: "unit-test",
+      });
+      expect(result.text).toBe(sample.expected);
+    }
+  });
+
   it("preserves small conversational numbers in natural spoken contexts", () => {
     const result = canonicalizeDictationText("今天来了两个人", {
       preferredLanguage: "zh-CN",
