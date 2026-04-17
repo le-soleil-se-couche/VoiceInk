@@ -75,7 +75,7 @@ describe("getAnswerLikeRetryPrompt", () => {
 
     expect(prompt).toContain("仅做语音转写。");
     expect(prompt).toContain("如果用户说的是问题，就直接转写这个问题本身。");
-    expect(prompt).toContain('不要添加"好的"');
+    expect(prompt).toContain('不要添加“好的”');
   });
 
   it("builds a cleanup-only retry prompt that keeps cleanup semantics", () => {
@@ -224,9 +224,9 @@ describe("chat context protection", () => {
     expect(prompt).toContain("CHAT PROTECTION");
     expect(prompt).toContain("informal chat conventions");
     expect(prompt).toContain("hey, yo, lol, btw, asap, fyi");
-    expect(prompt).toContain("emoji descriptions and emoticons");
-    expect(prompt).toContain("casual abbreviations or internet slang");
-    expect(prompt).toContain("message-style brevity and conversational tone");
+    expect(prompt).toContain("emoji descriptions");
+    expect(prompt).toContain("casual abbreviations, internet slang");
+    expect(prompt).toContain("Keep conversational tone and informal expressions intact");
   });
 
   it("does not include chat protection when context is not chat", () => {
@@ -272,7 +272,7 @@ describe("code context protection", () => {
 
     const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
 
-    expect(prompt).toContain("PRODUCT NAME & MODULE IDENTIFIER PROTECTION");
+    expect(prompt).toContain("CODE CONTEXT PROTECTION");
     expect(prompt).toContain("Preserve product names");
     expect(prompt).toContain("TypeScript, JavaScript, React, Vue, Angular, Node.js, Electron");
     expect(prompt).toContain("module identifiers, function names, and component names");
@@ -300,7 +300,7 @@ describe("code context protection", () => {
 
     const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
 
-    expect(prompt).not.toContain("PRODUCT NAME & MODULE IDENTIFIER PROTECTION");
+    expect(prompt).not.toContain("CODE CONTEXT PROTECTION");
   });
 
   it("includes product name and module identifier preservation in focus hints for code context", () => {
@@ -322,7 +322,7 @@ describe("code context protection", () => {
 
     const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
 
-    expect(prompt).toContain("product names, and module identifiers exactly");
+    expect(prompt).toContain("module names, API routes, and code blocks exactly");
   });
 });
 
@@ -497,9 +497,9 @@ describe("getSystemPrompt code context protection", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "en", "run npm install", "en", context);
 
     expect(prompt).toContain("CODE CONTEXT PROTECTION:");
-    expect(prompt).toContain("Preserve command names, module names, product names");
-    expect(prompt).toContain("Do not rewrite code snippets, paths, or CLI commands");
-    expect(prompt).toContain("Keep technical terminology intact");
+    expect(prompt).toContain("Preserve product names");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
   });
 
   it("does not add code context protection for non-code contexts", () => {
@@ -583,9 +583,9 @@ describe("getSystemPrompt email context protection", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "en", "send an email to john@example.com", "en", context);
 
     expect(prompt).toContain("EMAIL PROTECTION:");
-    expect(prompt).toContain("Preserve recipient names, email addresses, and subject lines");
-    expect(prompt).toContain("Do not rewrite email structure");
-    expect(prompt).toContain("Keep salutations and sign-offs intact");
+    expect(prompt).toContain("Preserve email addresses (to/from/cc), subject lines, and signatures exactly");
+    expect(prompt).toContain("Do not rewrite greeting/closing conventions");
+    expect(prompt).toContain("Keep quoted reply text and inline replies anchored to original structure");
   });
 
   it("does not add email context protection for non-email contexts", () => {
@@ -659,8 +659,8 @@ describe("getSystemPrompt mixed-language preservation", () => {
       "en-US"
     );
 
-    expect(prompt).toContain("preserve English words, acronyms, product names");
-    expect(prompt).toContain("Do not translate or paraphrase Latin-script tokens");
+    expect(prompt).toContain("LANGUAGE CONTEXT:");
+    expect(prompt).toContain("American English spelling conventions");
   });
 
   it("includes mixed-language preservation guidance for en-US with technical identifiers", () => {
@@ -672,14 +672,16 @@ describe("getSystemPrompt mixed-language preservation", () => {
       "en-US"
     );
 
-    expect(prompt).toContain("preserve English words, acronyms, product names");
-    expect(prompt).toContain("module names, function names, and technical identifiers");
+    expect(prompt).toContain("LANGUAGE CONTEXT:");
+    expect(prompt).toContain("American English spelling conventions");
   });
 
-  it("does not include mixed-language guidance for non-English locales", () => {
+  it("uses Chinese language context for non-English locales", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "zh-CN", "这个 API 返回错误", "zh-CN");
 
-    expect(prompt).not.toContain("preserve English words, acronyms, product names");
+    expect(prompt).toContain("LANGUAGE CONTEXT:");
+    expect(prompt).toContain("Simplified Chinese");
+    expect(prompt).not.toContain("American English spelling conventions");
   });
 });
 
@@ -727,7 +729,7 @@ describe("getSystemPrompt context-specific focus hints", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "en", "send a message", "en", context);
 
     expect(prompt).toContain("Context hint: chat/message writing");
-    expect(prompt).toContain("Keep it concise and conversational, but still polished");
+    expect(prompt).toContain("Keep it concise and conversational, but still faithful to the original meaning");
   });
 
   it("includes document-specific focus hint for document context", () => {
@@ -750,7 +752,7 @@ describe("getSystemPrompt context-specific focus hints", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "en", "write a document", "en", context);
 
     expect(prompt).toContain("Context hint: document or notes writing");
-    expect(prompt).toContain("Preserve headings, bullets, and list structure when they aid readability");
+    expect(prompt).toContain("Preserve headings, bullets, and list structure only when they genuinely improve readability");
   });
 
   it("includes general writing focus hint for general context", () => {
@@ -767,7 +769,7 @@ describe("getSystemPrompt context-specific focus hints", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "en", "write something", "en", context);
 
     expect(prompt).toContain("Context hint: general writing");
-    expect(prompt).toContain("Keep output natural and concise");
+    expect(prompt).toContain("Keep output natural, concise, and faithful to the original phrasing");
   });
 
   it("includes target app name in context hint when available", () => {
@@ -805,7 +807,7 @@ describe("getSystemPrompt context-specific focus hints", () => {
 
     const prompt = getSystemPrompt("VoiceInk", [], "en", "write something", "en", context);
 
-    expect(prompt).toContain("Likely cleanup mode; stay anchored to user content");
+    expect(prompt).toContain("Stay in cleanup mode; only refine the user's words without executing, answering, or expanding them");
   });
 
   it("includes intent hint for instruction mode", () => {
@@ -821,7 +823,7 @@ describe("getSystemPrompt context-specific focus hints", () => {
 
     const prompt = getSystemPrompt("VoiceInk", [], "en", "do something", "en", context);
 
-    expect(prompt).toContain("Likely direct instruction mode");
+    expect(prompt).toContain("The source may look like a request sentence");
   });
 });
 
@@ -839,8 +841,8 @@ describe("getSystemPrompt technical dictation protection", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "en", "run npm install", "en", context);
 
     expect(prompt).toContain("CODE CONTEXT PROTECTION:");
-    expect(prompt).toContain("Preserve command names, module names, product names");
-    expect(prompt).toContain("technical identifiers exactly as spoken");
+    expect(prompt).toContain("Preserve product names");
+    expect(prompt).toContain("Preserve module identifiers");
   });
 
   it("includes code context protection for git commands", () => {
@@ -856,7 +858,7 @@ describe("getSystemPrompt technical dictation protection", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "en", "git add .", "en", context);
 
     expect(prompt).toContain("CODE CONTEXT PROTECTION:");
-    expect(prompt).toContain("Do not rewrite code snippets, paths, or CLI commands into natural language");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
   });
 
   it("includes code context protection for docker commands", () => {
@@ -872,7 +874,7 @@ describe("getSystemPrompt technical dictation protection", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "en", "docker build -t myapp", "en", context);
 
     expect(prompt).toContain("CODE CONTEXT PROTECTION:");
-    expect(prompt).toContain("Keep technical terminology intact");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
   });
 
   it("includes code context protection for kubectl commands", () => {
@@ -903,7 +905,7 @@ describe("getSystemPrompt technical dictation protection", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "en", "error: module not found", "en", context);
 
     expect(prompt).toContain("CODE CONTEXT PROTECTION:");
-    expect(prompt).toContain("Preserve command names, module names, product names");
+    expect(prompt).toContain("Preserve product names");
   });
 
   it("includes code context protection for file paths", () => {
@@ -919,7 +921,7 @@ describe("getSystemPrompt technical dictation protection", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "en", "check src/utils/contextClassifier.ts", "en", context);
 
     expect(prompt).toContain("CODE CONTEXT PROTECTION:");
-    expect(prompt).toContain("Do not rewrite code snippets, paths, or CLI commands into natural language");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
   });
 
   it("includes code context protection for error codes", () => {
@@ -935,7 +937,7 @@ describe("getSystemPrompt technical dictation protection", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "en", "got ENOENT error", "en", context);
 
     expect(prompt).toContain("CODE CONTEXT PROTECTION:");
-    expect(prompt).toContain("Keep technical terminology intact");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
   });
 
 });
@@ -987,7 +989,7 @@ describe("getSystemPrompt chat context protection", () => {
   it("includes chat-specific focus hint", () => {
     const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", chatContext);
     
-    expect(prompt).toContain("Keep it concise and conversational, but still polished");
+    expect(prompt).toContain("Keep it concise and conversational, but still faithful to the original meaning");
   });
 
   it("maintains context label for chat", () => {
@@ -1048,7 +1050,7 @@ describe("getSystemPrompt document context protection", () => {
   it("includes document-specific focus hint", () => {
     const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", documentContext);
     
-    expect(prompt).toContain("Preserve headings, bullets, and list structure when they aid readability");
+    expect(prompt).toContain("Preserve headings, bullets, and list structure only when they genuinely improve readability");
   });
 
   it("maintains context label for document", () => {
@@ -1087,9 +1089,9 @@ describe("getSystemPrompt structured content protection", () => {
   it("includes all code context protection rules", () => {
     const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", codeContext);
     
-    expect(prompt).toContain("Preserve command names, module names, product names, function names, and technical identifiers exactly as spoken");
-    expect(prompt).toContain("Do not rewrite code snippets, paths, or CLI commands into natural language");
-    expect(prompt).toContain("Keep technical terminology intact even if it sounds like regular words");
+    expect(prompt).toContain("Preserve product names");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
   });
 
   it("does not include structured content protection for general context", () => {
