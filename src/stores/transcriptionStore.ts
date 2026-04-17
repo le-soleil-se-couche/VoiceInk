@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { TranscriptionItem } from "../types/electron";
+import type { TranscriptionItem, TranscriptionPageResult } from "../types/electron";
 
 interface TranscriptionState {
   transcriptions: TranscriptionItem[];
@@ -24,6 +24,8 @@ interface PaginationState {
   hasMore: boolean;
   oldestLoadedId: number | null;
 }
+
+type MaybeTranscriptionPageResult = TranscriptionItem[] | Partial<TranscriptionPageResult>;
 
 function savePaginationState(state: PaginationState) {
   if (typeof window === "undefined" || !window.localStorage) return;
@@ -62,19 +64,21 @@ function mergeTranscriptions(
   return merged;
 }
 
-function mergeTranscriptions(
-  existing: TranscriptionItem[],
-  incoming: TranscriptionItem[]
-): TranscriptionItem[] {
-  const merged = [...existing];
-
-  for (const item of incoming) {
-    if (!merged.some((existingItem) => existingItem.id === item.id)) {
-      merged.push(item);
-    }
+function normalizePageResult(
+  result: MaybeTranscriptionPageResult | null | undefined,
+  limit: number
+): { items: TranscriptionItem[]; hasMore: boolean } {
+  if (Array.isArray(result)) {
+    return {
+      items: result,
+      hasMore: result.length === limit,
+    };
   }
 
-  return merged;
+  const items = Array.isArray(result?.transcriptions) ? result.transcriptions : [];
+  const hasMore = typeof result?.hasMore === "boolean" ? result.hasMore : items.length === limit;
+
+  return { items, hasMore };
 }
 
 function ensureIpcListeners() {
@@ -123,12 +127,13 @@ function ensureIpcListeners() {
 export async function initializeTranscriptions(limit = DEFAULT_LIMIT) {
   currentLimit = limit;
   ensureIpcListeners();
-  const items = window.electronAPI.getTranscriptionsPage
+  const pageResult = window.electronAPI.getTranscriptionsPage
     ? await window.electronAPI.getTranscriptionsPage({ limit })
     : await window.electronAPI.getTranscriptions(limit);
+  const { items, hasMore } = normalizePageResult(pageResult as MaybeTranscriptionPageResult, limit);
   useTranscriptionStore.setState({
     transcriptions: items,
-    hasMore: items.length === limit,
+    hasMore,
     isLoadingMore: false,
     oldestLoadedId: items.length > 0 ? items[items.length - 1].id : null,
   });
@@ -143,14 +148,18 @@ export async function loadMoreTranscriptions(limit = currentLimit) {
 
   useTranscriptionStore.setState({ isLoadingMore: true });
   try {
-    const items = await window.electronAPI.getTranscriptionsPage({
+    const pageResult = await window.electronAPI.getTranscriptionsPage({
       limit,
       beforeId: oldestLoadedId,
     });
+    const { items, hasMore } = normalizePageResult(
+      pageResult as MaybeTranscriptionPageResult,
+      limit
+    );
     const merged = mergeTranscriptions(transcriptions, items);
     useTranscriptionStore.setState({
       transcriptions: merged,
-      hasMore: items.length === limit,
+      hasMore,
       isLoadingMore: false,
       oldestLoadedId: merged.length > 0 ? merged[merged.length - 1].id : null,
     });

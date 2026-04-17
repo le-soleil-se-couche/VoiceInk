@@ -12,6 +12,11 @@ export interface TranscriptionPageRequest {
   beforeId?: number | null;
 }
 
+export interface TranscriptionPageResult {
+  transcriptions: TranscriptionItem[];
+  hasMore: boolean;
+}
+
 export interface NoteItem {
   id: number;
   title: string;
@@ -331,11 +336,8 @@ declare global {
       saveTranscription: (text: string) => Promise<{ id: number; success: boolean }>;
       getTranscriptionsPage?: (
         options?: TranscriptionPageRequest
-      ) => Promise<TranscriptionItem[]>;
+      ) => Promise<TranscriptionPageResult | TranscriptionItem[]>;
       getTranscriptions: (limit?: number) => Promise<TranscriptionItem[]>;
-      getTranscriptionsPage?: (
-        options?: TranscriptionPageRequest
-      ) => Promise<TranscriptionItem[]>;
       clearTranscriptions: () => Promise<{ cleared: number; success: boolean }>;
       deleteTranscription: (id: number) => Promise<{ success: boolean }>;
 

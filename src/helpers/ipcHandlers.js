@@ -791,13 +791,14 @@ class IPCHandlers {
       // If the floating dictation panel currently has focus, dismiss it so the
       // paste keystroke lands in the user's target app instead of the overlay.
       const mainWindow = this.windowManager?.mainWindow;
+      let hidFocusedPanelForPaste = false;
       if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()) {
         if (process.platform === "darwin") {
-          // hide() forces macOS to activate the previous app; showInactive()
-          // restores the overlay without stealing focus.
+          // hide() forces macOS to reactivate the previous app so Cmd+V lands
+          // on the target app instead of the overlay.
           mainWindow.hide();
-          await new Promise((resolve) => setTimeout(resolve, 120));
-          mainWindow.showInactive();
+          hidFocusedPanelForPaste = true;
+          await new Promise((resolve) => setTimeout(resolve, 180));
         } else {
           mainWindow.blur();
           await new Promise((resolve) => setTimeout(resolve, 80));
@@ -820,7 +821,7 @@ class IPCHandlers {
         "clipboard"
       );
 
-      if (result?.mode === "copied" || result?.mode === "failed") {
+      if (result?.mode === "copied" || result?.mode === "failed" || hidFocusedPanelForPaste) {
         this.windowManager?.showDictationPanel?.();
       }
 

@@ -53,7 +53,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   saveTranscription: (text) => ipcRenderer.invoke("db-save-transcription", text),
   getTranscriptionsPage: (options) => ipcRenderer.invoke("db-get-transcriptions-page", options),
   getTranscriptions: (limit) => ipcRenderer.invoke("db-get-transcriptions", limit),
-  getTranscriptionsPage: (options) => ipcRenderer.invoke("db-get-transcriptions-page", options),
   clearTranscriptions: () => ipcRenderer.invoke("db-clear-transcriptions"),
   deleteTranscription: (id) => ipcRenderer.invoke("db-delete-transcription", id),
   // Dictionary functions
