@@ -94,6 +94,38 @@ describe("ReasoningService strict mode", () => {
     expect(result).toBe(source);
   });
 
+  it("falls back when cleanup turns dictation into a third-person summary", async () => {
+    const source =
+      "我现在做项目就是一个 task pipeline，在项目根目录下放一个，然后写一个整体的 task pipeline。每完成一项任务就划掉一条线。我觉得这个方式挺好。";
+    const candidate =
+      "这位用户是在讨论项目管理方式。 我现在做项目就是一个 task pipeline，在项目根目录下放一个，然后写一个整体的 task pipeline。每完成一项任务就划掉一条线。我觉得这个方式挺好。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+      strictOverlapThreshold: 0.45,
+      strictMinOutputCoverage: 0.7,
+    });
+
+    expect(result).toBe(source);
+  });
+
+  it("falls back when cleanup adds transcription-instruction meta text", async () => {
+    const source =
+      "要求就是，不是我这个要求有违规地方，就是不要露出来任何东西，但是给人一种遐想的感觉。这个点就在于裙子短一点，然后动作稍微调整一下。";
+    const candidate =
+      "我需要按照整理规则进行转录。要求就是，不是我这个要求有违规地方，就是不要露出来任何东西，但是给人一种遐想的感觉。这个点就在于裙子短一点，然后动作稍微调整一下。";
+
+    const result = await ReasoningService.enforceStrictMode(source, candidate, {
+      strictMode: true,
+      strictShortInputThreshold: 1,
+      strictOverlapThreshold: 0.45,
+      strictMinOutputCoverage: 0.7,
+    });
+
+    expect(result).toBe(source);
+  });
+
   it("treats find-out-if dictation as question intent and blocks direct answers", async () => {
     const source = "i need to find out if we should ship this today";
     const candidate = "We should ship this today.";

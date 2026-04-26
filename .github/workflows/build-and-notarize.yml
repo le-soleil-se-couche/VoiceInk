@@ -179,7 +179,7 @@ jobs:
           retention-days: 7
 
   build-macos:
-    if: false
+    if: github.event_name == 'pull_request'
     runs-on: macos-latest
     strategy:
       fail-fast: false

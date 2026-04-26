@@ -146,6 +146,27 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return patterns.some((re) => re.test(text));
   }
 
+  private isAssistantMetaRewriteOutput(source: string, candidate: string): boolean {
+    const normalizedSource = source.trim();
+    const normalizedCandidate = candidate.trim();
+    if (!normalizedSource || !normalizedCandidate || normalizedCandidate.length < 6) {
+      return false;
+    }
+
+    const patterns = [
+      /^这位用户(?:是在|正在|认为|觉得|希望|想要|需要|很疑惑|感到|讨论)/u,
+      /^用户(?:是在|正在|认为|觉得|希望|想要|需要|很疑惑|感到|讨论)/u,
+      /^这段(?:话|文本)(?:主要|是在|表达|讨论|说明)/u,
+      /^我需要按照.{0,16}(?:规则|要求).{0,16}(?:转录|整理|修订|润色)/u,
+      /(?:我修订后的文本如下|修订后的文本如下|整理后的文本如下|改写后的文本如下|润色后的文本如下)/u,
+      /(?:以下是(?:修订|整理|改写|润色)后的文本|通过这种调整)/u,
+    ];
+
+    return patterns.some(
+      (pattern) => pattern.test(normalizedCandidate) && !pattern.test(normalizedSource)
+    );
+  }
+
   private isQuestionLikeText(text: string): boolean {
     if (!text || !text.trim()) {
       return false;
@@ -462,11 +483,18 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return fallback;
     };
 
-    if (this.isAnswerLikeOutput(candidate)) {
+    const answerLikeReason = this.isAnswerLikeOutput(candidate)
+      ? "answer_like"
+      : this.isAssistantMetaRewriteOutput(source, candidate)
+        ? "meta_rewrite"
+        : null;
+
+    if (answerLikeReason) {
       if (!hasRetried) {
         logger.logReasoning("STRICT_MODE_ANSWER_LIKE_RETRY", {
           provider,
           model,
+          reason: answerLikeReason,
           originalLength: source.length,
           candidateLength: candidate.length,
         });
@@ -499,7 +527,7 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
           }
         }
       }
-      return finalizeFallback("answer_like");
+      return finalizeFallback(answerLikeReason);
     }
 
     if (this.isQuestionLikeText(source) && !this.isQuestionLikeText(candidate)) {
