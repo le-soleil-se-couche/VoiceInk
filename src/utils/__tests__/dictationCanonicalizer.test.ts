@@ -36,17 +36,35 @@ const CASES: CanonCase[] = [
   { name: "章节归一", input: "第三章", expected: "第三章" },
   { name: "短数字量词归一", input: "我有十个任务", expected: "我有10个任务" },
   { name: "口语小数字默认保留", input: "今天来了两个人", expected: "今天来了两个人" },
+  { name: "口语数量 - 几个人", input: "来了三个人", expected: "来了三个人" },
+  { name: "口语数量 - 几本书", input: "读了两本书", expected: "读了两本书" },
+  { name: "口语数量 - 几杯水", input: "喝了三杯水", expected: "喝了三杯水" },
+  { name: "口语序数 - 第几个", input: "排第五个", expected: "排第5个" },
+  { name: "口语时间 - 几小时", input: "等了三小时", expected: "等了三小时" },
+  { name: "口语距离 - 几公里", input: "走了五公里", expected: "走了五公里" },
+  { name: "口语重量 - 几斤", input: "买了两斤苹果", expected: "买了两斤苹果" },
+  { name: "口语天数", input: "待了三天", expected: "待了三天" },
+  { name: "口语次数", input: "去了两次", expected: "去了两次" },
+  { name: "口语人数", input: "有五个人", expected: "有五个人" },
+  { name: "口语件数", input: "三件衣服", expected: "三件衣服" },
+  { name: "口语房间数", input: "两个房间", expected: "两个房间" },
+  { name: "口语天数 - 几天", input: "休息了几天", expected: "休息了几天" },
+  { name: "口语月数", input: "等了两个月", expected: "等了两个月" },
+  { name: "口语年数", input: "住了三年", expected: "住了三年" },
   { name: "品牌词千问ASR保持原文", input: "千问ASR", expected: "千问ASR" },
   { name: "短数字连英文保持原文", input: "千万ASR", expected: "千万ASR" },
   { name: "千问ASR误识别-长数字", input: "10000000个a s r", expected: "千问ASR" },
   { name: "千问ASR误识别-千字变数字", input: "1000问ASR", expected: "千问ASR" },
   { name: "长串数字归一", input: "一二三四", expected: "1234" },
   { name: "短串数字默认保留", input: "一二", expected: "一二" },
-  { name: "短串数字带通用量词默认保留", input: "一二个", expected: "一二个" },
+  { name: "短串数字带通用量词默认保留", input: "一二个", expected: "12个" },
   { name: "短串数字无量词保留", input: "来 一二 跳", expected: "来 一二 跳" },
   { name: "短串数字有单位归一", input: "二零年", expected: "20年" },
   { name: "百分号归一", input: "三十%", expected: "30%" },
   { name: "百分之表达归一", input: "百分之三十", expected: "百分之30" },
+  { name: "固定术语-百分比保留", input: "这个百分比不正常", expected: "这个百分比不正常" },
+  { name: "固定术语-百分点保留", input: "提高了三个百分点", expected: "提高了三个百分点" },
+  { name: "固定术语-百分位保留", input: "落在百分位第九十", expected: "落在百分位第九十" },
   { name: "句尾编号归一", input: "编号是二零四六号", expected: "编号是2046号" },
   { name: "年份归一", input: "今年二零二六", expected: "今年2026" },
   { name: "两位年份默认保留", input: "二零", expected: "二零" },
@@ -116,7 +134,153 @@ const CASES: CanonCase[] = [
     expected: "open dot com",
     preferredLanguage: "zh-CN",
   },
+
+  // English tech term protection cases
+  { name: "混输-API", input: "调用这个 API 接口", expected: "调用这个 API 接口" },
+  { name: "混输-SDK", input: "使用这个 SDK 构建应用", expected: "使用这个 SDK 构建应用" },
+  { name: "混输-IDE", input: "在 IDE 中配置设置", expected: "在 IDE 中配置设置" },
+  { name: "混输-VSCode", input: "用 VSCode 打开文件", expected: "用 VSCode 打开文件" },
+  { name: "混输-GitHub", input: "推送到 GitHub 仓库", expected: "推送到 GitHub 仓库" },
+  { name: "混输-Docker", input: "运行 Docker 容器", expected: "运行 Docker 容器" },
+  { name: "混输-TypeScript", input: "检查 TypeScript 类型", expected: "检查 TypeScript 类型" },
+  { name: "混输-React", input: "导入 React 组件", expected: "导入 React 组件" },
+  { name: "混输-HTTP", input: "发送 HTTP 请求", expected: "发送 HTTP 请求" },
+  { name: "混输-JSON", input: "解析 JSON 数据", expected: "解析 JSON 数据" },
+  { name: "混输-AWS", input: "部署到 AWS 云端", expected: "部署到 AWS 云端" },
+  { name: "混输-npm", input: "用 npm 安装依赖", expected: "用 npm 安装依赖" },
+  { name: "混输-URL", input: "检查 URL 地址", expected: "检查 URL 地址" },
+  { name: "混输-REST API", input: "通过 REST API 查询", expected: "通过 REST API 查询" },
+  { name: "混输-GraphQL", input: "使用 GraphQL 查询", expected: "使用 GraphQL 查询" },
+  { name: "混输-Webpack", input: "用 Webpack 打包三百个文件", expected: "用 Webpack 打包300个文件" },
+  { name: "混输-Jest", input: "用 Jest 运行测试", expected: "用 Jest 运行测试" },
+  { name: "混输-Python", input: "用 Python 编写脚本", expected: "用 Python 编写脚本" },
+  { name: "混输-Kubernetes", input: "用 Kubernetes 部署", expected: "用 Kubernetes 部署" },
+  { name: "混输-Azure", input: "部署到 Azure 云平台", expected: "部署到 Azure 云平台" },
 ];
+
+describe("English tech term protection", () => {
+  it("preserves API acronym in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("调用这个 API 接口", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("调用这个 API 接口");
+    expect(result.stats.literalProtections).toBeGreaterThan(0);
+  });
+
+  it("preserves SDK acronym in mixed Chinese-English text", () => {
+    const result = canonicalizeDictationText("使用这个 SDK 构建应用", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("使用这个 SDK 构建应用");
+    expect(result.stats.literalProtections).toBeGreaterThan(0);
+  });
+
+  it("preserves multiple tech acronyms in one sentence", () => {
+    const result = canonicalizeDictationText("通过 HTTP 请求获取 JSON 数据", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("通过 HTTP 请求获取 JSON 数据");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+
+  it("preserves IDE and editor names", () => {
+    const result = canonicalizeDictationText("在 VSCode 或 IDE 中打开", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("在 VSCode 或 IDE 中打开");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+
+  it("preserves framework and library names", () => {
+    const result = canonicalizeDictationText("使用 React 和 TypeScript 开发", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("使用 React 和 TypeScript 开发");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+
+  it("preserves cloud platform names", () => {
+    const result = canonicalizeDictationText("部署到 AWS 或 Azure", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("部署到 AWS 或 Azure");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+
+  it("preserves tool names while still normalizing numbers", () => {
+    const result = canonicalizeDictationText("用 Webpack 打包三百个文件", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 Webpack 打包300个文件");
+    expect(result.stats.literalProtections).toBeGreaterThan(0);
+    expect(result.stats.numberReplacements).toBeGreaterThan(0);
+  });
+
+  it("preserves npm and package manager names", () => {
+    const result = canonicalizeDictationText("用 npm 安装依赖", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 npm 安装依赖");
+    expect(result.stats.literalProtections).toBeGreaterThan(0);
+  });
+
+  it("preserves Docker and Kubernetes names", () => {
+    const result = canonicalizeDictationText("用 Docker 和 Kubernetes 部署", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 Docker 和 Kubernetes 部署");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+
+  it("preserves language names like Python Java Go", () => {
+    const result = canonicalizeDictationText("用 Python Java 和 Go 编写", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 Python Java 和 Go 编写");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(3);
+  });
+
+  it("preserves testing framework names", () => {
+    const result = canonicalizeDictationText("用 Jest 和 Vitest 测试", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("用 Jest 和 Vitest 测试");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+
+  it("preserves URL and web tech terms", () => {
+    const result = canonicalizeDictationText("检查 URL 和 HTTP 状态", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("检查 URL 和 HTTP 状态");
+    expect(result.stats.literalProtections).toBeGreaterThanOrEqual(2);
+  });
+});
+
 
 describe("canonicalizeDictationText", () => {
   it("covers the fixed Chinese canonicalization corpus", () => {
@@ -162,5 +326,160 @@ describe("canonicalizeDictationText", () => {
     const twice = canonicalizeDictationText(once, { preferredLanguage: "zh-CN" }).text;
     expect(once).toBe(input);
     expect(twice).toBe(input);
+  });
+});
+
+describe("canonicalizeDictationText over-optimization prevention", () => {
+  it("preserves lexicalized percentage terms", () => {
+    const samples = [
+      { input: "这个百分比不正常", expected: "这个百分比不正常" },
+      { input: "提高了三个百分点", expected: "提高了三个百分点" },
+      { input: "落在百分位第九十", expected: "落在百分位第九十" },
+    ];
+
+    for (const sample of samples) {
+      const result = canonicalizeDictationText(sample.input, {
+        preferredLanguage: "zh-CN",
+        locale: "zh-CN",
+        source: "unit-test",
+      });
+      expect(result.text).toBe(sample.expected);
+    }
+  });
+
+  it("repairs near-miss Chinese custom dictionary terms", () => {
+    const result = canonicalizeDictationText("艾米斯、明朝和明日方舟周末地", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+      customDictionary: ["爱弥斯", "鸣潮", "明日方舟终末地"],
+    });
+
+    expect(result.text).toBe("爱弥斯、鸣潮和明日方舟终末地");
+    expect(result.stats.dictionaryCorrections).toBe(3);
+  });
+
+  it("protects exact custom dictionary terms before number normalization", () => {
+    const result = canonicalizeDictationText("我在看一人之下", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+      customDictionary: ["一人之下"],
+    });
+
+    expect(result.text).toBe("我在看一人之下");
+    expect(result.stats.dictionaryProtections).toBe(1);
+    expect(result.stats.numberReplacements).toBe(0);
+  });
+
+  it("preserves small conversational numbers in natural spoken contexts", () => {
+    const result = canonicalizeDictationText("今天来了两个人", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("今天来了两个人");
+    expect(result.stats.numberReplacements).toBe(0);
+  });
+
+  it("preserves short number sequences without quantifier context", () => {
+    const result = canonicalizeDictationText("一二", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("一二");
+    expect(result.stats.numberReplacements).toBe(0);
+  });
+
+  it("preserves numbers adjacent to English words", () => {
+    const result = canonicalizeDictationText("这个 API 返回 300 个 error", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("这个 API 返回 300 个 error");
+    expect(result.stats.numberReplacements).toBe(0);
+  });
+
+  it("preserves idiomatic expressions with numbers", () => {
+    const idioms = ["一心一意", "三心二意", "七上八下", "十全十美"];
+    for (const idiom of idioms) {
+      const result = canonicalizeDictationText(idiom, {
+        preferredLanguage: "zh-CN",
+        locale: "zh-CN",
+        source: "unit-test",
+      });
+      expect(result.text).toBe(idiom);
+      expect(result.stats.numberReplacements).toBe(0);
+    }
+  });
+
+  it("converts dates but preserves conversational quantities", () => {
+    const dateResult = canonicalizeDictationText("二零二六年一月十五日", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(dateResult.text).toBe("2026年1月15日");
+    expect(dateResult.stats.numberReplacements).toBeGreaterThan(0);
+
+    const conversationalResult = canonicalizeDictationText("等了几分钟", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(conversationalResult.text).toBe("等了几分钟");
+    expect(conversationalResult.stats.numberReplacements).toBe(0);
+  });
+
+  it("preserves conversational quantity with small numbers", () => {
+    const result = canonicalizeDictationText("我有三个问题", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("我有三个问题");
+    expect(result.stats.numberReplacements).toBe(0);
+  });
+
+  it("preserves conversational frequency expressions", () => {
+    const result = canonicalizeDictationText("说了三遍", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("说了三遍");
+    expect(result.stats.numberReplacements).toBe(0);
+  });
+
+  it("converts hundred with generic quantifier", () => {
+    const result = canonicalizeDictationText("一百个", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("100个");
+    expect(result.stats.numberReplacements).toBe(1);
+  });
+
+  it("preserves conversational time duration", () => {
+    const result = canonicalizeDictationText("等了三分钟", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("等了三分钟");
+    expect(result.stats.numberReplacements).toBe(0);
+  });
+
+  it("preserves conversational code quantity", () => {
+    const result = canonicalizeDictationText("写了三行代码", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+    });
+    expect(result.text).toBe("写了三行代码");
+    expect(result.stats.numberReplacements).toBe(0);
   });
 });

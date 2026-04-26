@@ -15,11 +15,11 @@ const path = require("path");
 const {
   downloadFile,
   extractZip,
-  fetchLatestRelease,
+  fetchLatestReleaseFromRepos,
   setExecutable,
 } = require("./lib/download-utils");
 
-const REPO = "OpenWhispr/openwhispr";
+const REPOS = ["le-soleil-se-couche/VoiceInk", "OpenWhispr/openwhispr"];
 const TAG_PREFIX = "windows-fast-paste-v";
 const ZIP_NAME = "windows-fast-paste-win32-x64.zip";
 const BINARY_NAME = "windows-fast-paste.exe";
@@ -49,13 +49,16 @@ async function main() {
     console.log("\n[windows-fast-paste] Fetching latest release...");
   }
   const tagToFind = VERSION_OVERRIDE || TAG_PREFIX;
-  const release = await fetchLatestRelease(REPO, { tagPrefix: tagToFind });
+  const repoMatch = await fetchLatestReleaseFromRepos(REPOS, { tagPrefix: tagToFind });
+  const release = repoMatch?.release;
 
   if (!release) {
     console.error("[windows-fast-paste] Could not find a release matching prefix:", TAG_PREFIX);
     console.log("[windows-fast-paste] Paste will use nircmd/PowerShell fallback");
     return;
   }
+
+  console.log(`[windows-fast-paste] Using release source: ${repoMatch.repo}`);
 
   const zipAsset = release.assets.find((a) => a.name === ZIP_NAME);
   if (!zipAsset) {

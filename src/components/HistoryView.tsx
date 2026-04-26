@@ -41,14 +41,15 @@ export default function HistoryView({
   onOpenSettings,
 }: HistoryViewProps) {
   const { t } = useTranslation();
+  const safeHistory = Array.isArray(history) ? history : [];
 
   const groupedHistory = useMemo(() => {
-    if (history.length === 0) return [];
+    if (safeHistory.length === 0) return [];
 
     const groups: { label: string; items: TranscriptionItemType[] }[] = [];
     let currentLabel: string | null = null;
 
-    for (const item of history) {
+    for (const item of safeHistory) {
       const label = formatDateGroup(item.timestamp, t);
 
       if (label !== currentLabel) {
@@ -60,7 +61,7 @@ export default function HistoryView({
     }
 
     return groups;
-  }, [history, t]);
+  }, [safeHistory, t]);
 
   return (
     <div className="px-4 pt-4 pb-6">
@@ -148,7 +149,7 @@ export default function HistoryView({
               <span className="text-sm text-muted-foreground">{t("controlPanel.loading")}</span>
             </div>
           </div>
-        ) : history.length === 0 ? (
+        ) : safeHistory.length === 0 ? (
           <div className="rounded-lg border border-border bg-card/50 dark:bg-card/60 backdrop-blur-sm">
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <svg

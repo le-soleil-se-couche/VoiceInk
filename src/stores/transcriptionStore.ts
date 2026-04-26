@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { TranscriptionItem } from "../types/electron";
+import type { TranscriptionItem, TranscriptionPageResult } from "../types/electron";
 
 interface TranscriptionState {
   transcriptions: TranscriptionItem[];
@@ -18,6 +18,36 @@ const useTranscriptionStore = create<TranscriptionState>()(() => ({
 let hasBoundIpcListeners = false;
 const DEFAULT_LIMIT = 200;
 let currentLimit = DEFAULT_LIMIT;
+const PAGINATION_STORAGE_KEY = "voiceink_transcription_pagination";
+
+interface PaginationState {
+  hasMore: boolean;
+  oldestLoadedId: number | null;
+}
+
+type MaybeTranscriptionPageResult = TranscriptionItem[] | Partial<TranscriptionPageResult>;
+
+function savePaginationState(state: PaginationState) {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(PAGINATION_STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.warn("Failed to save pagination state:", e);
+  }
+}
+
+function loadPaginationState(): PaginationState | null {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+  try {
+    const stored = window.localStorage.getItem(PAGINATION_STORAGE_KEY);
+    if (!stored) return null;
+    return JSON.parse(stored) as PaginationState;
+  } catch (e) {
+    console.warn("Failed to load pagination state:", e);
+    return null;
+  }
+}
+
 
 function mergeTranscriptions(
   existing: TranscriptionItem[],
@@ -32,6 +62,23 @@ function mergeTranscriptions(
   }
 
   return merged;
+}
+
+function normalizePageResult(
+  result: MaybeTranscriptionPageResult | null | undefined,
+  limit: number
+): { items: TranscriptionItem[]; hasMore: boolean } {
+  if (Array.isArray(result)) {
+    return {
+      items: result,
+      hasMore: result.length === limit,
+    };
+  }
+
+  const items = Array.isArray(result?.transcriptions) ? result.transcriptions : [];
+  const hasMore = typeof result?.hasMore === "boolean" ? result.hasMore : items.length === limit;
+
+  return { items, hasMore };
 }
 
 function ensureIpcListeners() {
@@ -80,12 +127,13 @@ function ensureIpcListeners() {
 export async function initializeTranscriptions(limit = DEFAULT_LIMIT) {
   currentLimit = limit;
   ensureIpcListeners();
-  const items = window.electronAPI.getTranscriptionsPage
+  const pageResult = window.electronAPI.getTranscriptionsPage
     ? await window.electronAPI.getTranscriptionsPage({ limit })
     : await window.electronAPI.getTranscriptions(limit);
+  const { items, hasMore } = normalizePageResult(pageResult as MaybeTranscriptionPageResult, limit);
   useTranscriptionStore.setState({
     transcriptions: items,
-    hasMore: items.length === limit,
+    hasMore,
     isLoadingMore: false,
     oldestLoadedId: items.length > 0 ? items[items.length - 1].id : null,
   });
@@ -100,14 +148,18 @@ export async function loadMoreTranscriptions(limit = currentLimit) {
 
   useTranscriptionStore.setState({ isLoadingMore: true });
   try {
-    const items = await window.electronAPI.getTranscriptionsPage({
+    const pageResult = await window.electronAPI.getTranscriptionsPage({
       limit,
       beforeId: oldestLoadedId,
     });
+    const { items, hasMore } = normalizePageResult(
+      pageResult as MaybeTranscriptionPageResult,
+      limit
+    );
     const merged = mergeTranscriptions(transcriptions, items);
     useTranscriptionStore.setState({
       transcriptions: merged,
-      hasMore: items.length === limit,
+      hasMore,
       isLoadingMore: false,
       oldestLoadedId: merged.length > 0 ? merged[merged.length - 1].id : null,
     });

@@ -1,0 +1,85 @@
+const ANSWER_LIKE_PATTERNS = [
+  /(作为|身为).{0,10}(ai|语言模型|助手)/i,
+  /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
+  /^(?:我来|让我|我可以|我会|我能).{0,20}(?:处理|修改|整理|解释|说明|回答|发送|发给|重写|润色)/,
+  /^(?:我来|让我|我可以|我会|我能).{0,12}(?:帮你|替你|为你|给你).{0,20}/,
+  /(不用担心|别担心|我会尽力|我可以帮你|请告诉我|请问你|你想要).{0,40}/,
+  /(?:要不要|是否需要).{0,12}(?:我|帮你|我来)/,
+  /(?:需要|想要|希望).{0,6}(?:我|我来).{0,12}(?:帮你|处理|说明|解释|整理)/,
+  /(对不起|抱歉).{0,20}(我会|我将|让我|我们)/,
+  /你想要.{0,20}(什么|哪一个|哪两个|哪些)/,
+  /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
+  /\b(as an ai|as a language model)\b/i,
+  /\b(i\s*(can't|cannot|am unable|won't))\b/i,
+  /^\s*(?:let me|i(?:'ll| will| can))\b.{0,30}\b(?:help|handle|explain|answer|rewrite|fix|edit|send|summarize|polish|clean up)\b/i,
+  /\b(i can help|don't worry|please tell me|what can i)\b/i,
+  /\b(i(?:'d| would)\s+be\s+happy\s+to)\b.{0,30}\b(?:help|rewrite|edit|polish|clean(?:\s+up)?|fix|summarize|answer|handle)\b/i,
+  /^\s*happy\s+to\s+help\b/i,
+  /\b(would you like me to|do you want me to|should i\b|can i help|how can i help|could you clarify|can you clarify)\b/i,
+  /^\s*(?:what|which)\s+(?:would\s+you\s+like\s+to\s+(?:know|do|change|fix|rewrite|edit)|do\s+you\s+want\s+me\s+to\s+(?:do|change|fix|rewrite|edit))\b/i,
+  /^\s*(?:tell\s+me|let\s+me\s+know)\s+what\s+(?:you\s+want|you(?:'d|\s+would)\s+like)\s+(?:to\s+(?:know|do|change|fix|rewrite|edit)|me\s+to\s+(?:do|change|fix|rewrite|edit))\b/i,
+  /^\s*(?:sure|okay|ok|alright|certainly|absolutely|of\s+course)[,，.!！？]?\s+(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/i,
+  /^\s*would\s+you\s+like\s+(?:the\s+|a\s+)?(?:polished|cleaned(?:[- ]up)?|rewritten|revised|updated)\s+(?:version|text|message|question)\b/i,
+  /\b(?:please\s+)?(?:provide|share|send)\s+(?:me\s+)?(?:the\s+|your\s+)?(?:text|sentence|question|message|content)\s+(?:you(?:'d|\s+would)?\s+like\s+me\s+to)\s+(?:polish|rewrite|edit|clean(?:\s+up)?|fix|summarize|answer)\b/i,
+  /^\s*(?:sure|okay|ok|alright|certainly|absolutely|of course)[,，]?\s+(?:what(?:'s| is)\s+your\s+(?:question|request)|how\s+can\s+i\s+help(?:\s+you)?|tell\s+me\s+what\s+you\s+need)\b/i,
+  /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
+  /\b(you can try).{0,20}(sentence|example)\b/i,
+  /^\s*(?:sure|okay|ok|alright|certainly|absolutely|of course)[,，]?\s+(?:here(?:'s| is)|i(?:'ve| have)\s+(?:cleaned(?:[- ]up)?|polished|rewritten|revised|updated)|(?:this|that)\s+is)\b/i,
+  /^\s*(?:(?:sure|okay|ok|alright|certainly|absolutely|of course)[,，]?\s+)?(?:here(?:'s| is)|below is)\s+(?:the|your|a)\s+(?:(?:more|slightly)\s+)?(?:polished|cleaned(?:[- ]up)?|rewritten|revised|updated)\s+(?:version|question|text|message)\s*[:：-]/i,
+  /^\s*(?:(?:sure|okay|ok|alright|certainly|absolutely|of course)[,，]?\s+)?(?:here(?:'s| is)|below is)\s+(?:the|your|a)\s+(?:(?:more|much|slightly)\s+)?(?:natural|clearer|better|improved)\s+(?:version|question|text|message|way\s+to\s+say\s+(?:it|this))\s*[:：-]/i,
+  /^\s*the\s+(?:(?:more|slightly)\s+)?(?:polished|cleaned(?:[- ]up)?|rewritten|revised|updated)\s+(?:version|question|text|message)\s+is\s*[:：-]/i,
+  /^\s*the\s+(?:(?:more|much|slightly)\s+)?(?:natural|clearer|better|improved)\s+(?:version|question|text|message|way\s+to\s+say\s+(?:it|this))\s+is\s*[:：-]/i,
+  /^\s*(?:(?:more|slightly)\s+)?(?:polished|cleaned(?:[- ]up)?|rewritten|revised|updated)\s+(?:version|question|text|message)\s*[:：-]/i,
+  /^\s*(?:(?:more|much|slightly)\s+)?(?:natural|clearer|better|improved)\s+(?:version|question|text|message|way\s+to\s+say\s+(?:it|this))\s*[:：-]/i,
+  /^\s*(?:好的|好呀|行|当然可以|没问题)[，,]?(?:请说|请讲|请告诉我|你可以说|我来帮你|我可以帮你)(?:吧|呀|呢)?/,
+  /^\s*(?:请问\s*)?(?:还有)?(?:什么|什麽|有什么|有啥)(?:事情|问题|内容)?(?:需要|想要|要)?(?:我)?(?:可以|能)(?:继续|再)?(?:帮(?:您|你)|协助(?:您|你)|处理|说明|解答)(?:的吗|吗|呢|呀|的)?[?？]?$/,
+  /^\s*(?:我(?:可以|能)(?:怎么|如何|还能|还可以)?|请问\s*(?:我)?)(?:帮(?:您|你)|协助(?:您|你)|为(?:您|你)处理|为(?:您|你)解答)(?:什么|什麽|哪些|哪方面|什么问题)?(?:呢|吗|呀)?[?？]?$/,
+  /^\s*(?:好的|好呀|行|当然可以|没问题)[，,！!。]?\s*(?:这个|這個|这|這|那|那個|那个|怎么|怎麼|为什么|為什麼|是否|是不是|能不能|可不可以|要不要|会不会|有没有|幾|几|多少|誰|谁|哪|什麼|什么).{0,40}[?？]$/,
+  /^\s*(?:好的|好呀|行|当然可以|没问题)[，,]?(?:这(?:是|里)|以下)\s*(?:是)?(?:润色后|修改后|整理后|重写后)的(?:版本|内容|问题|文本)\s*[:：]/,
+  /^\s*(?:润色后|修改后|整理后|重写后)的(?:版本|内容|问题|文本)\s*[:：]/,
+  /^\s*(?:好的|好呀|行|当然可以|没问题)[，,]?(?:这(?:是|里)|以下)\s*(?:是)?(?:更自然|更清晰|更清楚|更好的?)的(?:说法|版本|内容|问题|文本)\s*[:：]/,
+  /^\s*(?:这(?:是|里)|以下)\s*(?:是)?(?:更自然|更清晰|更清楚|更好的?)的(?:说法|版本|内容|问题|文本)\s*[:：]/,
+  /^\s*(?:更自然|更清晰|更清楚|更好的?)的(?:说法|版本|内容|问题|文本)\s*[:：]/,
+  /^\s*i(?:'ve| have)\s+(?:prepared|created|generated|drafted|written|composed)\s/i,
+  /^\s*here(?:'s| is)\s+(?:what|how)\s+(?:i|we)\s+(?:have|'ve)\s+/i,
+  /^\s*(?:我已经|我已|我帮你|我替你).{0,25}(?:准备好|创建好|写好|整理好|修改好|润色好)/i,
+  /^\s*below\s+(?:you\s+(?:will|'ll)\s+)?(?:find|is)\s/i,
+  /^\s*(?:以下|下面).{0,25}(?:是我|为您|给你).{0,20}(?:准备|创建|写|整理|修改|润色)/i,
+];
+
+const HIGH_CONFIDENCE_ANSWER_LIKE_PATTERNS = [
+  /(?:^|\b)(?:answer\s+is|the\s+answer\s+is)\b/i,
+  /(?:答案|结果)(?:是|为)[:：]?\s*[-+]?\d+(?:\.\d+)?(?:[。.!！？?]|$)/,
+  /^\s*[-+]?\d+(?:\.\d+)?(?:\s*[+\-*/x×÷]\s*[-+]?\d+(?:\.\d+)?)+(?:\s*(?:=|等于)\s*)[-+]?\d+(?:\.\d+)?(?:[。.!！？?]|$)/,
+];
+
+const HAN_CHAR_RE = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
+
+function getWeightedTextLength(text: string): number {
+  let length = 0;
+
+  for (const char of text) {
+    length += HAN_CHAR_RE.test(char) ? 2 : 1;
+  }
+
+  return length;
+}
+
+export function isAnswerLikeText(text: string, minimumLength = 6): boolean {
+  if (!text || !text.trim()) {
+    return false;
+  }
+
+  const trimmed = text.trim();
+  if (HIGH_CONFIDENCE_ANSWER_LIKE_PATTERNS.some((pattern) => pattern.test(trimmed))) {
+    return true;
+  }
+
+  if (getWeightedTextLength(trimmed) < minimumLength) {
+    return false;
+  }
+
+  return ANSWER_LIKE_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+
+export { ANSWER_LIKE_PATTERNS, HIGH_CONFIDENCE_ANSWER_LIKE_PATTERNS };

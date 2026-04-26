@@ -3,6 +3,7 @@ import { useAuth } from "./useAuth";
 import { CACHE_CONFIG } from "../config/constants";
 import { withSessionRefresh } from "../lib/neonAuth";
 
+
 interface UsageData {
   wordsUsed: number;
   wordsRemaining: number;
@@ -42,6 +43,64 @@ interface UseUsageResult {
 }
 
 const USAGE_CACHE_TTL = CACHE_CONFIG.API_KEY_TTL; // 1 hour
+const USAGE_STORAGE_KEY = "voiceink_usage_data";
+const USAGE_STORAGE_VERSION = 1;
+
+interface StoredUsageData {
+  version: number;
+  timestamp: number;
+  data: UsageData;
+}
+
+function saveUsageToStorage(data: UsageData): void {
+  try {
+    const stored: StoredUsageData = {
+      version: USAGE_STORAGE_VERSION,
+      timestamp: Date.now(),
+      data,
+    };
+    localStorage.setItem(USAGE_STORAGE_KEY, JSON.stringify(stored));
+  } catch (error) {
+    console.warn("Failed to save usage data to localStorage", error);
+  }
+}
+
+function loadUsageFromStorage(): UsageData | null {
+  try {
+    const raw = localStorage.getItem(USAGE_STORAGE_KEY);
+    if (!raw) return null;
+    const stored: StoredUsageData = JSON.parse(raw);
+    if (stored.version !== USAGE_STORAGE_VERSION) return null;
+    // Consider cached data stale after 24 hours
+    const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+    if (Date.now() - stored.timestamp > MAX_AGE_MS) {
+      localStorage.removeItem(USAGE_STORAGE_KEY);
+      return null;
+    }
+    return stored.data;
+  } catch (error) {
+    console.warn("Failed to load usage data from localStorage", error);
+    return null;
+  }
+}
+
+/**
+ * Fallback usage data when backend verification is unavailable.
+ * Ensures subscription-dependent features degrade gracefully to free tier defaults.
+ */
+const FALLBACK_USAGE_DATA: UsageData = {
+  wordsUsed: 0,
+  wordsRemaining: 2000,
+  limit: 2000,
+  plan: "free",
+  status: "offline",
+  isSubscribed: false,
+  isTrial: false,
+  trialDaysLeft: null,
+  currentPeriodEnd: null,
+  billingInterval: null,
+  resetAt: "rolling",
+};
 
 export function useUsage(): UseUsageResult | null {
   const { isSignedIn, isLoaded } = useAuth();
@@ -63,7 +122,7 @@ export function useUsage(): UseUsageResult | null {
       await withSessionRefresh(async () => {
         const result = await window.electronAPI.cloudUsage();
         if (result.success) {
-          setData({
+          const usageData: UsageData = {
             wordsUsed: result.wordsUsed ?? 0,
             wordsRemaining: result.wordsRemaining ?? 0,
             limit: result.limit ?? 2000,
@@ -75,7 +134,9 @@ export function useUsage(): UseUsageResult | null {
             currentPeriodEnd: result.currentPeriodEnd ?? null,
             billingInterval: result.billingInterval ?? null,
             resetAt: result.resetAt ?? "rolling",
-          });
+          };
+          setData(usageData);
+          saveUsageToStorage(usageData);
           lastFetchRef.current = Date.now();
         } else {
           const error: any = new Error(result.error || "Failed to fetch usage");
@@ -84,7 +145,17 @@ export function useUsage(): UseUsageResult | null {
         }
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch usage");
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch usage";
+      setError(errorMessage);
+      // Fallback to cached subscription data when backend is unavailable
+      const cached = loadUsageFromStorage();
+      if (cached) {
+        setData(cached);
+      }
+
+      // Fallback to free tier defaults when backend verification is unavailable
+      // This ensures subscription-dependent features degrade gracefully
+      setData(FALLBACK_USAGE_DATA);
     } finally {
       setIsLoading(false);
       setHasLoaded(true);

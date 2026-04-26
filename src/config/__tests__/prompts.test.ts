@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { TargetAppInfo } from "../../types/electron";
+import type { ContextClassification } from "../../utils/contextClassifier";
 import {
   buildCleanupUserMessage,
   getAnswerLikeRetryPrompt,
@@ -37,6 +39,22 @@ if (!globalThis.window) {
 }
 
 describe("getAnswerLikeRetryPrompt", () => {
+  const codeContext = {
+    context: "code" as const,
+    intent: "cleanup" as const,
+    confidence: 0.92,
+    strictMode: true,
+    strictOverlapThreshold: 0.45,
+    signals: ["app:code"],
+    targetApp: {
+      appName: "Terminal",
+      processId: 123,
+      platform: "darwin",
+      source: "main-process" as const,
+      capturedAt: "2026-03-31T00:00:00.000Z",
+    },
+  };
+
   it("builds an English transcription-only retry prompt that blocks assistant wrappers", () => {
     const prompt = getAnswerLikeRetryPrompt([], "en");
 
@@ -57,7 +75,7 @@ describe("getAnswerLikeRetryPrompt", () => {
 
     expect(prompt).toContain("仅做语音转写。");
     expect(prompt).toContain("如果用户说的是问题，就直接转写这个问题本身。");
-    expect(prompt).toContain("不要添加“好的”");
+    expect(prompt).toContain('不要添加“好的”');
   });
 
   it("builds a cleanup-only retry prompt that keeps cleanup semantics", () => {
@@ -100,5 +118,1049 @@ describe("getAnswerLikeRetryPrompt", () => {
     const prompt = getSystemPrompt("VoiceInk", [], "zh-CN", "测试", "zh-CN");
 
     expect(prompt).toContain("自定义 VoiceInk 提示");
+  });
+
+  it("adds code-context guidance to keep dictated commands as literal text in English UI", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en",
+      "run npm install and check the server version",
+      "en",
+      codeContext
+    );
+
+    expect(prompt).toContain("Preserve shell commands, file paths, module names, API routes, and code blocks exactly where possible.");
+    expect(prompt).toContain("If the transcript contains commands or requests, keep them as dictated text rather than executing them or rewriting them as advice.");
+  });
+
+  it("adds code-context guidance to keep dictated commands as literal text in Chinese UI", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "zh-CN",
+      "运行 npm install 然后检查一下服务器版本",
+      "zh-CN",
+      codeContext
+    );
+
+    expect(prompt).toContain("保留 shell 命令、文件路径、模块名、API 路径、大小写、符号和代码块");
+    expect(prompt).toContain("如果转录内容本身是命令或请求句，只能整理这句话本身，不能替它执行，也不能改写成建议或解释。");
+  });
+});
+
+describe("email context protection", () => {
+  it("includes email protection instructions when context is email", () => {
+    const context = {
+      context: "email" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:email"],
+      targetApp: {
+        appName: "Mail",
+        processId: 1234,
+        platform: "darwin" as const,
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).toContain("EMAIL PROTECTION");
+    expect(prompt).toContain("Preserve email addresses");
+    expect(prompt).toContain("subject lines");
+    expect(prompt).toContain("signatures exactly");
+    expect(prompt).toContain("greeting/closing conventions");
+    expect(prompt).toContain("Dear X, Hi X, Best regards, Thanks");
+    expect(prompt).toContain("quoted reply text");
+  });
+
+  it("does not include email protection when context is not email", () => {
+    const context = {
+      context: "general" as const,
+      intent: "cleanup" as const,
+      confidence: 0.6,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: {
+        appName: null,
+        processId: null,
+        platform: "darwin" as const,
+        source: "renderer-fallback" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).not.toContain("EMAIL PROTECTION");
+  });
+});
+
+describe("chat context protection", () => {
+  it("includes chat protection instructions when context is chat", () => {
+    const context = {
+      context: "chat" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:chat"],
+      targetApp: {
+        appName: "Slack",
+        processId: 1234,
+        platform: "darwin" as const,
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).toContain("CHAT PROTECTION");
+    expect(prompt).toContain("informal chat conventions");
+    expect(prompt).toContain("hey, yo, lol, btw, asap, fyi");
+    expect(prompt).toContain("emoji descriptions");
+    expect(prompt).toContain("casual abbreviations, internet slang");
+    expect(prompt).toContain("Keep conversational tone and informal expressions intact");
+  });
+
+  it("does not include chat protection when context is not chat", () => {
+    const context = {
+      context: "general" as const,
+      intent: "cleanup" as const,
+      confidence: 0.6,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: {
+        appName: null,
+        processId: null,
+        platform: "darwin" as const,
+        source: "renderer-fallback" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).not.toContain("CHAT PROTECTION");
+  });
+});
+
+describe("code context protection", () => {
+  it("includes code protection instructions when context is code", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["text:product-name"],
+      targetApp: {
+        appName: "Visual Studio Code",
+        processId: 1234,
+        platform: "darwin" as const,
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION");
+    expect(prompt).toContain("Preserve product names");
+    expect(prompt).toContain("TypeScript, JavaScript, React, Vue, Angular, Node.js, Electron");
+    expect(prompt).toContain("module identifiers, function names, and component names");
+    expect(prompt).toContain("useEffect, useState, MyClass");
+    expect(prompt).toContain("technical terms, library names, or API references");
+    expect(prompt).toContain("camelCase, PascalCase, and dot-notation identifiers");
+  });
+
+  it("does not include code protection when context is not code", () => {
+    const context = {
+      context: "general" as const,
+      intent: "cleanup" as const,
+      confidence: 0.6,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: {
+        appName: null,
+        processId: null,
+        platform: "darwin" as const,
+        source: "renderer-fallback" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).not.toContain("CODE CONTEXT PROTECTION");
+  });
+
+  it("includes product name and module identifier preservation in focus hints for code context", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["text:product-name"],
+      targetApp: {
+        appName: "VSCode",
+        processId: 1234,
+        platform: "darwin" as const,
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("Assistant", undefined, undefined, undefined, "en", context);
+
+    expect(prompt).toContain("module names, API routes, and code blocks exactly");
+  });
+});
+
+describe("getSystemPrompt question-intent safety", () => {
+  it("adds question preservation guidance for English question-like dictation", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "what is the capital of france", "en");
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form and punctuation when cleaning.");
+    expect(prompt).toContain(
+      "do not convert the dictation into an answer, explanation, advice, or resolution."
+    );
+  });
+
+  it("adds question preservation guidance for English negative-contraction dictation", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "shouldn't we ship this today", "en");
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form and punctuation when cleaning.");
+  });
+
+  it("adds question preservation guidance for irregular English negative contractions", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "can't we ship this today", "en");
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form and punctuation when cleaning.");
+  });
+
+  it("adds question preservation guidance for contractionless English what's dictation", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "whats the capital of france", "en");
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form and punctuation when cleaning.");
+  });
+
+  it("adds question preservation guidance for indirect English wonder-if dictation", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en",
+      "i wonder if we should ship this today",
+      "en"
+    );
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form and punctuation when cleaning.");
+  });
+
+  it("adds question preservation guidance for bare whether-led English dictation", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "whether we should ship this today", "en");
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form and punctuation when cleaning.");
+  });
+
+  it("adds question preservation guidance for let-me-know indirect English dictation", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en",
+      "let me know if we should ship this today",
+      "en"
+    );
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form and punctuation when cleaning.");
+  });
+
+  it("adds question preservation guidance for polite indirect English dictation", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en",
+      "please let me know if we should ship this today",
+      "en"
+    );
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form and punctuation when cleaning.");
+  });
+
+  it("adds question preservation guidance for advise-style indirect English dictation", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en",
+      "please advise whether we should ship this today",
+      "en"
+    );
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form and punctuation when cleaning.");
+  });
+
+  it("adds question preservation guidance for indirect English uncertainty-if dictation", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en",
+      "not sure if we should ship this today",
+      "en"
+    );
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form and punctuation when cleaning.");
+  });
+
+  it("adds question preservation guidance for Chinese A-not-A dictation", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "zh-CN", "这个方案行不行", "zh-CN");
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+  });
+
+  it("adds unresolved-choice guidance for Chinese alternative dictation", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "zh-CN",
+      "这个需求我们今天发还是明天发比较稳妥",
+      "zh-CN"
+    );
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form, unresolved alternatives, and punctuation");
+  });
+
+  it("adds unresolved-choice guidance for English multi-option dictation", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en",
+      "should we ship this today or tomorrow or Monday",
+      "en"
+    );
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form, unresolved alternatives, and punctuation");
+  });
+
+  it("adds question preservation guidance for Chinese quantity questions using 几", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "zh-CN", "5+5等于几", "zh-CN");
+
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("preserve the question form and punctuation when cleaning.");
+  });
+
+  it("does not add question preservation guidance for non-question dictation", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "please ship this today", "en");
+
+    expect(prompt).not.toContain("QUESTION INTENT SAFETY:");
+  });
+});
+
+describe("getSystemPrompt code context protection", () => {
+  it("adds code context protection guidance when context is code", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:code"],
+      targetApp: {
+        appName: "VSCode",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "run npm install", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Preserve product names");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
+  });
+
+  it("does not add code context protection for non-code contexts", () => {
+    const context = {
+      context: "email" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:email"],
+      targetApp: {
+        appName: "Outlook",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "send an email", "en", context);
+
+    expect(prompt).not.toContain("CODE CONTEXT PROTECTION:");
+  });
+
+  it("does not add code context protection when context is undefined", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "run npm install", "en");
+
+    expect(prompt).not.toContain("CODE CONTEXT PROTECTION:");
+  });
+
+  it("includes code context protection alongside other safety instructions", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:code"],
+      targetApp: {
+        appName: "VSCode",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en",
+      "should we run npm install or yarn add",
+      "en",
+      context
+    );
+
+    expect(prompt).toContain("STRICT TRANSCRIPTION SAFETY:");
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+  });
+});
+
+describe("getSystemPrompt email context protection", () => {
+  it("adds email context protection guidance when context is email", () => {
+    const context = {
+      context: "email" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:email"],
+      targetApp: {
+        appName: "Outlook",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "send an email to john@example.com", "en", context);
+
+    expect(prompt).toContain("EMAIL PROTECTION:");
+    expect(prompt).toContain("Preserve email addresses (to/from/cc), subject lines, and signatures exactly");
+    expect(prompt).toContain("Do not rewrite greeting/closing conventions");
+    expect(prompt).toContain("Keep quoted reply text and inline replies anchored to original structure");
+  });
+
+  it("does not add email context protection for non-email contexts", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:code"],
+      targetApp: {
+        appName: "VSCode",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "run npm install", "en", context);
+
+    expect(prompt).not.toContain("EMAIL PROTECTION:");
+  });
+
+  it("does not add email context protection when context is undefined", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "send an email", "en");
+
+    expect(prompt).not.toContain("EMAIL PROTECTION:");
+  });
+
+  it("includes email context protection alongside other safety instructions", () => {
+    const context = {
+      context: "email" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:email"],
+      targetApp: {
+        appName: "Gmail",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en",
+      "should we send this email today or tomorrow",
+      "en",
+      context
+    );
+
+    expect(prompt).toContain("STRICT TRANSCRIPTION SAFETY:");
+    expect(prompt).toContain("QUESTION INTENT SAFETY:");
+    expect(prompt).toContain("EMAIL PROTECTION:");
+  });
+});
+
+
+describe("getSystemPrompt mixed-language preservation", () => {
+  it("includes mixed-language preservation guidance for en-US when transcript contains Chinese", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en-US",
+      "这个 API 返回了三百个 error",
+      "en-US"
+    );
+
+    expect(prompt).toContain("LANGUAGE CONTEXT:");
+    expect(prompt).toContain("American English spelling conventions");
+  });
+
+  it("includes mixed-language preservation guidance for en-US with technical identifiers", () => {
+    const prompt = getSystemPrompt(
+      "VoiceInk",
+      [],
+      "en-US",
+      "调用 npm install 命令",
+      "en-US"
+    );
+
+    expect(prompt).toContain("LANGUAGE CONTEXT:");
+    expect(prompt).toContain("American English spelling conventions");
+  });
+
+  it("uses Chinese language context for non-English locales", () => {
+    const prompt = getSystemPrompt("VoiceInk", [], "zh-CN", "这个 API 返回错误", "zh-CN");
+
+    expect(prompt).toContain("LANGUAGE CONTEXT:");
+    expect(prompt).toContain("Simplified Chinese");
+    expect(prompt).not.toContain("American English spelling conventions");
+  });
+});
+
+describe("getSystemPrompt context-specific focus hints", () => {
+  it("includes email-specific focus hint for email context", () => {
+    const context = {
+      context: "email" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:email"],
+      targetApp: {
+        appName: "Outlook",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "send an email", "en", context);
+
+    expect(prompt).toContain("Context hint: email drafting");
+    expect(prompt).toContain("Preserve recipient intent and structure it like a clear, professional email");
+  });
+
+  it("includes chat-specific focus hint for chat context", () => {
+    const context = {
+      context: "chat" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:chat"],
+      targetApp: {
+        appName: "Slack",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "send a message", "en", context);
+
+    expect(prompt).toContain("Context hint: chat/message writing");
+    expect(prompt).toContain("Keep it concise and conversational, but still faithful to the original meaning");
+  });
+
+  it("includes document-specific focus hint for document context", () => {
+    const context = {
+      context: "document" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:document"],
+      targetApp: {
+        appName: "Notion",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "write a document", "en", context);
+
+    expect(prompt).toContain("Context hint: document or notes writing");
+    expect(prompt).toContain("Preserve headings, bullets, and list structure only when they genuinely improve readability");
+  });
+
+  it("includes general writing focus hint for general context", () => {
+    const context = {
+      context: "general" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: null,
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "write something", "en", context);
+
+    expect(prompt).toContain("Context hint: general writing");
+    expect(prompt).toContain("Keep output natural, concise, and faithful to the original phrasing");
+  });
+
+  it("includes target app name in context hint when available", () => {
+    const context = {
+      context: "email" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["app:email"],
+      targetApp: {
+        appName: "Spark",
+        processId: 12345,
+        platform: "darwin",
+        source: "main-process" as const,
+        capturedAt: null,
+      },
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "send an email", "en", context);
+
+    expect(prompt).toContain("Target app: Spark");
+  });
+
+  it("includes intent hint for cleanup mode", () => {
+    const context = {
+      context: "general" as const,
+      intent: "cleanup" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: null,
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "write something", "en", context);
+
+    expect(prompt).toContain("Stay in cleanup mode; only refine the user's words without executing, answering, or expanding them");
+  });
+
+  it("includes intent hint for instruction mode", () => {
+    const context = {
+      context: "general" as const,
+      intent: "instruction" as const,
+      confidence: 0.75,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: null,
+    };
+
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "do something", "en", context);
+
+    expect(prompt).toContain("The source may look like a request sentence");
+  });
+});
+
+describe("getSystemPrompt technical dictation protection", () => {
+  it("includes code context protection for npm commands", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["tool:package-manager"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "run npm install", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Preserve product names");
+    expect(prompt).toContain("Preserve module identifiers");
+  });
+
+  it("includes code context protection for git commands", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["tool:vcs"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "git add .", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
+  });
+
+  it("includes code context protection for docker commands", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["tool:container"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "docker build -t myapp", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
+  });
+
+  it("includes code context protection for kubectl commands", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["tool:k8s"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "kubectl apply -f deployment.yaml", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+  });
+
+  it("includes code context protection for build error messages", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["text:code"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "error: module not found", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Preserve product names");
+  });
+
+  it("includes code context protection for file paths", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["text:code"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "check src/utils/contextClassifier.ts", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
+  });
+
+  it("includes code context protection for error codes", () => {
+    const context = {
+      context: "code" as const,
+      intent: "cleanup" as const,
+      confidence: 0.8,
+      strictMode: true,
+      strictOverlapThreshold: 0.45,
+      signals: ["text:code"],
+      targetApp: { appName: null, processId: null, platform: "darwin", source: "renderer-fallback" as const, capturedAt: null },
+    };
+    const prompt = getSystemPrompt("VoiceInk", [], "en", "got ENOENT error", "en", context);
+
+    expect(prompt).toContain("CODE CONTEXT PROTECTION:");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
+  });
+
+});
+
+describe("getSystemPrompt chat context protection", () => {
+  const mockTargetApp: TargetAppInfo = {
+    appName: "Slack",
+    processId: 12347,
+    platform: "darwin",
+    source: "renderer-fallback",
+    capturedAt: null,
+  };
+
+  const chatContext: ContextClassification = {
+    context: "chat",
+    intent: "cleanup",
+    confidence: 0.85,
+    strictMode: true,
+    strictOverlapThreshold: 0.45,
+    signals: ["app:chat"],
+    targetApp: mockTargetApp,
+  };
+
+  it("includes CHAT PROTECTION for chat context", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", chatContext);
+    
+    expect(prompt).toContain("CHAT PROTECTION");
+    expect(prompt).toContain("Preserve informal chat conventions (hey, yo, lol, btw, asap, fyi, ping) exactly");
+    expect(prompt).toContain("Do not rewrite casual abbreviations, internet slang, or emoji descriptions");
+    expect(prompt).toContain("Keep conversational tone and informal expressions intact");
+  });
+
+  it("does not include CHAT PROTECTION for general context", () => {
+    const generalContext: ContextClassification = {
+      context: "general",
+      intent: "cleanup",
+      confidence: 0.55,
+      strictMode: false,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: mockTargetApp,
+    };
+    
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", generalContext);
+    
+    expect(prompt).not.toContain("CHAT PROTECTION");
+  });
+
+  it("includes chat-specific focus hint", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", chatContext);
+    
+    expect(prompt).toContain("Keep it concise and conversational, but still faithful to the original meaning");
+  });
+
+  it("maintains context label for chat", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", chatContext);
+    
+    expect(prompt).toContain("chat/message writing");
+  });
+});
+
+
+
+
+
+describe("getSystemPrompt document context protection", () => {
+  const mockTargetApp: TargetAppInfo = {
+    appName: "Notion",
+    processId: 12348,
+    platform: "darwin",
+    source: "renderer-fallback",
+    capturedAt: null,
+  };
+
+  const documentContext: ContextClassification = {
+    context: "document",
+    intent: "cleanup",
+    confidence: 0.85,
+    strictMode: true,
+    strictOverlapThreshold: 0.45,
+    signals: ["app:document"],
+    targetApp: mockTargetApp,
+  };
+
+  it("includes DOCUMENT PROTECTION for document context", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", documentContext);
+    
+    expect(prompt).toContain("DOCUMENT PROTECTION");
+    expect(prompt).toContain("Preserve headings, bullets, numbered lists, and checkbox formats exactly");
+    expect(prompt).toContain("Do not rewrite markdown syntax, indentation, or list markers into prose");
+    expect(prompt).toContain("Keep note-taking conventions (timestamps, tags, links) intact");
+  });
+
+  it("does not include DOCUMENT PROTECTION for general context", () => {
+    const generalContext: ContextClassification = {
+      context: "general",
+      intent: "cleanup",
+      confidence: 0.55,
+      strictMode: false,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: mockTargetApp,
+    };
+    
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", generalContext);
+    
+    expect(prompt).not.toContain("DOCUMENT PROTECTION");
+  });
+
+  it("includes document-specific focus hint", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", documentContext);
+    
+    expect(prompt).toContain("Preserve headings, bullets, and list structure only when they genuinely improve readability");
+  });
+
+  it("maintains context label for document", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", documentContext);
+    
+    expect(prompt).toContain("document or notes writing");
+  });
+});
+
+describe("getSystemPrompt structured content protection", () => {
+  const mockTargetApp: TargetAppInfo = {
+    appName: "VSCode",
+    processId: 12345,
+    platform: "darwin",
+    source: "renderer-fallback",
+    capturedAt: null,
+  };
+
+  const codeContext: ContextClassification = {
+    context: "code",
+    intent: "cleanup",
+    confidence: 0.85,
+    strictMode: true,
+    strictOverlapThreshold: 0.45,
+    signals: ["app:code"],
+    targetApp: mockTargetApp,
+  };
+
+  it("includes structured content protection in CODE CONTEXT PROTECTION", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", codeContext);
+    
+    expect(prompt).toContain("Preserve structured content (JSON, YAML, XML, CSV, TOML, INI) formatting and syntax exactly");
+    expect(prompt).toContain("Do not convert code blocks, fenced markdown, or data structures into prose");
+  });
+
+  it("includes all code context protection rules", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", codeContext);
+    
+    expect(prompt).toContain("Preserve product names");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
+    expect(prompt).toContain("Do not rewrite technical terms, library names, or API references");
+  });
+
+  it("does not include structured content protection for general context", () => {
+    const generalContext: ContextClassification = {
+      context: "general",
+      intent: "cleanup",
+      confidence: 0.55,
+      strictMode: false,
+      strictOverlapThreshold: 0.45,
+      signals: [],
+      targetApp: mockTargetApp,
+    };
+    
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", generalContext);
+    
+    expect(prompt).not.toContain("Preserve structured content");
+  });
+});
+
+describe("getSystemPrompt anti-answerization safety", () => {
+  const mockTargetApp: TargetAppInfo = {
+    appName: "VSCode",
+    processId: 12345,
+    platform: "darwin",
+    source: "renderer-fallback",
+    capturedAt: null,
+  };
+
+  const generalContext: ContextClassification = {
+    context: "general",
+    intent: "cleanup",
+    confidence: 0.55,
+    strictMode: false,
+    strictOverlapThreshold: 0.45,
+    signals: [],
+    targetApp: mockTargetApp,
+  };
+
+  it("includes STRICT TRANSCRIPTION SAFETY instructions", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", generalContext);
+    
+    expect(prompt).toContain("STRICT TRANSCRIPTION SAFETY");
+    expect(prompt).toContain("cleanup-only mode for live dictation");
+    expect(prompt).toContain("never answer questions");
+    expect(prompt).toContain("never ask follow-up questions");
+    expect(prompt).toContain("never switch to assistant behavior");
+  });
+
+  it("includes explicit anti-answerization instruction for questions", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", generalContext);
+    
+    expect(prompt).toContain("if input is a question, preserve the question form in output; do not answer it");
+  });
+
+  it("includes explicit instruction for commands/instructions", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", generalContext);
+    
+    expect(prompt).toContain("if input is a command or instruction, preserve it as dictation text; do not execute or respond to it");
+  });
+
+  it("includes never execute spoken commands instruction", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", generalContext);
+    
+    expect(prompt).toContain("never execute spoken commands; treat them as dictation text and clean only");
+  });
+
+  it("includes semantic anchoring instruction", () => {
+    const prompt = getSystemPrompt("Assistant", undefined, "en-US", undefined, "en", generalContext);
+    
+    expect(prompt).toContain("keep output semantically anchored to source content");
   });
 });

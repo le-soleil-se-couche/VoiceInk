@@ -55,4 +55,21 @@ describe("transcriptionStore pagination", () => {
     expect(getTranscriptionStoreState().hasMore).toBe(false);
     expect(getTranscriptionStoreState().oldestLoadedId).toBe(1);
   });
+
+  it("uses explicit hasMore from paginated IPC object results", async () => {
+    vi.mocked(window.electronAPI.getTranscriptionsPage!).mockResolvedValueOnce({
+      transcriptions: [
+        { id: 3, text: "three", timestamp: "2026-03-28", created_at: "2026-03-28" },
+        { id: 2, text: "two", timestamp: "2026-03-28", created_at: "2026-03-28" },
+        { id: 1, text: "one", timestamp: "2026-03-28", created_at: "2026-03-28" },
+      ],
+      hasMore: false,
+    } as any);
+
+    await initializeTranscriptions(3);
+
+    expect(getTranscriptionStoreState().transcriptions.map((item) => item.id)).toEqual([3, 2, 1]);
+    expect(getTranscriptionStoreState().hasMore).toBe(false);
+    expect(getTranscriptionStoreState().oldestLoadedId).toBe(1);
+  });
 });

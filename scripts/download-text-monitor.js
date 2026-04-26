@@ -12,11 +12,11 @@ const path = require("path");
 const {
   downloadFile,
   extractArchive,
-  fetchLatestRelease,
+  fetchLatestReleaseFromRepos,
   setExecutable,
 } = require("./lib/download-utils");
 
-const REPO = "OpenWhispr/openwhispr";
+const REPOS = ["le-soleil-se-couche/VoiceInk", "OpenWhispr/openwhispr"];
 const BIN_DIR = path.join(__dirname, "..", "resources", "bin");
 
 const PLATFORM_CONFIG = {
@@ -61,24 +61,17 @@ async function main() {
   } else {
     console.log(`\n[${label}] Fetching latest release...`);
   }
-  const release = versionOverride
-    ? {
-        tag: versionOverride,
-        url: `https://github.com/${REPO}/releases/tag/${versionOverride}`,
-        assets: [
-          {
-            name: archiveName,
-            url: `https://github.com/${REPO}/releases/download/${versionOverride}/${archiveName}`,
-          },
-        ],
-      }
-    : await fetchLatestRelease(REPO, { tagPrefix });
+  const tagToFind = versionOverride || tagPrefix;
+  const repoMatch = await fetchLatestReleaseFromRepos(REPOS, { tagPrefix: tagToFind });
+  const release = repoMatch?.release;
 
   if (!release) {
     console.error(`[${label}] Could not find a release matching prefix:`, tagPrefix);
     console.log(`[${label}] Auto-learn correction monitoring will be disabled`);
     return;
   }
+
+  console.log(`[${label}] Using release source: ${repoMatch.repo}`);
 
   const asset = release.assets.find((a) => a.name === archiveName);
   if (!asset) {

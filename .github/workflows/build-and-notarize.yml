@@ -70,13 +70,7 @@ jobs:
           sudo apt-get install -y rpm libx11-dev libxtst-dev libatspi2.0-dev libglib2.0-dev
 
       - name: Build Application
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npm run build:renderer
-          else
-            npm run build:linux -- --publish never
-          fi
+        run: npm run build:linux -- --publish never
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
           VITE_NEON_AUTH_URL: ${{ vars.VITE_NEON_AUTH_URL }}
@@ -158,13 +152,7 @@ jobs:
           restore-keys: windows-electron-
 
       - name: Build Application
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npm run build:renderer
-          else
-            npm run build:win -- --publish never
-          fi
+        run: npm run build:win -- --publish never
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
           VITE_NEON_AUTH_URL: ${{ vars.VITE_NEON_AUTH_URL }}
@@ -185,6 +173,8 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x64, arm64]
+    env:
+      HAS_MAC_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' && secrets.APPLE_API_KEY_BASE64 != '' && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -236,7 +226,7 @@ jobs:
           restore-keys: macos-${{ matrix.arch }}-electron-
 
       - name: Setup macOS Code Signing
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && env.HAS_MAC_SIGNING == 'true'
         env:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -261,20 +251,14 @@ jobs:
           echo "APPLE_API_KEY=$API_KEY_PATH" >> $GITHUB_ENV
 
       - name: Build Application (${{ matrix.arch }})
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npm run build:renderer
-          else
-            npm run build:mac -- --${{ matrix.arch }} --publish never
-          fi
+        run: npm run build:mac -- --${{ matrix.arch }} --publish never
         env:
           TARGET_ARCH: ${{ matrix.arch }}
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
           VITE_NEON_AUTH_URL: ${{ vars.VITE_NEON_AUTH_URL }}
           VITE_OPENWHISPR_API_URL: ${{ vars.VITE_OPENWHISPR_API_URL }}
           VITE_OPENWHISPR_OAUTH_CALLBACK_URL: ${{ vars.VITE_OPENWHISPR_OAUTH_CALLBACK_URL }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ github.event_name != 'pull_request' && 'true' || 'false' }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ github.event_name != 'pull_request' && env.HAS_MAC_SIGNING == 'true' && 'true' || 'false' }}
           CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
@@ -288,7 +272,7 @@ jobs:
           retention-days: 7
 
       - name: Cleanup Certificates
-        if: always() && github.event_name != 'pull_request'
+        if: always() && github.event_name != 'pull_request' && env.HAS_MAC_SIGNING == 'true'
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
           rm -f $RUNNER_TEMP/build_certificate.p12

@@ -222,7 +222,8 @@
       "dateGroups": {
         "today": "Today",
         "yesterday": "Yesterday"
-      }
+      },
+      "loadMore": "Load more"
     },
     "cloudMigration": {
       "title": "Welcome to VoiceInk Pro",
@@ -924,7 +925,11 @@
         "enterprise": {
           "name": "Enterprise",
           "price": "Custom",
-          "features": ["Cloud sync", "Team features (coming soon)", "SSO & compliance"],
+          "features": [
+            "Cloud sync",
+            "Team features (coming soon)",
+            "SSO & compliance"
+          ],
           "cta": "Contact Us"
         },
         "currentPlan": "Current plan"
@@ -1598,6 +1603,10 @@
     "oauth": {
       "redirectTitle": "Redirecting to app...",
       "closeTab": "You can close this tab."
+    },
+    "persistence": {
+      "recoveredTitle": "Recovered {{count}} Transcription(s)",
+      "recoveredDescription": "{{count}} transcription(s) saved during previous session have been restored."
     }
   }
 }

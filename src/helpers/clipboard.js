@@ -164,29 +164,70 @@ class ClipboardManager {
     this.linuxFastPastePath = null;
     this.linuxFastPasteChecked = false;
     this.pendingRestoreTimers = new Set();
+    this.pendingClipboardRestoreOriginal = null;
   }
 
-  _cancelPendingClipboardRestores() {
-    if (!this.pendingRestoreTimers || this.pendingRestoreTimers.size === 0) return;
+  _cancelPendingClipboardRestores({ preserveOriginal = false } = {}) {
+    if (!this.pendingRestoreTimers || this.pendingRestoreTimers.size === 0) {
+      if (!preserveOriginal) {
+        this.pendingClipboardRestoreOriginal = null;
+      }
+      return;
+    }
     for (const timer of this.pendingRestoreTimers) {
       clearTimeout(timer);
     }
     this.pendingRestoreTimers.clear();
+    if (!preserveOriginal) {
+      this.pendingClipboardRestoreOriginal = null;
+    }
     this.safeLog("🧹 Cleared pending clipboard restore timers");
   }
 
+  _readOriginalClipboardForPaste() {
+    const hasPendingRestore = this.pendingRestoreTimers?.size > 0;
+    const pendingOriginal = hasPendingRestore ? this.pendingClipboardRestoreOriginal : null;
+    this._cancelPendingClipboardRestores({ preserveOriginal: true });
+    if (pendingOriginal !== null) {
+      return pendingOriginal;
+    }
+    return clipboard.readText();
+  }
+
   _scheduleClipboardRestore(originalClipboard, delayMs, restoreFn) {
+    this.pendingClipboardRestoreOriginal = originalClipboard;
     const timer = setTimeout(() => {
       this.pendingRestoreTimers.delete(timer);
       try {
         restoreFn();
       } catch (error) {
         this.safeLog("⚠️ Clipboard restore failed", error?.message || error);
+      } finally {
+        if (this.pendingRestoreTimers.size === 0) {
+          this.pendingClipboardRestoreOriginal = null;
+        }
       }
     }, delayMs);
 
     this.pendingRestoreTimers.add(timer);
     return timer;
+  }
+
+  _scheduleConditionalClipboardRestore({
+    originalClipboard,
+    expectedCurrent,
+    delayMs,
+    context = "clipboard-restore",
+  }) {
+    return this._scheduleClipboardRestore(originalClipboard, delayMs, () => {
+      const currentClipboard = clipboard.readText();
+      if (currentClipboard !== expectedCurrent) {
+        this.safeLog("⏭️ Skip clipboard restore (clipboard changed)", { context });
+        return;
+      }
+      clipboard.writeText(originalClipboard);
+      this.safeLog("🔄 Clipboard restored", { context });
+    });
   }
 
   _isWayland() {
@@ -697,8 +738,7 @@ class ClipboardManager {
     let clipboardWritten = false;
 
     try {
-      this._cancelPendingClipboardRestores();
-      const originalClipboard = clipboard.readText();
+      const originalClipboard = this._readOriginalClipboardForPaste();
       this.safeLog(
         "💾 Saved original clipboard content:",
         originalClipboard.substring(0, 50) + "..."
@@ -726,12 +766,12 @@ class ClipboardManager {
 
         this.safeLog("✅ Permissions granted, attempting to paste...");
         try {
-          await this.pasteMacOS(originalClipboard, options);
+          await this.pasteMacOS(originalClipboard, text, options);
         } catch (firstError) {
           this.safeLog("⚠️ First paste attempt failed, retrying...", firstError?.message);
           clipboard.writeText(text);
           await new Promise((r) => setTimeout(r, 200));
-          await this.pasteMacOS(originalClipboard, options);
+          await this.pasteMacOS(originalClipboard, text, options);
         }
       } else if (platform === "win32") {
         const focusProbe = this.probeWindowsPasteTarget();
@@ -864,10 +904,11 @@ class ClipboardManager {
     }
   }
 
-  async pasteMacOS(originalClipboard, options = {}) {
+  async pasteMacOS(originalClipboard, pastedText, options = {}) {
     const fastPasteBinary = this.resolveFastPasteBinary();
     const useFastPaste = !!fastPasteBinary;
     const pasteDelay = options.fromStreaming ? (useFastPaste ? 15 : 50) : PASTE_DELAYS.darwin;
+    const restoreDelayMs = options.fromStreaming ? 6000 : 3500;
 
     return new Promise((resolve, reject) => {
       setTimeout(() => {
@@ -892,8 +933,11 @@ class ClipboardManager {
 
           if (code === 0) {
             this.safeLog(`Text pasted successfully via ${useFastPaste ? "CGEvent" : "osascript"}`);
-            this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.darwin, () => {
-              clipboard.writeText(originalClipboard);
+            this._scheduleConditionalClipboardRestore({
+              originalClipboard,
+              expectedCurrent: pastedText,
+              delayMs: restoreDelayMs,
+              context: useFastPaste ? "darwin-cgevent" : "darwin-osascript",
             });
             resolve();
           } else if (useFastPaste) {
@@ -904,7 +948,9 @@ class ClipboardManager {
             );
             this.fastPasteChecked = true;
             this.fastPastePath = null;
-            this.pasteMacOSWithOsascript(originalClipboard).then(resolve).catch(reject);
+            this.pasteMacOSWithOsascript(originalClipboard, pastedText, options)
+              .then(resolve)
+              .catch(reject);
           } else {
             this.accessibilityCache = { value: null, expiresAt: 0 };
             const errorMsg = `Paste failed (code ${code}). Text is copied to clipboard - please paste manually with Cmd+V.`;
@@ -921,7 +967,9 @@ class ClipboardManager {
             this.safeLog("CGEvent paste error, falling back to osascript");
             this.fastPasteChecked = true;
             this.fastPastePath = null;
-            this.pasteMacOSWithOsascript(originalClipboard).then(resolve).catch(reject);
+            this.pasteMacOSWithOsascript(originalClipboard, pastedText, options)
+              .then(resolve)
+              .catch(reject);
           } else {
             const errorMsg = `Paste command failed: ${error.message}. Text is copied to clipboard - please paste manually with Cmd+V.`;
             reject(new Error(errorMsg));
@@ -940,7 +988,8 @@ class ClipboardManager {
     });
   }
 
-  async pasteMacOSWithOsascript(originalClipboard) {
+  async pasteMacOSWithOsascript(originalClipboard, pastedText, options = {}) {
+    const restoreDelayMs = options.fromStreaming ? 6000 : 3500;
     return new Promise((resolve, reject) => {
       const pasteProcess = spawn("osascript", [
         "-e",
@@ -956,14 +1005,18 @@ class ClipboardManager {
 
         if (code === 0) {
           this.safeLog("Text pasted successfully via osascript fallback");
-          this._scheduleClipboardRestore(originalClipboard, RESTORE_DELAYS.darwin, () => {
-            clipboard.writeText(originalClipboard);
+          this._scheduleConditionalClipboardRestore({
+            originalClipboard,
+            expectedCurrent: pastedText,
+            delayMs: restoreDelayMs,
+            context: "darwin-osascript-fallback",
           });
           resolve();
         } else {
           this.accessibilityCache = { value: null, expiresAt: 0 };
-          const errorMsg = `Paste failed (code ${code}). Text is copied to clipboard - please paste manually with Cmd+V.`;
-          reject(new Error(errorMsg));
+          // Preserve clipboard content for manual paste fallback
+          this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
+          resolve();
         }
       });
 
@@ -971,19 +1024,18 @@ class ClipboardManager {
         if (hasTimedOut) return;
         clearTimeout(timeoutId);
         pasteProcess.removeAllListeners();
-        const errorMsg = `Paste command failed: ${error.message}. Text is copied to clipboard - please paste manually with Cmd+V.`;
-        reject(new Error(errorMsg));
+        // Preserve clipboard content for manual paste fallback
+        this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
+        resolve();
       });
 
       const timeoutId = setTimeout(() => {
         hasTimedOut = true;
         killProcess(pasteProcess, "SIGKILL");
         pasteProcess.removeAllListeners();
-        reject(
-          new Error(
-            "Paste operation timed out. Text is copied to clipboard - please paste manually with Cmd+V."
-          )
-        );
+        // Preserve clipboard content for manual paste fallback
+        this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
+        resolve();
       }, 3000);
     });
   }
@@ -1206,11 +1258,9 @@ class ClipboardManager {
               elapsedMs: elapsed,
               stderr: errorOutput,
             });
-            reject(
-              new Error(
-                `Windows paste failed with code ${code}. Text is copied to clipboard - please paste manually with Ctrl+V.`
-              )
-            );
+            // Preserve clipboard content for manual paste fallback
+            this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
+            resolve();
           }
         });
 
@@ -1222,11 +1272,9 @@ class ClipboardManager {
             elapsedMs: elapsed,
             error: error.message,
           });
-          reject(
-            new Error(
-              `Windows paste failed: ${error.message}. Text is copied to clipboard - please paste manually with Ctrl+V.`
-            )
-          );
+          // Preserve clipboard content for manual paste fallback
+          this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
+          resolve();
         });
 
         const timeoutId = setTimeout(() => {
@@ -1235,11 +1283,9 @@ class ClipboardManager {
           this.safeLog(`⏱️ PowerShell paste timeout`, { elapsedMs: elapsed });
           killProcess(pasteProcess, "SIGKILL");
           pasteProcess.removeAllListeners();
-          reject(
-            new Error(
-              "Paste operation timed out. Text is copied to clipboard - please paste manually with Ctrl+V."
-            )
-          );
+          // Preserve clipboard content for manual paste fallback
+          this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
+          resolve();
         }, 5000);
       }, pasteDelay);
     });
@@ -1757,6 +1803,10 @@ class ClipboardManager {
       errorMsg +=
         "\n\nNote: ydotool is installed but the ydotoold daemon is not running. Start it with: sudo systemctl enable --now ydotool";
     }
+
+    // Keep dictation text in clipboard for manual paste fallback
+    // Do NOT restore originalClipboard - the user needs the dictated text to paste manually
+    this.safeLog("📋 Keeping dictation text in clipboard for manual paste fallback");
 
     const err = new Error(errorMsg + failureSummary);
     err.code = "PASTE_SIMULATION_FAILED";

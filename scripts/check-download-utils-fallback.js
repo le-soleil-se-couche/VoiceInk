@@ -11,12 +11,12 @@ async function main() {
   const requests = [];
   const mockRelease = {
     tag_name: "v-test-fallback",
-    html_url: "https://github.com/OpenWhispr/openwhispr/releases/tag/v-test-fallback",
+    html_url: "https://github.com/le-soleil-se-couche/VoiceInk/releases/tag/v-test-fallback",
     assets: [
       {
         name: "dummy.zip",
         browser_download_url:
-          "https://github.com/OpenWhispr/openwhispr/releases/download/v-test-fallback/dummy.zip",
+          "https://github.com/le-soleil-se-couche/VoiceInk/releases/download/v-test-fallback/dummy.zip",
       },
     ],
   };
@@ -61,7 +61,7 @@ async function main() {
   };
 
   try {
-    const release = await fetchLatestRelease("OpenWhispr/openwhispr");
+    const release = await fetchLatestRelease("le-soleil-se-couche/VoiceInk");
     if (!release || release.tag !== "v-test-fallback") {
       throw new Error("Fallback release parsing failed");
     }

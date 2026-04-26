@@ -9,6 +9,9 @@ import { isSecureEndpoint } from "../utils/urlUtils";
 import { withSessionRefresh } from "../lib/neonAuth";
 import { getSettings, isCloudReasoningMode } from "../stores/settingsStore";
 import { DEFAULT_STRICT_OVERLAP_THRESHOLD } from "../utils/contextClassifier";
+import { isAnswerLikeText } from "../utils/answerLikeDetection";
+import { hasUnresolvedAlternativeChoice, isQuestionLikeDictation } from "../utils/questionIntent";
+import { shouldBlockQuestionAnswerization, hasCodeOrStructuredContent, shouldBlockCodeOrStructuredContentRewrite, isAnswerLikeTranscriptionOutput } from "../utils/answerGuard";
 
 const CHINESE_WORD_REPEAT_STUTTER_RE =
   /([\u4e00-\u9fff]{2,4})(?:\s*[，,、；;]\s*)\1(?=[\u4e00-\u9fff，,、。！？\s]|$)/g;
@@ -117,33 +120,17 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
   }
 
   private isAnswerLikeOutput(text: string): boolean {
+    return isAnswerLikeText(text, 6);
+  }
+
+  private isChineseIndirectQuestion(text: string): boolean {
     if (!text || !text.trim()) {
       return false;
     }
 
-    if (text.trim().length < 6) {
-      return false;
-    }
-
-    const patterns = [
-      /(作为|身为).{0,10}(ai|语言模型|助手)/i,
-      /\b(as\s+(?:an?|your)\s+(?:ai\s+)?(?:assistant|language\s+model))\b/i,
-      /(我无法|不能|不会|不可以).{0,18}(提供|协助|回答|满足|处理)/,
-      /(不用担心|别担心|我会尽力|我可以帮你|请告诉我|请问你|[你您]想要).{0,40}/,
-      /^(?:好的|好|是的|对|對|嗯)[，,、]\s*.+(?:吗|麼|么|[?？])$/u,
-      /(对不起|抱歉).{0,20}(我会|我将|让我|我们)/,
-      /你想要.{0,20}(什么|哪一个|哪两个|哪些)/,
-      /如果您想.{0,20}(测试|试试|尝试).{0,30}(语音转文字|转录|句子|示例)/,
-      /\b(as an ai|as a language model)\b/i,
-      /\b(i(?:'m| am)\s+here\s+to\s+help(?:\s+with\s+that)?)\b/i,
-      /\b(i\s*(can't|cannot|am unable|won't))\b/i,
-      /\b(i can help|don't worry|please tell me|what can i)\b/i,
-      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)[,，]\s+(?:what|when|where|why|who|which|how|is|are|am|do|does|did|can|could|would|should|will|has|have|had)\b/i,
-      /\b(if you want to test).{0,30}(speech[- ]to[- ]text|transcription)\b/i,
-      /\b(you can try).{0,20}(sentence|example)\b/i,
-    ];
-
-    return patterns.some((re) => re.test(text));
+    return /^(?:我)?(?:想知道|想问(?:一下)?|想确认(?:一下)?|请问|麻烦你|麻烦帮我|帮我)(?:.{0,40})(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否|是不是|能不能|可不可以|要不要|会不会|有没有|行不行|对不对|好不好)/u.test(
+      text.trim()
+    );
   }
 
   private isQuestionLikeText(text: string): boolean {
@@ -152,24 +139,44 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     }
 
     const normalized = text.trim().toLowerCase();
+    const collapsedEnglishQuestionStart =
+      /^(?:whats|whos|wheres|whens|whys|hows)\b/;
+    const enIndirectQuestionStart =
+      /^(?:i\s+wonder\s+(?:if|whether)|i(?:'m|\s+am)\s+wondering\s+(?:if|whether)|wondering\s+(?:if|whether)|i(?:'m|\s+am)\s+curious\s+(?:if|whether)|do\s+you\s+know\s+(?:if|whether)|can\s+you\s+tell\s+me\s+(?:if|whether))\b/;
+
     if (/[?？]$/.test(normalized)) {
+      return true;
+    }
+
+    if (isQuestionLikeDictation(text)) {
       return true;
     }
 
     const zhQuestionPatterns = [
       /[吗么呢吧]$/,
-      /\b(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否)\b/,
+      /(?:什么|谁|哪(?:里|儿)?|为什么|为何|怎么|怎样|几时|几点|多少|几|是否)/,
       /(?:是不是|能不能|可不可以|要不要|会不会|有没有)/,
       /(?:行不行|对不对|好不好|可不可以|能不能|要不要|有没有|是不是)$/,
+      /(?:等于|等於|是|為|为)\s*(?:多少|几)\s*$/,
+      /(?:等于几|几点|多少[钱个次岁天年月分秒]?|几月几号|几号|几天|几次|几岁)$/,
+      /^(?:我想知道|我想问|我在想|想知道|想问).{0,24}(?:是否|是不是|要不要|能不能|可不可以|会不会|有没有|为什么|为何|怎么|怎样|多少|几|谁|什么|哪(?:里|儿)?)/,
     ];
 
     if (zhQuestionPatterns.some((re) => re.test(normalized))) {
       return true;
     }
 
+    if (this.isChineseIndirectQuestion(text)) {
+      return true;
+    }
+
     const enQuestionStart =
       /^(?:what|when|where|why|who|whom|whose|which|how|is|are|am|was|were|do|does|did|can|could|would|should|will|have|has|had|may)\b/;
-    if (enQuestionStart.test(normalized)) {
+    if (
+      enQuestionStart.test(normalized) ||
+      collapsedEnglishQuestionStart.test(normalized) ||
+      enIndirectQuestionStart.test(normalized)
+    ) {
       return true;
     }
 
@@ -180,13 +187,42 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
 
     const enIndirectQuestionPatterns = [
       /^(?:i\s+(?:need|want|would\s+like|'d\s+like)\s+to\s+(?:find\s+out|see))\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:i\s+wonder|i(?:'m|\s+am)\s+wondering|i\s+was\s+wondering)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
       /^(?:please\s+)?(?:find\s+out|see)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:please\s+)?(?:check|confirm|verify|clarify)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:please\s+)?(?:tell\s+me|let\s+me\s+know)\b.{0,24}\b(?:if|whether|what|when|where|why|who|how)\b/i,
     ];
     if (enIndirectQuestionPatterns.some((re) => re.test(normalized))) {
       return true;
     }
 
-    return /\b(?:what|when|where|why|who|whom|whose|which|how)\b/.test(normalized);
+    return /\b(?:what|when|where|why|who|whom|whose|which|how|whats|whos|wheres|whens|whys|hows)\b/.test(
+      normalized
+    );
+  }
+
+  private hasTrailingAnswerAfterQuestion(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    const trimmed = text.trim();
+    const lastQuestionIndex = Math.max(trimmed.lastIndexOf("?"), trimmed.lastIndexOf("？"));
+    if (lastQuestionIndex < 0) {
+      return false;
+    }
+
+    const trailing = trimmed.slice(lastQuestionIndex + 1).trim();
+    if (!trailing) {
+      return false;
+    }
+
+    const normalizedTrailing = trailing.replace(/^[)\]"'”’」』】>\s\-–—:;,，。！？、]+/, "").trim();
+    if (!/[\u4e00-\u9fffA-Za-z0-9]/.test(normalizedTrailing)) {
+      return false;
+    }
+
+    return !isQuestionLikeDictation(normalizedTrailing);
   }
 
   private splitIntoClauses(text: string): string[] {
@@ -214,6 +250,87 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
     return clauses
       .slice(questionClauseIndex + 1)
       .some((clause) => clause.length > 0 && !this.isQuestionLikeText(clause));
+  }
+
+  private hasQuestionLeadInThenAnswerTail(source: string, candidate: string): boolean {
+    const normalizedSource = source.trim().replace(/[?？。.!！]+$/u, "");
+    const normalizedCandidate = candidate.trim();
+    if (
+      !normalizedSource ||
+      !normalizedCandidate ||
+      normalizedCandidate.length <= normalizedSource.length ||
+      !this.isQuestionLikeText(source) ||
+      !normalizedCandidate.startsWith(normalizedSource)
+    ) {
+      return false;
+    }
+
+    const tail = normalizedCandidate
+      .slice(normalizedSource.length)
+      .replace(/^[?？。.!！,，、；;:\-\s]+/u, "")
+      .trim();
+
+    return tail.length > 0;
+  }
+
+  private isAssistantDialogueQuestion(text: string): boolean {
+    if (!text || !text.trim()) {
+      return false;
+    }
+
+    const normalized = text.trim().toLowerCase().normalize("NFKC");
+    const englishPatterns = [
+      /^(?:can|could|would|will)\s+you\s+(?:tell|confirm|check|verify|clarify)\b.{0,40}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+      /^(?:can|could|would|will)\s+you\s+let\s+me\s+know\b.{0,40}\b(?:if|whether|what|when|where|why|who|how)\b/i,
+    ];
+    if (englishPatterns.some((re) => re.test(normalized))) {
+      return true;
+    }
+
+    const chinesePatterns = [
+      /^(?:你能|你可以|能不能|可不可以|请|麻烦你|帮我).{0,12}(?:告诉我|确认|看一下|看下|检查一下|检查下|说明).{0,20}(?:吗|么|呢|吧|[?？])?$/u,
+    ];
+    return chinesePatterns.some((re) => re.test(text.trim()));
+  }
+
+  private hasAssistantWrapperQuestionShift(source: string, candidate: string): boolean {
+    if (!this.isQuestionLikeText(source) || !candidate.trim()) {
+      return false;
+    }
+
+    const englishWrapperRe =
+      /^(?:sure|yes|yeah|yep|okay|ok|alright|certainly|of\s+course|absolutely)\b[\s,，、:：-]*(.+)$/i;
+    const chineseWrapperRe =
+      /^(?:好的|好|是的|对|對|嗯)\s*[，,、:：-]?\s*(.+)$/u;
+
+    const englishCandidateMatch = candidate.trim().match(englishWrapperRe);
+    if (englishCandidateMatch) {
+      const sourceMatch = source.trim().match(englishWrapperRe);
+      const remainder = englishCandidateMatch[1]?.trim() ?? "";
+      if (!sourceMatch && remainder && this.isQuestionLikeText(remainder)) {
+        return true;
+      }
+    }
+
+    const chineseCandidateMatch = candidate.trim().match(chineseWrapperRe);
+    if (chineseCandidateMatch) {
+      const sourceMatch = source.trim().match(chineseWrapperRe);
+      const remainder = chineseCandidateMatch[1]?.trim() ?? "";
+      if (!sourceMatch && remainder && this.isQuestionLikeText(remainder)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private hasAssistantDialogueQuestionShift(source: string, candidate: string): boolean {
+    return (
+      (this.isQuestionLikeText(candidate) &&
+        this.isAssistantDialogueQuestion(candidate) &&
+        !this.isAssistantDialogueQuestion(source)) ||
+      this.hasAssistantWrapperQuestionShift(source, candidate)
+    );
   }
 
   private calculateOverlapMetrics(source: string, candidate: string): {
@@ -550,6 +667,54 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
       return finalizeFallback("question_answer_append");
     }
 
+    if (this.hasQuestionLeadInThenAnswerTail(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+      return finalizeFallback("question_answer_tail");
+    }
+
+    if (this.hasAssistantDialogueQuestionShift(source, candidate)) {
+      if (!hasRetried) {
+        const retryResult = await this.retryWithCleanupOnlyPrompt(
+          source,
+          config,
+          provider,
+          model,
+          agentName
+        );
+        if (retryResult !== null) {
+          return this.applyStrictModeGuard(
+            source,
+            retryResult,
+            config,
+            provider,
+            model,
+            agentName,
+            true
+          );
+        }
+      }
+      return finalizeFallback("assistant_dialogue_question");
+    }
+
     if (this.deletesNovelChineseContent(source, candidate)) {
       if (!hasRetried) {
         const retryResult = await this.retryWithCleanupOnlyPrompt(
@@ -576,6 +741,42 @@ STRICT TRANSCRIPTION SAFETY (NON-NEGOTIABLE):
         sourceLength: source.length,
         candidateLength: candidate.length,
       });
+    }
+
+    if (this.hasQuestionThenAnswerPattern(source, candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_QUESTION_ANSWER_APPEND_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
+    }
+
+    if (isQuestionLikeDictation(source) && this.hasTrailingAnswerAfterQuestion(candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_TRAILING_ANSWER_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
+    }
+
+    if (hasUnresolvedAlternativeChoice(source) && !hasUnresolvedAlternativeChoice(candidate)) {
+      const fallback = this.localCleanupFallback(source);
+      logger.logReasoning("STRICT_MODE_ALTERNATIVE_CHOICE_BLOCKED", {
+        provider,
+        model,
+        originalLength: source.length,
+        candidateLength: candidate.length,
+        fallbackLength: fallback.length,
+      });
+      return fallback;
     }
 
     const defaultShortInputThreshold = 24;
