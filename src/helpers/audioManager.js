@@ -2620,22 +2620,24 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
         const audioBuffer = await optimizedAudio.arrayBuffer();
         const qwenDictionaryInstruction = this.getQwenAsrDictionaryInstruction(dictionaryPrompt);
-        const qwenContent = [];
+        const qwenMessages = [];
         if (qwenDictionaryInstruction) {
-          qwenContent.push({ type: "text", text: qwenDictionaryInstruction });
+          qwenMessages.push({
+            role: "system",
+            content: [{ text: qwenDictionaryInstruction }],
+          });
         }
-        qwenContent.push({
-          type: "input_audio",
-          input_audio: {
-            data: `data:${mimeType};base64,${arrayBufferToBase64(audioBuffer)}`,
-          },
+        qwenMessages.push({
+          role: "user",
+          content: [
+            {
+              type: "input_audio",
+              input_audio: {
+                data: `data:${mimeType};base64,${arrayBufferToBase64(audioBuffer)}`,
+              },
+            },
+          ],
         });
-        const qwenMessages = [
-          {
-            role: "user",
-            content: qwenContent,
-          },
-        ];
         const payload = {
           model,
           messages: qwenMessages,
