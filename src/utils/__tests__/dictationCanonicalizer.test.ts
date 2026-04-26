@@ -348,7 +348,7 @@ describe("canonicalizeDictationText over-optimization prevention", () => {
   });
 
   it("repairs near-miss Chinese custom dictionary terms", () => {
-    const result = canonicalizeDictationText("艾米斯、鸣巢和明日方舟终末的", {
+    const result = canonicalizeDictationText("艾米斯、明朝和明日方舟周末地", {
       preferredLanguage: "zh-CN",
       locale: "zh-CN",
       source: "unit-test",

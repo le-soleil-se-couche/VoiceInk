@@ -195,6 +195,16 @@ const normalizeDictionaryComparable = (value: string): string =>
     .map((char) => DICTIONARY_CONFUSION_CANONICALS.get(char) || char)
     .join("");
 
+const normalizeDictionaryCandidateComparable = (
+  candidate: string,
+  term: ChineseDictionaryTerm
+): string => {
+  const phraseAdjusted = term.compact.includes("终末")
+    ? candidate.replace(/周末/g, "终末")
+    : candidate;
+  return normalizeDictionaryComparable(phraseAdjusted);
+};
+
 const getChineseDictionaryTerms = (customDictionary?: string[]): ChineseDictionaryTerm[] => {
   if (!customDictionary?.length) return [];
 
@@ -231,12 +241,12 @@ const countDifferentChars = (left: string, right: string): number => {
 const isDictionaryNearMiss = (candidate: string, term: ChineseDictionaryTerm): boolean => {
   if (candidate === term.compact) return false;
   if (candidate.length !== term.compact.length) return false;
-  if (normalizeDictionaryComparable(candidate) !== term.comparable) return false;
+  if (normalizeDictionaryCandidateComparable(candidate, term) !== term.comparable) return false;
 
   const diffCount = countDifferentChars(candidate, term.compact);
   if (diffCount === 0) return false;
   if (term.compact.length <= 2) {
-    return diffCount === 1 && !candidate.includes("的");
+    return diffCount <= 2 && !candidate.includes("的");
   }
   if (term.compact.length === 3) {
     return diffCount <= 2;
