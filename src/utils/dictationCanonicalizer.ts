@@ -2,6 +2,7 @@ export interface DictationCanonicalizerOptions {
   locale?: string | null;
   preferredLanguage?: string | null;
   source?: string | null;
+  customDictionary?: string[];
   canonicalizerEnabled?: boolean;
   numberEnabled?: boolean;
   punctuationEnabled?: boolean;
@@ -20,6 +21,8 @@ export interface DictationCanonicalizerStats {
   literalProtections: number;
   idiomProtections: number;
   dotConversions: number;
+  dictionaryProtections: number;
+  dictionaryCorrections: number;
 }
 
 export interface DictationCanonicalizerResult {
@@ -116,7 +119,26 @@ const LEXICAL_NUMERAL_TERM_PATTERNS: RegExp[] = [
   /[百千万萬]分(?:比|位|点|号|號|制|率)/g,
 ];
 
+const DICTIONARY_CONFUSION_GROUPS = [
+  ["爱", "艾"],
+  ["弥", "米", "迷"],
+  ["斯", "丝", "思"],
+  ["鸣", "明", "名", "命"],
+  ["潮", "巢", "朝"],
+  ["终", "中"],
+  ["末", "墨", "莫"],
+  ["地", "的"],
+  ["舟", "州", "周"],
+];
 
+const DICTIONARY_CONFUSION_CANONICALS = new Map<string, string>(
+  DICTIONARY_CONFUSION_GROUPS.flatMap((group) => group.map((char) => [char, group[0]]))
+);
+
+type ChineseDictionaryTerm = {
+  compact: string;
+  comparable: string;
+};
 
 const IDIOM_PROTECTIONS = [
   "一心一意",
@@ -165,6 +187,134 @@ const normalizedSource = (source?: string | null) =>
   typeof source === "string" && source.trim() ? source.trim() : DEFAULT_SOURCE;
 
 const countHanChars = (value: string): number => (value.match(HAN_CHAR_RE) || []).length;
+
+const compactDictionaryTerm = (value: string): string => value.replace(/\s+/g, "");
+
+const normalizeDictionaryComparable = (value: string): string =>
+  [...compactDictionaryTerm(value)]
+    .map((char) => DICTIONARY_CONFUSION_CANONICALS.get(char) || char)
+    .join("");
+
+const normalizeDictionaryCandidateComparable = (
+  candidate: string,
+  term: ChineseDictionaryTerm
+): string => {
+  const phraseAdjusted = term.compact.includes("终末")
+    ? candidate.replace(/周末/g, "终末")
+    : candidate;
+  return normalizeDictionaryComparable(phraseAdjusted);
+};
+
+const getChineseDictionaryTerms = (customDictionary?: string[]): ChineseDictionaryTerm[] => {
+  if (!customDictionary?.length) return [];
+
+  const seen = new Set<string>();
+  const terms: ChineseDictionaryTerm[] = [];
+
+  for (const rawTerm of customDictionary) {
+    const exact = typeof rawTerm === "string" ? rawTerm.trim() : "";
+    const compact = compactDictionaryTerm(exact);
+    if (!compact || !hasAnyHanChars(compact)) continue;
+    if (!/^[\u4e00-\u9fff]+$/.test(compact)) continue;
+    if (compact.length < 2 || compact.length > 16) continue;
+    if (seen.has(compact)) continue;
+
+    seen.add(compact);
+    terms.push({
+      compact,
+      comparable: normalizeDictionaryComparable(compact),
+    });
+  }
+
+  return terms.sort((a, b) => b.compact.length - a.compact.length);
+};
+
+const countDifferentChars = (left: string, right: string): number => {
+  let count = 0;
+  const limit = Math.min(left.length, right.length);
+  for (let i = 0; i < limit; i += 1) {
+    if (left[i] !== right[i]) count += 1;
+  }
+  return count + Math.abs(left.length - right.length);
+};
+
+const isDictionaryNearMiss = (candidate: string, term: ChineseDictionaryTerm): boolean => {
+  if (candidate === term.compact) return false;
+  if (candidate.length !== term.compact.length) return false;
+  if (normalizeDictionaryCandidateComparable(candidate, term) !== term.comparable) return false;
+
+  const diffCount = countDifferentChars(candidate, term.compact);
+  if (diffCount === 0) return false;
+  if (term.compact.length <= 2) {
+    return diffCount <= 2 && !candidate.includes("的");
+  }
+  if (term.compact.length === 3) {
+    return diffCount <= 2;
+  }
+
+  return diffCount <= Math.max(1, Math.floor(term.compact.length / 3));
+};
+
+const repairDictionaryTermsInHanRun = (
+  run: string,
+  terms: ChineseDictionaryTerm[],
+  stats: DictationCanonicalizerStats
+): string => {
+  let next = run;
+
+  for (const term of terms) {
+    const length = term.compact.length;
+    if (next.length < length) continue;
+
+    let rebuilt = "";
+    let index = 0;
+    while (index < next.length) {
+      const candidate = next.slice(index, index + length);
+      if (candidate.length === length && isDictionaryNearMiss(candidate, term)) {
+        rebuilt += term.compact;
+        index += length;
+        stats.dictionaryCorrections += 1;
+        continue;
+      }
+
+      rebuilt += next[index];
+      index += 1;
+    }
+    next = rebuilt;
+  }
+
+  return next;
+};
+
+const repairCustomDictionaryTerms = (
+  value: string,
+  terms: ChineseDictionaryTerm[],
+  stats: DictationCanonicalizerStats
+): string => {
+  if (terms.length === 0) return value;
+  return value.replace(/[\u4e00-\u9fff]+/g, (run) =>
+    repairDictionaryTermsInHanRun(run, terms, stats)
+  );
+};
+
+const protectCustomDictionaryTerms = (
+  value: string,
+  terms: ChineseDictionaryTerm[],
+  placeholders: Map<string, string>,
+  stats: DictationCanonicalizerStats
+): string => {
+  let protectedText = value;
+  for (const term of terms) {
+    const pattern = new RegExp([...term.compact].map(escapeRegExp).join("\\s*"), "g");
+    protectedText = protectedText.replace(pattern, () => {
+      const token = `__CANON_DICT_${placeholders.size}__`;
+      placeholders.set(token, term.compact);
+      stats.dictionaryProtections += 1;
+      return token;
+    });
+  }
+  return protectedText;
+};
 
 const isChineseContextEnabled = (value: string, preferredLanguage: string): boolean => {
   if (preferredLanguage === "zh-CN" || preferredLanguage === "zh-TW") {
@@ -527,6 +677,8 @@ export const canonicalizeDictationText = (
     literalProtections: 0,
     idiomProtections: 0,
     dotConversions: 0,
+    dictionaryProtections: 0,
+    dictionaryCorrections: 0,
   };
 
   if (!stats.enabled || !baseText.trim()) {
@@ -540,7 +692,10 @@ export const canonicalizeDictationText = (
   }
 
   const placeholders = new Map<string, string>();
+  const dictionaryTerms = getChineseDictionaryTerms(options.customDictionary);
   let next = baseText;
+  next = repairCustomDictionaryTerms(next, dictionaryTerms, stats);
+  next = protectCustomDictionaryTerms(next, dictionaryTerms, placeholders, stats);
   next = protectIdioms(next, placeholders, stats);
   next = protectEnglishTechTerms(next, placeholders, stats);
   next = protectLiteralMentions(next, placeholders, stats);

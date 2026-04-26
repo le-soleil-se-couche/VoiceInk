@@ -347,6 +347,31 @@ describe("canonicalizeDictationText over-optimization prevention", () => {
     }
   });
 
+  it("repairs near-miss Chinese custom dictionary terms", () => {
+    const result = canonicalizeDictationText("艾米斯、明朝和明日方舟周末地", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+      customDictionary: ["爱弥斯", "鸣潮", "明日方舟终末地"],
+    });
+
+    expect(result.text).toBe("爱弥斯、鸣潮和明日方舟终末地");
+    expect(result.stats.dictionaryCorrections).toBe(3);
+  });
+
+  it("protects exact custom dictionary terms before number normalization", () => {
+    const result = canonicalizeDictationText("我在看一人之下", {
+      preferredLanguage: "zh-CN",
+      locale: "zh-CN",
+      source: "unit-test",
+      customDictionary: ["一人之下"],
+    });
+
+    expect(result.text).toBe("我在看一人之下");
+    expect(result.stats.dictionaryProtections).toBe(1);
+    expect(result.stats.numberReplacements).toBe(0);
+  });
+
   it("preserves small conversational numbers in natural spoken contexts", () => {
     const result = canonicalizeDictationText("今天来了两个人", {
       preferredLanguage: "zh-CN",

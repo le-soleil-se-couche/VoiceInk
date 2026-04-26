@@ -1531,19 +1531,22 @@ class IPCHandlers {
 
         const buildQwenAudioPayload = () => {
           const audioBase64 = Buffer.from(audioBuffer).toString("base64");
+          const content = [];
+          if (typeof prompt === "string" && prompt.trim()) {
+            content.push({ type: "text", text: prompt.trim() });
+          }
+          content.push({
+            type: "input_audio",
+            input_audio: {
+              data: `data:${mimeType || "audio/webm"};base64,${audioBase64}`,
+            },
+          });
           return {
             model: trimmedModel || model,
             messages: [
               {
                 role: "user",
-                content: [
-                  {
-                    type: "input_audio",
-                    input_audio: {
-                      data: `data:${mimeType || "audio/webm"};base64,${audioBase64}`,
-                    },
-                  },
-                ],
+                content,
               },
             ],
             stream: false,

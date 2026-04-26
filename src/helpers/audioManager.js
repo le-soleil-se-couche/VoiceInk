@@ -684,6 +684,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     return words.length > 0 ? words.join(", ") : null;
   }
 
+  getQwenAsrDictionaryInstruction(dictionaryPrompt) {
+    if (!dictionaryPrompt) return null;
+    return `请在转写音频时优先使用以下自定义词典的精确写法：${dictionaryPrompt}。只输出音频中实际说出的内容，不要解释或扩写。`;
+  }
+
   setCallbacks({
     onStateChange,
     onError,
@@ -1667,6 +1672,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       source,
       locale: settings.uiLanguage || "en",
       preferredLanguage: settings.preferredLanguage || "auto",
+      customDictionary: settings.customDictionary || [],
       canonicalizerEnabled: this.getLocalStorageFlag(FLAG_CANONICALIZER_ENABLED, true),
       numberEnabled: this.getLocalStorageFlag(FLAG_NUMBER_CANONICALIZER_ENABLED, true),
       punctuationEnabled: this.getLocalStorageFlag(FLAG_PUNCTUATION_CANONICALIZER_ENABLED, true),
@@ -1705,6 +1711,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           stats.punctuationReplacements > 0 ||
           stats.literalProtections > 0 ||
           stats.idiomProtections > 0 ||
+          stats.dictionaryProtections > 0 ||
+          stats.dictionaryCorrections > 0 ||
           elapsedMs > STREAMING_CANONICALIZER_TARGET_MS)
       ) {
         logger.logReasoning("CANONICALIZER_APPLIED", {
@@ -1715,6 +1723,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           punctuationReplacements: stats.punctuationReplacements,
           literalProtections: stats.literalProtections,
           idiomProtections: stats.idiomProtections,
+          dictionaryProtections: stats.dictionaryProtections,
+          dictionaryCorrections: stats.dictionaryCorrections,
           dotConversions: stats.dotConversions,
         });
       }
@@ -2512,12 +2522,13 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             mimeType,
             isQwenAsr,
           };
-          if (!isQwenAsr) {
-            const promptToUse =
-              typeof promptOverride === "string" ? promptOverride : dictionaryPrompt;
-            if (promptToUse) {
-              proxyData.prompt = promptToUse;
-            }
+          const promptToUse =
+            typeof promptOverride === "string" ? promptOverride : dictionaryPrompt;
+          if (promptToUse) {
+            proxyData.prompt =
+              isQwenAsr && typeof promptOverride !== "string"
+                ? this.getQwenAsrDictionaryInstruction(promptToUse)
+                : promptToUse;
           }
 
           logger.debug(
@@ -2539,7 +2550,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         let proxyText = await runCustomProxyAttempt();
         proxyText = await this.guardMacAsrAnswerLikeOutput(proxyText, {
           source: sourceTag,
-          retryOnce: async () => runCustomProxyAttempt(isQwenAsr ? null : retryPrompt),
+          retryOnce: async () => runCustomProxyAttempt(retryPrompt),
         });
 
         if (proxyText && proxyText.trim().length > 0) {
@@ -2588,17 +2599,21 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         requestEndpoint = resolveCustomChatCompletionsEndpoint(endpoint);
 
         const audioBuffer = await optimizedAudio.arrayBuffer();
+        const qwenDictionaryInstruction = this.getQwenAsrDictionaryInstruction(dictionaryPrompt);
+        const qwenContent = [];
+        if (qwenDictionaryInstruction) {
+          qwenContent.push({ type: "text", text: qwenDictionaryInstruction });
+        }
+        qwenContent.push({
+          type: "input_audio",
+          input_audio: {
+            data: `data:${mimeType};base64,${arrayBufferToBase64(audioBuffer)}`,
+          },
+        });
         const qwenMessages = [
           {
             role: "user",
-            content: [
-              {
-                type: "input_audio",
-                input_audio: {
-                  data: `data:${mimeType};base64,${arrayBufferToBase64(audioBuffer)}`,
-                },
-              },
-            ],
+            content: qwenContent,
           },
         ];
         const payload = {
@@ -2617,7 +2632,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             method: "POST",
             hasAuthHeader: !!apiKey,
             payloadType: "chat-completions-input-audio",
-            dictionaryIgnoredForQwen: !!dictionaryPrompt,
+            dictionarySentForQwen: !!qwenDictionaryInstruction,
             dictionaryTermsCount: dictionaryPrompt
               ? dictionaryPrompt.split(",").map((s) => s.trim()).filter(Boolean).length
               : 0,
